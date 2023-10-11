@@ -1,0 +1,13 @@
+Package: bipps
+Type: Package
+Title: Bayesian Inference of Point Patterns in Space
+Version: 0.0.1
+Date: 2023-10-11
+Author: Michele Peruzzi
+Maintainer: Michele Peruzzi <peruzzi@umich.edu>
+Description: Fits Bayesian regression models for analyzing multivariate point pattern data using latent Gaussian Processes
+License: GPL (>= 3)
+Imports: Rcpp (>= 1.0.5), stats, dplyr, glue, rlang, magrittr, FNN
+Suggests: ggplot2, abind, rmarkdown, knitr, tidyr
+LinkingTo: Rcpp, RcppArmadillo
+VignetteBuilder: knitr
