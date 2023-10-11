@@ -41,7 +41,7 @@ public:
   
   // indexing info
   arma::field<arma::uvec> indexing; 
-  arma::field<arma::uvec> indexing_obs;
+  
   arma::field<arma::uvec> parents_indexing; 
   //arma::field<arma::uvec> children_indexing;
   
@@ -90,7 +90,7 @@ public:
   arma::mat Lambda;
   arma::umat Lambda_mask; // 1 where we want lambda to be nonzero
   arma::mat LambdaHw; // part of the regression mean explained by the latent process
-  arma::mat wU; // nonreference locations
+  //arma::mat wU; // nonreference locations
   
   arma::mat XB; // by outcome
   arma::mat linear_predictor;
@@ -206,8 +206,7 @@ public:
   //bool w_hmc_rm;
   //bool w_hmc_srm;
   void deal_with_w(BippsDataLMC& data, bool sample=true);
-  void gaussian_w(BippsDataLMC& data, bool sample);
-  void gaussian_nonreference_w(int, BippsDataLMC& data, const arma::mat&, bool sample);
+  
   void nongaussian_w(BippsDataLMC& data, bool sample);
   void w_prior_sample(BippsDataLMC& data);
   std::vector<NodeDataW> w_node;
@@ -242,12 +241,6 @@ public:
   std::vector<NodeDataB> lambda_node; // std::vector
   std::vector<AdaptE> lambda_hmc_adapt; // std::vector
   arma::uvec lambda_hmc_started;
-  
-  
-  // Tausq
-  void deal_with_tausq(BippsDataLMC& data, bool ref_pardata=false);
-  void gibbs_sample_tausq_std(bool ref_pardata);
-  void gibbs_sample_tausq_fgrid(BippsDataLMC& data, bool ref_pardata);
   
   void logpost_refresh_after_gibbs(BippsDataLMC& data, bool sample=true); 
   
@@ -288,7 +281,6 @@ public:
     const arma::vec& block_groups_in,
     
     const arma::field<arma::uvec>& indexing_in,
-    const arma::field<arma::uvec>& indexing_obs_in,
     
     int matern_twonu_in,
     
@@ -307,8 +299,6 @@ public:
     const arma::mat& metrop_theta_sd,
     const arma::mat& metrop_theta_bounds,
     
-    bool use_cache,
-    bool use_forced_grid,
     bool use_ps,
     
     bool verbose_in,
@@ -326,7 +316,6 @@ public:
     const arma::vec& block_groups_in,
     
     const arma::field<arma::uvec>& indexing_in,
-    const arma::field<arma::uvec>& indexing_obs_in,
     
     int matern_twonu_in,
     

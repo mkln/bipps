@@ -35,13 +35,13 @@ struct BippsDataLMC {
   double loglik_w; // will be pml
   double ll_y_all;
   
-  arma::field<arma::cube> Hproject; // moves from w to observed coords
-  arma::field<arma::cube> Rproject; // stores R for obs
-  arma::field<arma::cube> Riproject;
+  //arma::field<arma::cube> Hproject; // moves from w to observed coords
+  //arma::field<arma::cube> Rproject; // stores R for obs
+  //arma::field<arma::cube> Riproject;
   
-  arma::cube DplusSi;
-  arma::cube DplusSi_c;
-  arma::vec DplusSi_ldet;
+  //arma::cube DplusSi;
+  //arma::cube DplusSi_c;
+  //arma::vec DplusSi_ldet;
   
   // w cache
   arma::field<arma::mat> Sigi_chol;

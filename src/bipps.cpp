@@ -19,8 +19,6 @@ Bipps::Bipps(
   const arma::vec& block_groups_in,
   
   const arma::field<arma::uvec>& indexing_in,
-  const arma::field<arma::uvec>& indexing_obs_in,
-  
   int matern_twonu_in,
   
   const arma::mat& w_in,
@@ -38,8 +36,6 @@ Bipps::Bipps(
   const arma::mat& metrop_theta_sd,
   const arma::mat& metrop_theta_bounds,
   
-  bool use_cache=true,
-  bool use_forced_grid=false,
   bool use_ps=true,
   
   bool verbose_in=false,
@@ -51,8 +47,8 @@ Bipps::Bipps(
   
   verbose = verbose_in;
   debug = debugging;
-  forced_grid = use_forced_grid;
-  cached = use_cache;
+  forced_grid = false;
+  cached = true;
   
   if(verbose & debug){
     Rcpp::Rcout << "Bipps::Bipps initialization.\n";
@@ -102,7 +98,6 @@ Bipps::Bipps(
   
   // domain partitioning
   indexing    = indexing_in;
-  indexing_obs = indexing_obs_in;
   
   // initial values
   w = w_in; 
@@ -159,7 +154,6 @@ Bipps::Bipps(
   init_matern(num_threads, matern_twonu_in, use_ps);
   
   LambdaHw = w * Lambda.t(); // arma::zeros(coords.n_rows, q); 
-  wU = w;
   
   rand_norm_mat = arma::zeros(coords.n_rows, k);
   rand_unif = arma::zeros(n_blocks);
@@ -242,16 +236,9 @@ void Bipps::make_gibbs_groups(){
   int pblocks = 0;
   for(unsigned int i=0; i<n_blocks; i++){
     int u = block_names(i) - 1;
-    if(forced_grid){
-      // forced grid, then predict blocks are all those that have some missing
-      if(block_ct_obs(u) < na_1_blocks(u).n_elem){
-        pblocks ++;
-      }
-    } else {
-      // original grid, then predict blocks are the empty ones
-      if(block_ct_obs(u) == 0){
-        pblocks ++;
-      }
+    // original grid, then predict blocks are the empty ones
+    if(block_ct_obs(u) == 0){
+      pblocks ++;
     }
   }
   
@@ -266,20 +253,13 @@ void Bipps::make_gibbs_groups(){
     int p=0; 
     for(unsigned int i=0; i<n_blocks; i++){
       int u = block_names(i) - 1;
-      if(forced_grid){
-        // forced grid, then predict blocks are all those that have some missing
-        if(block_ct_obs(u) < na_1_blocks(u).n_elem){
-          u_predicts(p) = u;
-          p ++;
-        }
-      } else {
-        // original grid, then predict blocks are the empty ones
-        if(block_ct_obs(u) == 0){
-          u_predicts(p) = u;
-          
-          p ++;
-        }
+      // original grid, then predict blocks are the empty ones
+      if(block_ct_obs(u) == 0){
+        u_predicts(p) = u;
+        
+        p ++;
       }
+      
     }
   } else {
     if(verbose & debug){
@@ -298,11 +278,11 @@ void Bipps::make_gibbs_groups(){
     for(unsigned int i=0; i<u_predicts.n_elem; i++){
       int u = u_predicts(i);
       if(block_ct_obs(u) > 0){
-        Hpred(i) = arma::zeros(k,indexing(u).n_elem,indexing_obs(u).n_elem);
+        Hpred(i) = arma::zeros(k,indexing(u).n_elem,indexing(u).n_elem);
       } else {
-        Hpred(i) = arma::zeros(k,parents_indexing(u).n_elem,indexing_obs(u).n_elem);
+        Hpred(i) = arma::zeros(k,parents_indexing(u).n_elem,indexing(u).n_elem);
       }
-      Rcholpred(i) = arma::zeros(k,indexing_obs(u).n_elem);
+      Rcholpred(i) = arma::zeros(k,indexing(u).n_elem);
     }
   }
   if(verbose & debug){
@@ -329,7 +309,7 @@ void Bipps::na_study(){
 #pragma omp parallel for 
 #endif
   for(unsigned int i=0; i<n_blocks;i++){
-    arma::mat yvec = y.rows(indexing_obs(i));
+    arma::mat yvec = y.rows(indexing(i));
     na_1_blocks(i) = arma::zeros<arma::uvec>(yvec.n_rows);
     na_0_blocks(i) = arma::zeros<arma::uvec>(yvec.n_rows);
     // consider NA if all margins are missing
@@ -418,13 +398,7 @@ void Bipps::init_cache(){
   kr_caching = arma::unique(kr_caching_ix);
   
   starting_kr = 0;
-  if(forced_grid){
-    cx_and_kr_caching = arma::join_vert(coords_caching,
-                                        kr_caching);
-    starting_kr = coords_caching.n_elem;
-  } else {
-    cx_and_kr_caching = kr_caching;
-  }
+  cx_and_kr_caching = kr_caching;
   
   // 
   findkr = arma::zeros<arma::uvec>(n_blocks);
@@ -439,11 +413,9 @@ void Bipps::init_cache(){
     arma::uvec cpx = arma::find(kr_caching == kr_cached_ix, 1, "first");
     findkr(u) = cpx(0);
     
-    //if(forced_grid){
     int u_cached_ix = coords_caching_ix(u);
     arma::uvec cx = arma::find( coords_caching == u_cached_ix, 1, "first" );
     findcc(u) = cx(0);
-    //}
   }
   
   if(verbose & debug){
@@ -505,7 +477,7 @@ void Bipps::init_gibbs_index(){
   for(unsigned int i=0; i<n_blocks; i++){ // all blocks
     int u = block_names(i)-1; // block name
     
-    if(indexing_obs(u).n_elem > 0){ 
+    if(indexing(u).n_elem > 0){ 
       // number of coords of the jth parent of the child
       dim_by_parent(u) = arma::zeros<arma::uvec>(parents(u).n_elem + 1);
       for(unsigned int j=0; j<parents(u).n_elem; j++){
@@ -565,9 +537,9 @@ void Bipps::init_meshdata(const arma::mat& theta_in){
   //param_data.w_cond_mean_K = arma::field<arma::cube> (n_blocks);
   //param_data.w_cond_prec   = arma::field<arma::cube> (n_blocks);
   
-  param_data.Rproject = arma::field<arma::cube>(n_blocks);
-  param_data.Riproject = arma::field<arma::cube>(n_blocks);
-  param_data.Hproject = arma::field<arma::cube>(n_blocks);
+  //param_data.Rproject = arma::field<arma::cube>(n_blocks);
+  //param_data.Riproject = arma::field<arma::cube>(n_blocks);
+  //param_data.Hproject = arma::field<arma::cube>(n_blocks);
   
   param_data.Smu_start = arma::field<arma::mat>(n_blocks);
   param_data.Sigi_chol = arma::field<arma::mat>(n_blocks);
@@ -584,11 +556,7 @@ void Bipps::init_meshdata(const arma::mat& theta_in){
     //param_data.w_cond_mean_K(i) = arma::zeros(indexing(i).n_elem, parents_indexing(i).n_elem, k);
     //param_data.w_cond_prec(i) = arma::zeros(indexing(i).n_elem, indexing(i).n_elem, k);
     
-    if(forced_grid){
-      param_data.Hproject(i) = arma::zeros(k, indexing(i).n_elem, indexing_obs(i).n_elem);
-      param_data.Rproject(i) = arma::zeros(k, k, indexing_obs(i).n_elem);
-      param_data.Riproject(i) = arma::zeros(k, k, indexing_obs(i).n_elem);
-    }
+    
     param_data.Smu_start(i) = arma::zeros(k*indexing(i).n_elem, 1);
     param_data.Sigi_chol(i) = arma::zeros(k*indexing(i).n_elem, k*indexing(i).n_elem);
     param_data.AK_uP(i) = arma::field<arma::cube>(children(i).n_elem);
@@ -630,9 +598,9 @@ void Bipps::init_meshdata(const arma::mat& theta_in){
   // noncentral parameters
   param_data.ll_y = arma::zeros(coords.n_rows, 1);
   param_data.ll_y_all       = 0; 
-  param_data.DplusSi = arma::zeros(q, q, y.n_rows);
-  param_data.DplusSi_c = arma::zeros(q, q, y.n_rows);
-  param_data.DplusSi_ldet = arma::zeros(y.n_rows);
+  //param_data.DplusSi = arma::zeros(q, q, y.n_rows);
+  //param_data.DplusSi_c = arma::zeros(q, q, y.n_rows);
+  //param_data.DplusSi_ldet = arma::zeros(y.n_rows);
   
   param_data.H_cache = arma::field<arma::cube> (kr_caching.n_elem);
   param_data.Ri_cache = arma::field<arma::cube> (kr_caching.n_elem);
@@ -754,15 +722,7 @@ void Bipps::update_block_covpars(int u, BippsDataLMC& data){
     data.w_cond_prec_parents_ptr.at(u) = &data.Kppi_cache(krfound);
   } 
   
-  if(forced_grid){
-    int ccfound = findcc(u);
-    CviaKron_HRj_bdiag_(data.Hproject(u), data.Rproject(u), data.Riproject(u),
-                        data.Kxxi_cache(ccfound),
-                        coords, indexing_obs(u), 
-                        na_1_blocks(u), indexing(u), 
-                        k, data.theta, matern);
-    
-  }
+  
   //message("[update_block_covpars] done.");
 }
 
@@ -846,28 +806,28 @@ void Bipps::init_betareg(){
     //}
   }
 }
-
+/*
 void Bipps::calc_DplusSi(int u, BippsDataLMC & data, const arma::mat& Lam, const arma::vec& tsqi){
   //message("[calc_DplusSi] start.");
   //int indxsize = indexing(u).n_elem;
   
   if((k==1) & (q==1)){
-    for(unsigned int ix=0; ix<indexing_obs(u).n_elem; ix++){
+    for(unsigned int ix=0; ix<indexing(u).n_elem; ix++){
       if(na_1_blocks(u)(ix) == 1){
         arma::mat Dtau = Lam(0, 0) * Lam(0, 0) * data.Rproject(u).slice(ix) + 1.0/tsqi(0);
         // fill 
-        data.DplusSi_ldet(indexing_obs(u)(ix)) = - log(Dtau(0,0));
-        data.DplusSi.slice(indexing_obs(u)(ix)) = 1.0/Dtau; // 1.0/ (L * L);
-        data.DplusSi_c.slice(indexing_obs(u)(ix)) = pow(Dtau, -0.5);
+        data.DplusSi_ldet(indexing(u)(ix)) = - log(Dtau(0,0));
+        data.DplusSi.slice(indexing(u)(ix)) = 1.0/Dtau; // 1.0/ (L * L);
+        data.DplusSi_c.slice(indexing(u)(ix)) = pow(Dtau, -0.5);
       }
     }
   } else {
-    for(unsigned int ix=0; ix<indexing_obs(u).n_elem; ix++){
+    for(unsigned int ix=0; ix<indexing(u).n_elem; ix++){
       if(na_1_blocks(u)(ix) == 1){
         arma::mat Dtau = Lam * data.Rproject(u).slice(ix) * Lam.t();
         arma::vec II = arma::ones(q);
         for(unsigned int j=0; j<q; j++){
-          if(na_mat(indexing_obs(u)(ix), j) == 1){
+          if(na_mat(indexing(u)(ix), j) == 1){
             // this outcome margin observed at this location
             Dtau(j, j) += 1/tsqi(j);
           } else {
@@ -889,16 +849,16 @@ void Bipps::calc_DplusSi(int u, BippsDataLMC & data, const arma::mat& Lam, const
         Lifull.submat(obs, obs) = Li;
         
         // fill 
-        data.DplusSi_ldet(indexing_obs(u)(ix)) = 2.0 * arma::accu(log(Li.diag()));
-        data.DplusSi.slice(indexing_obs(u)(ix)) = Ditau;
-        data.DplusSi_c.slice(indexing_obs(u)(ix)) = Lifull;
+        //data.DplusSi_ldet(indexing(u)(ix)) = 2.0 * arma::accu(log(Li.diag()));
+        //data.DplusSi.slice(indexing(u)(ix)) = Ditau;
+        //data.DplusSi_c.slice(indexing(u)(ix)) = Lifull;
       }
     }
   }
   
   
 }
-
+*/
 bool Bipps::calc_ywlogdens(BippsDataLMC& data){
   start_overall = std::chrono::steady_clock::now();
   // called for a proposal of theta
@@ -913,13 +873,6 @@ bool Bipps::calc_ywlogdens(BippsDataLMC& data){
     int u = block_names(r)-1;
     update_block_covpars(u, data);
     update_block_wlogdens(u, data);
-    
-    if(forced_grid){
-      if(arma::all(familyid == 0)){
-        calc_DplusSi(u, data, Lambda, tausq_inv);
-      }
-      update_lly(u, data, LambdaHw, false);
-    }
   }
   
   data.loglik_w = 
@@ -959,62 +912,28 @@ bool Bipps::get_loglik_comps_w(BippsDataLMC& data){
 void Bipps::update_lly(int u, BippsDataLMC& data, const arma::mat& LamHw, bool map){
   //message("[update_lly] start.");
   start = std::chrono::steady_clock::now();
-  data.ll_y.rows(indexing_obs(u)).fill(0.0);
-  
-  if(arma::all(familyid == 0) & (!map)){
-    for(unsigned int ix=0; ix<indexing_obs(u).n_elem; ix++){
-      if(na_1_blocks(u)(ix) == 1){
-        // at least one outcome available
-        arma::vec ymean = arma::trans(y.row(indexing_obs(u)(ix)) - 
-          XB.row(indexing_obs(u)(ix)) - LamHw.row(indexing_obs(u)(ix)));
-        data.ll_y.row(indexing_obs(u)(ix)) += 
-          + 0.5 * data.DplusSi_ldet(indexing_obs(u)(ix)) - 0.5 * ymean.t() * 
-          data.DplusSi.slice(indexing_obs(u)(ix)) * ymean;
+  data.ll_y.rows(indexing(u)).fill(0.0);
+
+  // some nongaussian
+  int nr = indexing(u).n_elem;
+  for(int ix=0; ix<nr; ix++){
+    int i = indexing(u)(ix);
+    double loglike = 0;
+    for(unsigned int j=0; j<q; j++){
+      if(na_mat(i, j) > 0){
+        //double xz = x(i) * z(i);
+        double xb = XB(i, j) + LamHw(i, j);
+        double ystar=0;
+        double tausq = 1.0/tausq_inv(j);
+        arma::vec nograd = 
+          get_likdens_likgrad(loglike, y(i,j), ystar, tausq, offsets(i, j), 
+                              xb, familyid(j), false);
+
       }
     }
-  } else {
-    // some nongaussian
-    int nr = indexing_obs(u).n_elem;
-    for(int ix=0; ix<nr; ix++){
-      int i = indexing_obs(u)(ix);
-      double loglike = 0;
-      for(unsigned int j=0; j<q; j++){
-        if(na_mat(i, j) > 0){
-          //double xz = x(i) * z(i);
-          double xb = XB(i, j) + LamHw(i, j);
-          double ystar=0;
-          double tausq = 1.0/tausq_inv(j);
-          arma::vec nograd = 
-            get_likdens_likgrad(loglike, y(i,j), ystar, tausq, offsets(i, j), 
-                                xb, familyid(j), false);
-          /*
-          double sigmoid, poislambda;
-          if(familyid(j) == 0){ //if(family == "gaussian"){
-            double y_minus_mean = y(i, j) - offsets(i, j) - XB(i, j) - LamHw(i, j);
-            loglike += gaussian_logdensity(y_minus_mean, 1.0/tausq_inv(j));
-          } else if(familyid(j) == 1){ //if(family=="poisson"){
-            poislambda = exp(offsets(i, j) + XB(i, j) + LamHw(i, j));//xz);//x(i));
-            double logdens = poisson_logpmf(y(i, j), poislambda);
-            
-            loglike += logdens;
-          } else if(familyid(j) == 2){ //if(family=="binomial"){
-            sigmoid = 1.0/(1.0 + exp(-offsets(i, j) - XB(i, j) - LamHw(i, j)));//xz ));
-            double logdens = bernoulli_logpmf(y(i, j), sigmoid);
-            loglike += logdens;
-          } else if(familyid(j) == 3){
-            sigmoid = 1.0/(1.0 + exp(-offsets(i, j) - XB(i, j) - LamHw(i, j)));//xz ));
-            loglike += betareg_logdens(y(i, j), sigmoid, tausq_inv(j));
-          } else if(familyid(j) == 4){
-            double logmu = offsets(i, j) + XB(i, j) + LamHw(i, j);
-            double mu = exp(logmu);
-            double alpha = 1.0/tausq_inv(j);
-            loglike += negbin_logdens(y(i, j), mu, logmu, alpha);
-          }*/
-        }
-      }
-      data.ll_y.row(i) += loglike;
-    }
+    data.ll_y.row(i) += loglike;
   }
+
   end = std::chrono::steady_clock::now();
 }
 
@@ -1033,16 +952,8 @@ void Bipps::logpost_refresh_after_gibbs(BippsDataLMC& data, bool sample){
     int u = block_names(r)-1;
     //update_block_covpars(u, data);
     update_block_wlogdens(u, data);
-    
-    if(forced_grid){
-      if(arma::all(familyid==0)){
-        calc_DplusSi(u, data, Lambda, tausq_inv);
-      }
-      update_lly(u, data, LambdaHw, false);
-    } else {
-      if(!sample){
-        update_lly(u, data, LambdaHw, true);
-      }
+    if(!sample){
+      update_lly(u, data, LambdaHw, true);
     }
   }
   
@@ -1202,11 +1113,7 @@ void Bipps::init_for_mcmc(){
       int u = block_names(i)-1;
       
       arma::uvec indexing_target;
-      if(forced_grid){
-        indexing_target = indexing_obs(u);
-      } else {
-        indexing_target = indexing(u);
-      }
+      indexing_target = indexing(u);
       
       NodeDataW new_block(y, na_mat, //Z.rows(indexing(u)), 
                               offset_for_w,
@@ -1244,8 +1151,6 @@ Bipps::Bipps(
   const arma::vec& block_groups_in,
   
   const arma::field<arma::uvec>& indexing_in,
-  const arma::field<arma::uvec>& indexing_obs_in,
-  
   int matern_twonu_in,
   
   const arma::mat& theta_in,
@@ -1288,7 +1193,6 @@ Bipps::Bipps(
   
   // domain partitioning
   indexing    = indexing_in;
-  indexing_obs = indexing_obs_in;
   
   // init
   u_is_which_col_f    = arma::field<arma::field<arma::field<arma::uvec> > > (n_blocks);

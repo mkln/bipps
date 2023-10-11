@@ -1,16 +1,13 @@
 bipps <- function(y, x, coords, k=NULL,
-             family = "gaussian",
+                  family = "poisson",
              axis_partition = NULL, 
              block_size = 30,
-             grid_size=NULL,
-             grid_custom = NULL,
              n_samples = 1000,
              n_burnin = 100,
              n_thin = 1,
              n_threads = 4,
              verbose = 0,
-             predict_everywhere = FALSE,
-             settings = list(adapting=TRUE, forced_grid=NULL, cache=NULL, 
+             settings = list(adapting=TRUE, 
                                 ps=TRUE, saving=TRUE, low_mem=FALSE, hmc=0),
              prior = list(beta=NULL, tausq=NULL, sigmasq = NULL,
                           phi=NULL, a=NULL, nu = NULL,
@@ -116,23 +113,12 @@ bipps <- function(y, x, coords, k=NULL,
     
     # family id 
     family <- if(length(family)==1){rep(family, q)} else {family}
-    
-    if(all(family == "gaussian")){ 
-      use_ps <- settings$ps %>% set_default(TRUE)
-    } else {
-      use_ps <- settings$ps %>% set_default(FALSE)
-    }
-    
+    use_ps <- settings$ps %>% set_default(TRUE)
     family_in <- data.frame(family=family)
-    available_families <- data.frame(id=0:4, family=c("gaussian", "poisson", "binomial", "beta", "negbinomial"))
+    available_families <- data.frame(id=0:4, family=c("poisson", "negbinomial"))
     
     suppressMessages(family_id <- family_in %>% 
                        left_join(available_families, by=c("family"="family")) %>% pull(.data$id))
-    
-    latent <- "gaussian"
-    if(!(latent %in% c("gaussian"))){
-      stop("Latent process not recognized. Choose 'gaussian'")
-    }
     
     # for spatial data: matern or expon, for spacetime: gneiting 2002 
     #n_par_each_process <- ifelse(dd==2, 1, 3) 
@@ -146,46 +132,6 @@ bipps <- function(y, x, coords, k=NULL,
       axis_partition <- rep(round((nr/block_size)^(1/dd)), dd)
     }
     
-    # -- heuristics for gridded data --
-    # if we observed all unique combinations of coordinates, this is how many rows we'd have
-    heuristic_gridded <- prod( coords %>% apply(2, function(x) length(unique(x))) )
-    # if data are not gridded, then the above should be MUCH larger than the number of rows
-    # if we're not too far off maybe the dataset is actually gridded
-    if(heuristic_gridded*0.5 < nrow(coords)){
-      data_likely_gridded <- TRUE
-    } else {
-      data_likely_gridded <- FALSE
-    }
-    if(ncol(coords) == 3){
-      # with time, check if there's equal spacing
-      timepoints <- coords[,3] %>% unique()
-      time_spacings <- timepoints %>% sort() %>% diff() %>% round(5) %>% unique()
-      if(length(time_spacings) < .1 * length(timepoints)){
-        data_likely_gridded <- TRUE
-      }
-    }
-    
-    if(is.null(settings$forced_grid)){
-      if(data_likely_gridded){
-        #cat("I think the data look gridded so I'm setting forced_grid=FALSE.\n")
-        use_forced_grid <- FALSE
-      } else {
-        #cat("I think the data don't look gridded so I'm setting forced_grid=TRUE.\n")
-        use_forced_grid <- TRUE
-      }
-    } else {
-      use_forced_grid <- settings$forced_grid %>% set_default(TRUE)
-      #if(!use_forced_grid & !data_likely_gridded){
-      #  warning("Data look not gridded: force a grid with settings$forced_grid=T.")
-      #}
-    }
-    
-    
-    use_cache <- settings$cache %>% set_default(TRUE)
-    if(use_forced_grid & (!use_cache)){
-      warning("Using a forced grid with no cache is a waste of resources.")
-    }
-     
     # what are we sampling
     sample_w       <- debug$sample_w %>% set_default(TRUE)
     sample_beta    <- debug$sample_beta %>% set_default(TRUE)
@@ -203,72 +149,12 @@ bipps <- function(y, x, coords, k=NULL,
       cbind(coords, y, na_which, x) %>% 
       as.data.frame()
     
-    #####
-    #cat("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - \n")
-    #cat("{q} outcome variables on {nrow(unique(coords))} unique locations." %>% glue::glue())
-    #cat("\n")
-    if(use_forced_grid){ 
-      # user showed intention to use fixed grid
-      if(!is.null(grid_custom$grid)){
-        grid <- grid_custom$grid
-        gridcoords_lmc <- grid %>% as.data.frame()
-        colnames(gridcoords_lmc)[1:dd] <- colnames(coords)
-        if(ncol(grid) == dd + p){
-          # we have the covariate values at the reference grid, so let's use them to make predictions
-          colnames(gridcoords_lmc)[-(1:dd)] <- colnames(x)
-        }
-      } else {
-        gs <- round(nrow(coords)^(1/ncol(coords)))
-        gsize <- if(is.null(grid_size)){ rep(gs, ncol(coords)) } else { grid_size }
-        
-        xgrids <- list()
-        for(j in 1:dd){
-          xgrids[[j]] <- seq(min(coords[,j]), max(coords[,j]), length.out=gsize[j])
-        }
-        
-        gridcoords_lmc <- expand.grid(xgrids)
-      }
-      
-      #cat("Forced grid built with {nrow(gridcoords_lmc)} locations." %>% glue::glue())
-      #cat("\n")
-      simdata <- dplyr::bind_rows(simdata %>% dplyr::mutate(thegrid=0), 
-                           gridcoords_lmc %>% dplyr::mutate(thegrid=1))
-      
-      absize <- round(nrow(gridcoords_lmc)/prod(axis_partition))
-    } else {
-      if(length(axis_partition) < ncol(coords)){
-        stop("Error: axis_partition not specified for all axes.")
-      }
-      simdata %<>% 
-        dplyr::mutate(thegrid = 0)
-      absize <- round(nrow(simdata)/prod(axis_partition))
-    }
-    #cat("Partitioning grid axes into {paste0(axis_partition, collapse=', ')} intervals. Approx block size {absize}" %>% glue::glue())
-    #cat("\n")
-    
-    #cat("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - \n")
-    
-    #simdata %<>% 
-    #  dplyr::arrange(!!!rlang::syms(paste0("Var", 1:dd)))
-    
     coords <- simdata %>% 
       dplyr::select(dplyr::contains("Var")) %>% 
       as.matrix()
     sort_ix     <- simdata$ix
-    
-    # Domain partitioning and gibbs groups
-    if(use_forced_grid){
-      if(!is.null(grid_custom$axis_interval_partition)){
-        fixed_thresholds <- grid_custom$axis_interval_partition
-        axis_partition <- sapply(fixed_thresholds, function(x) length(x) + 1)
-      } else {
-        gridded_coords <- simdata %>% dplyr::filter(.data$thegrid==1) %>% dplyr::select(dplyr::contains("Var")) %>% as.matrix()
-        fixed_thresholds <- 1:dd %>% lapply(function(i) kthresholdscp(gridded_coords[,i], axis_partition[i])) 
-      }
-    } else {
-      fixed_thresholds <- 1:dd %>% lapply(function(i) kthresholdscp(coords[,i], axis_partition[i])) 
-    }
-    
+
+    fixed_thresholds <- 1:dd %>% lapply(function(i) kthresholdscp(coords[,i], axis_partition[i])) 
     
     # guaranteed to produce blocks using Mv
     system.time(fake_coords_blocking <- coords %>% 
@@ -306,9 +192,7 @@ bipps <- function(y, x, coords, k=NULL,
       parents_children <- mesh_graph_build(coords_blocking %>% dplyr::select(-.data$ix), axis_partition, FALSE, n_threads, debugdag)
       })
   } else {
-    graph_time <- system.time({
-      parents_children <- mesh_graph_build_hypercube(coords_blocking %>% dplyr::select(-.data$ix))
-    })
+    stop("Input dimension is too high?!")
   }
   
   parents                      <- parents_children[["parents"]] 
@@ -322,39 +206,16 @@ bipps <- function(y, x, coords, k=NULL,
     block_groups %<>% rep(0, length(block_groups))
   }
   
-  
-  # these two lines remove the DAG and make all blocks independent
-  #parents %<>% lapply(function(x) x[x==-1]) 
-  #children %<>% lapply(function(x) x[x==-1])
-  
   suppressMessages(simdata_in <- coords_blocking %>% #cbind(data.frame(ix=cbix)) %>% 
     dplyr::select(-na_which) %>% dplyr::left_join(simdata))
   #simdata[is.na(simdata$ix), "ix"] <- seq(nr_start+1, nr_full)
   
-  #simdata_in %<>% 
-  #  dplyr::arrange(!!!rlang::syms(paste0("Var", 1:dd)))
+  
   blocking <- simdata_in$block %>% 
     factor() %>% as.integer()
   indexing <- (1:nrow(simdata_in)-1) %>% 
     split(blocking)
-  
-  if(use_forced_grid){
-    indexing_grid_ids <- simdata_in$thegrid %>% split(blocking)
-    indexing_grid <- list()
-    indexing_obs <- list()
-    for(i in 1:length(indexing)){
-      indexing_grid[[i]] <- indexing[[i]][which(indexing_grid_ids[[i]] == 1)]
-      if(predict_everywhere){
-        indexing_obs[[i]] <- indexing[[i]]
-      } else {
-        indexing_obs[[i]] <- indexing[[i]][which(indexing_grid_ids[[i]] == 0)]
-      }
-    }
-  } else {
-    indexing_grid <- indexing
-    indexing_obs <- indexing_grid
-  }
-  
+
   if(1){
     # prior and starting values for mcmc
     
@@ -617,21 +478,15 @@ bipps <- function(y, x, coords, k=NULL,
     dplyr::select(1:dd, .data$thegrid) %>%
     dplyr::rename(!!!coords_renamer,
                   forced_grid=.data$thegrid)
-  
-  ## checking
-  if(use_forced_grid){
-    suppressMessages(checking <- coordsdata %>% left_join(coords_blocking) %>% 
-      group_by(.data$block) %>% summarise(nfg = sum(.data$forced_grid)) %>% filter(.data$nfg==0))
-    if(nrow(checking) > 0){
-      stop("Partition is too fine for the current reference set. ")
-    }
-  }
-  
+
   if(verbose > 0){
     cat("Sending to MCMC.\n")
   }
   
   mcmc_run <- meshed_mcmc
+  
+  use_forced_grid <- FALSE
+  use_cache <- TRUE
   
   comp_time <- system.time({
       results <- mcmc_run(y, family_id, x, coords, k,
@@ -639,7 +494,7 @@ bipps <- function(y, x, coords, k=NULL,
                               parents, children, 
                               block_names, block_groups,
                               
-                              indexing_grid, indexing_obs,
+                              indexing, indexing,
                               
                               set_unif_bounds,
                               beta_Vi, 
