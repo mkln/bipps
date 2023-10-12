@@ -1,12 +1,12 @@
 rm(list=ls())
-library(meshed)
+library(bipps)
 library(magrittr)
 library(dplyr)
 library(ggplot2)
 
 set.seed(2020)
 
-SS <- 50 # coord values for jth dimension 
+SS <- 20 # coord values for jth dimension 
 dd <- 2 # spatial dimension
 n <- SS^2 # number of locations
 q <- 2 # number of outcomes
@@ -26,7 +26,7 @@ philist <- c(1, 1) # spatial decay for each factor
 # cholesky decomp of covariance matrix
 LClist <- 1:k %>% lapply(function(i) t(chol(
   #exp(- philist[i] * as.matrix(dist(clist[[i]])))))) #^2 + diag(nrow(clist[[i]]))*1e-5))))
-  meshed:::Cov_matern(clist[[i]], clist[[i]], 1, philist[i], 0.5, 0, T, 10))))
+  bipps:::Cov_matern(clist[[i]], clist[[i]], 1, philist[i], 0.5, 0, T, 10))))
 
 # generating the factors
 wlist <- 1:k %>% lapply(function(i) LClist[[i]] %*% rnorm(n))
@@ -52,10 +52,9 @@ Beta <- matrix(rnorm(p*q), ncol=q) * 0
 # outcome matrix, fully observed
 linear_predictor <- XX %*% Beta + WW %*% t(Lambda)
 YY_full <- matrix(0, ncol=q, nrow=nrow(linear_predictor))
-YY_full[,1] <- rbinom(n, 1, 1/(1+exp(linear_predictor[,1])))
-#bphi <- 15
-YY_full[,2] <- rbinom(n, 1, 1/(1+exp(linear_predictor[,2])))
-#rbeta(nrow(linear_predictor),  mu * bphi, (1-mu) * bphi)
+
+YY_full[,1] <- rpois(n, exp(linear_predictor[,1]))
+YY_full[,2] <- rpois(n, exp(linear_predictor[,2]))
 
 # .. introduce some NA values in the outcomes
 YY <- YY_full
@@ -79,24 +78,22 @@ mcmc_keep <- 1000
 mcmc_burn <- 5000
 mcmc_thin <- 1
 
-axis_partition <- c(6, 6) # resulting in blocks of approx size 32
 
 set.seed(1)
 mesh_total_time <- system.time({
-  meshout <- spmeshed(YY, family=c("binomial", "binomial"), XX, coords, k = 2,
-                      axis_partition=axis_partition,
+  meshout <- bipps(YY, family="poisson", XX, coords, k = 2,
+                      block_size=25,
                       n_samples = mcmc_keep, n_burn = mcmc_burn, n_thin = mcmc_thin, 
                       n_threads = 16,
                       starting=list(lambda = Lambda, beta=Beta, phi=1),
                       prior = list(btmlim= .01, toplim=1e3, phi=c(.1, 20), nu=c(.5, .5)),
-                      settings = list(adapting=T, forced_grid=F, cache=T, saving=F, ps=T, hmc=0),
+                      settings = list(adapting=T, saving=F, ps=T, hmc=0),
                       verbose=10,
-                      debug=list(sample_beta=F, sample_tausq=F, 
+                      debug=list(sample_beta=T, sample_tausq=F, 
                                  sample_theta=T, sample_w=T, sample_lambda=T,
                                  verbose=F, debug=F)
   )})
 
-sum(meshout$w_mcmc[[1]])
 
 plot_cube <- function(cube_mcmc, q, k, name="Parameter"){
   par(mar=c(2.5,2,1,1), mfrow=c(q,k))
@@ -114,7 +111,7 @@ plot_cube(meshout$beta_mcmc, p, q, "Beta")
 
 # posterior means
 meshout$tausq_mcmc %>% apply(1, mean)
-meshout$lambda_mcmc %>% apply(1:2, mean) #dlm::ergMean) %>% `[`(,1,1) %>% plot(type='l')
+meshout$lambda_mcmc %>% apply(1:2, mean) 
 meshout$beta_mcmc %>% apply(1:2, mean)
 meshout$theta_mcmc %>% apply(1:2, mean)
 

@@ -115,7 +115,7 @@ bipps <- function(y, x, coords, k=NULL,
     family <- if(length(family)==1){rep(family, q)} else {family}
     use_ps <- settings$ps %>% set_default(TRUE)
     family_in <- data.frame(family=family)
-    available_families <- data.frame(id=0:4, family=c("poisson", "negbinomial"))
+    available_families <- data.frame(id=c(1,4), family=c("poisson", "negbinomial"))
     
     suppressMessages(family_id <- family_in %>% 
                        left_join(available_families, by=c("family"="family")) %>% pull(.data$id))
@@ -475,18 +475,14 @@ bipps <- function(y, x, coords, k=NULL,
   names(coords_renamer) <- orig_coords_colnames
   
   coordsdata <- simdata_in %>% 
-    dplyr::select(1:dd, .data$thegrid) %>%
-    dplyr::rename(!!!coords_renamer,
-                  forced_grid=.data$thegrid)
+    dplyr::select(1:dd) %>%
+    dplyr::rename(!!!coords_renamer)
 
   if(verbose > 0){
     cat("Sending to MCMC.\n")
   }
   
-  mcmc_run <- meshed_mcmc
-  
-  use_forced_grid <- FALSE
-  use_cache <- TRUE
+  mcmc_run <- bipps_mcmc
   
   comp_time <- system.time({
       results <- mcmc_run(y, family_id, x, coords, k,
@@ -494,7 +490,7 @@ bipps <- function(y, x, coords, k=NULL,
                               parents, children, 
                               block_names, block_groups,
                               
-                              indexing, indexing,
+                              indexing, 
                               
                               set_unif_bounds,
                               beta_Vi, 
@@ -524,9 +520,7 @@ bipps <- function(y, x, coords, k=NULL,
                               
                               which_hmc,
                               mcmc_adaptive, # adapting
-                              
-                              use_cache,
-                              use_forced_grid,
+                            
                               use_ps,
                               
                               mcmc_verbose, mcmc_debug, # verbose, debug

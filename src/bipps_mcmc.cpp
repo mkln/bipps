@@ -24,7 +24,6 @@ Rcpp::List bipps_mcmc(
     
     
     const arma::field<arma::uvec>& indexing,
-    const arma::field<arma::uvec>& indexing_obs,
     
     const arma::mat& set_unif_bounds_in,
     const arma::mat& beta_Vi,
@@ -54,8 +53,6 @@ Rcpp::List bipps_mcmc(
     int which_hmc=0,
     bool adapting=false,
     
-    bool use_cache=true,
-    bool forced_grid=true,
     bool use_ps=true,
     
     bool verbose=false,
