@@ -18,7 +18,8 @@ bipps <- function(y, x, coords, k=NULL,
              debug = list(sample_beta=TRUE, sample_tausq=TRUE, 
                           sample_theta=TRUE, sample_w=TRUE, sample_lambda=TRUE,
                           verbose=FALSE, debug=FALSE),
-             indpart=FALSE
+             indpart=FALSE,
+             just_preprocess=FALSE
 ){
 
   # init
@@ -60,7 +61,10 @@ bipps <- function(y, x, coords, k=NULL,
     
     debugdag <- debug$dag %>% set_default(1)
     
+    
+    
     coords %<>% as.matrix()
+    
     
     dd             <- ncol(coords)
     p              <- ncol(x)
@@ -147,7 +151,8 @@ bipps <- function(y, x, coords, k=NULL,
     na_which <- ifelse(!is.na(yrownas), 1, NA)
     simdata <- data.frame(ix=1:nrow(coords)) %>% 
       cbind(coords, y, na_which, x) %>% 
-      as.data.frame()
+      as.data.frame() %>% 
+      arrange(!!!rlang::syms(paste0("Var", 1:dd)))
     
     coords <- simdata %>% 
       dplyr::select(dplyr::contains("Var")) %>% 
@@ -484,54 +489,56 @@ bipps <- function(y, x, coords, k=NULL,
   
   mcmc_run <- bipps_mcmc
   
-  comp_time <- system.time({
-      results <- mcmc_run(y, family_id, x, coords, k,
-                              
-                              parents, children, 
-                              block_names, block_groups,
-                              
-                              indexing, 
-                              
-                              set_unif_bounds,
-                              beta_Vi, 
-                              
-                          
-                              sigmasq_ab,
-                              tausq_ab,
-                          
-                              matern_fix_twonu,
-                              
-                              start_v, 
-                          
-                              start_lambda,
-                              lambda_mask,
-                          
-                              start_theta,
-                              start_beta,
-                              start_tausq,
-                              
-                              mcmc_mh_sd,
-                              
-                              mcmc_keep, mcmc_burn, mcmc_thin,
-                          
-                              mcmc_startfrom,
-                              
-                              n_threads,
-                              
-                              which_hmc,
-                              mcmc_adaptive, # adapting
+  if(!just_preprocess){
+    comp_time <- system.time({
+        results <- mcmc_run(y, family_id, x, coords, k,
+                                
+                                parents, children, 
+                                block_names, block_groups,
+                                
+                                indexing, 
+                                
+                                set_unif_bounds,
+                                beta_Vi, 
+                                
                             
-                              use_ps,
+                                sigmasq_ab,
+                                tausq_ab,
+                            
+                                matern_fix_twonu,
+                                
+                                start_v, 
+                            
+                                start_lambda,
+                                lambda_mask,
+                            
+                                start_theta,
+                                start_beta,
+                                start_tausq,
+                                
+                                mcmc_mh_sd,
+                                
+                                mcmc_keep, mcmc_burn, mcmc_thin,
+                            
+                                mcmc_startfrom,
+                                
+                                n_threads,
+                                
+                                which_hmc,
+                                mcmc_adaptive, # adapting
                               
-                              mcmc_verbose, mcmc_debug, # verbose, debug
-                              mcmc_print_every, # print all iter
-                              low_mem,
-                              # sampling of:
-                              # beta tausq sigmasq theta w
-                              sample_beta, sample_tausq, 
-                              sample_lambda,
-                              sample_theta, sample_w) 
-    })
+                                use_ps,
+                                
+                                mcmc_verbose, mcmc_debug, # verbose, debug
+                                mcmc_print_every, # print all iter
+                                low_mem,
+                                # sampling of:
+                                # beta tausq sigmasq theta w
+                                sample_beta, sample_tausq, 
+                                sample_lambda,
+                                sample_theta, sample_w) 
+      })
+  }
   
   if(saving){
     
@@ -547,7 +554,7 @@ bipps <- function(y, x, coords, k=NULL,
       parents, children, 
       block_names, block_groups,
       
-      indexing_grid, indexing_obs,
+      indexing,
       
       set_unif_bounds,
       beta_Vi, 
@@ -573,7 +580,6 @@ bipps <- function(y, x, coords, k=NULL,
       
       mcmc_adaptive, # adapting
       
-      use_forced_grid,
       use_ps,
       matern_fix_twonu,
       
@@ -590,10 +596,19 @@ bipps <- function(y, x, coords, k=NULL,
   }
   
   returning <- list(coordsdata = coordsdata,
-                    savedata = saved) %>% 
-    c(results)
+                    savedata = saved) 
   
-  class(returning) <- "spmeshed"
+  
+  if(!just_preprocess){
+    returning <- c(returning, results)
+    class(returning) <- "spmeshed"
+    return ( returning )
+  } else {
+    class(returning) <- "spmeshed_preprocess_only"
+    return(returning)
+  }
+  
+  
   
   return(returning) 
     

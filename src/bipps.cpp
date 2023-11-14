@@ -685,7 +685,7 @@ bool Bipps::refresh_cache(BippsDataLMC& data){
     }
   }
   
-  if(false & (verbose & debug)){
+  if(verbose & debug){
     end_overall = std::chrono::steady_clock::now();
     Rcpp::Rcout << "[refresh_cache] "
                 << std::chrono::duration_cast<std::chrono::microseconds>(end_overall - start_overall).count()
@@ -865,6 +865,10 @@ bool Bipps::calc_ywlogdens(BippsDataLMC& data){
   // updates involve the covariances
   // and Sigma for adjusting the error terms
 
+  if(verbose & debug){
+    Rcpp::Rcout << "[calc_ywlogdens] start.\n";
+  }
+  
 #ifdef _OPENMP
 #pragma omp parallel for 
 #endif
