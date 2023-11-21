@@ -11,3 +11,4 @@ renv*
 *.pdf
 example/data/
 .Rprofile
+.vscode
