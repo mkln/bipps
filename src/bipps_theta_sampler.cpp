@@ -53,7 +53,7 @@ void Bipps::metrop_theta(){
         alter_data.theta.tail_rows(1).t(), param_data.theta.tail_rows(1).t(), 2, 1); // sigmasq
     
     if(param_data.theta.n_rows > 5){
-      for(int i=0; i<param_data.theta.n_rows-2; i++){
+      for(auto i=0; i<param_data.theta.n_rows-2; i++){
         prior_logratio += arma::accu( -alter_data.theta.row(i) +param_data.theta.row(i) ); // exp
       }
     }

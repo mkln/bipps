@@ -2,13 +2,6 @@
 
 using namespace std;
 
-void apply2sd(arma::mat& x){
-  for(unsigned int j=0; j<x.n_cols; j++){
-    x.col(j) = x.col(j) / arma::stddev(x.col(j));  
-  }
-}
-
-
 void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sample_lambda, bool sample_tau){
   if(verbose & debug){
     Rcpp::Rcout << "[sample_hmc_BetaLambdaTau] starting\n";
@@ -27,7 +20,7 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
 #ifdef _OPENMP
 #pragma omp parallel for 
 #endif
-  for(unsigned int j=0; j<q; j++){
+  for(auto j=0; j<q; j++){
     
     ///
     /// ** Beta & Lambda update **
@@ -49,6 +42,7 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
       arma::mat WWj = bipps.w.submat(bipps.ix_by_q_a(j), subcols); // acts as X //*********
       if(!sample) { apply2sd(WWj); } // ***
 
+      // Rcpp::Rcout << "X.n_cols " << bipps.X.n_cols << endl;
       arma::mat XW = arma::join_horiz(bipps.X.rows(bipps.ix_by_q_a(j)), WWj);
 
       XW_joined = arma::join_vert(XW_joined, XW);
@@ -56,16 +50,16 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
     }
 
     arma::mat BL_Vi = arma::eye( XW_joined.n_cols, XW_joined.n_cols );
+
     BL_Vi.submat(0, 0, p-1, p-1) = Vi; // prior precision for beta
     arma::vec BL_Vim = arma::zeros(XW_joined.n_cols);
-
-    int family = familyid(j);
     
     // is this the right way of doing this? after instantiating like in the above?
     // where to get tausq_inv from?
     NodeDataB& lambda_block = lambda_node.at(j);
     lambda_block.update_mv(offsets_joined, 1.0/tausq_inv(j), BL_Vim, BL_Vi);
-    
+    lambda_block.X = XW_joined;
+
     arma::vec curLrow = arma::join_vert(
       multi_Beta.col(j),
       arma::trans(multi_Lambda.submat(oneuv*j, subcols)));
@@ -75,14 +69,13 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
 
     AdaptE& lambda_adapt = lambda_hmc_adapt.at(j);
     // nongaussian
-    //Rcpp::Rcout << "step " << endl;
     lambda_adapt.step();
 
     //do I need a persistent lambda_hmc_started object?
     // may want to simplfy sampler selection
     if((lambda_hmc_started(j) == 0) && (lambda_adapt.i == 10)){
       // wait a few iterations before starting adaptation
-      //Rcpp::Rcout << "reasonable stepsize " << endl;
+      // Rcpp::Rcout << "reasonable stepsize " << endl;
       
       double lambda_eps = find_reasonable_stepsize(curLrow, lambda_block, rnorm_row);
       
@@ -91,10 +84,11 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
       new_adapting_scheme.init(lambda_eps, n_params, which_hmc, 1e4);
       lambda_adapt = new_adapting_scheme;
       lambda_hmc_started(j) = 1;
-      //Rcpp::Rcout << "done initiating adapting scheme" << endl;
+      // Rcpp::Rcout << "done initiating adapting scheme" << endl;
     }
     if(which_hmc == 0){
       // some form of manifold mala
+      // bug is in here!
       sampled = simpa_cpp(curLrow, lambda_block, lambda_adapt, 
                               rnorm_row, lambda_runif(j), lambda_runif2(j), 
                               debug);

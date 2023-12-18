@@ -165,10 +165,9 @@ Rcpp::List bipps_mcmc(
     }
   }
   
-  bool acceptable = false;
   if(mcmc > 0){
-    acceptable = msp.get_loglik_comps_w( msp.param_data );
-    acceptable = msp.get_loglik_comps_w( msp.alter_data );
+    msp.get_loglik_comps_w( msp.param_data );
+    msp.get_loglik_comps_w( msp.alter_data );
   }
   
   double current_loglik = tempr*msp.param_data.loglik_w;

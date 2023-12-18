@@ -1,5 +1,5 @@
 
-#include <RcppArmadillo.h>
+#include "RcppArmadillo.h"
 #include "bipps.h"
 
 class MultiBipps {
@@ -26,8 +26,7 @@ public:
 
   arma::mat coords;
 
-  arma::vec y_joined;
-  arma::mat Lambda_mask;
+  arma::umat Lambda_mask;
   arma::uvec oneuv;
   arma::uvec familyid;
   arma::mat Vi;
@@ -41,7 +40,7 @@ public:
   RAMAdapt theta_adapt;
   arma::mat theta_unif_bounds;
 
-  int nThreads;
+  int num_threads = 1;
   MaternParams matern;
   void init_matern(int num_threads, int matern_twonu_in, bool use_ps);
 
@@ -61,14 +60,22 @@ public:
   MultiBipps(){};
   MultiBipps(
     const std::vector<Bipps>& multi_bipps_in,
+    const arma::uvec& familyid_in,
+    const arma::mat& multi_Beta_in,
+    const arma::mat& multi_Lambda_in,
+    const arma::umat& multi_Lambda_mask_in,
+    const arma::mat& multi_theta_in,
     const arma::vec& tausq_inv_in,
-    const arma::mat& theta_in,
     const arma::mat& metrop_theta_bounds,
     const arma::mat& metrop_theta_sd,
     const arma::mat& coords_in,
+    const arma::mat& beta_Vi_in,
+    int which_hmc_in,
     bool adapting_theta,
+    int matern_twonu_in,
     bool use_ps,
-    int num_threads,
-    int matern_twonu_in
+    int num_threads_in,
+    bool verbose_in,
+    bool debugging
     );
 };

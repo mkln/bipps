@@ -97,6 +97,12 @@ inline arma::vec kdiagchol(const arma::mat& Koo, const arma::mat& Kos, const arm
   return sqrt( 1.0/( Koo.diag() - temp ) );
 }
 
+inline void apply2sd(arma::mat& x){
+  for(unsigned int j=0; j<x.n_cols; j++){
+    x.col(j) = x.col(j) / arma::stddev(x.col(j));  
+  }
+}
+
 
 
 #endif

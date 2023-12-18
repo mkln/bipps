@@ -169,7 +169,6 @@ void Bipps::nongaussian_w(BippsDataLMC& data, bool sample){
         }
         
         
-        bool do_gibbs = arma::all(familyid == 0);
         arma::mat w_temp = w_current;
        
         if(which_hmc == 0){

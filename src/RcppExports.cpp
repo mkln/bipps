@@ -335,6 +335,55 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// multi_bipps_mcmc
+Rcpp::List multi_bipps_mcmc(const arma::field<arma::mat>& y_list, const arma::uvec& family, const arma::field<arma::mat>& X_list, const arma::mat& coords, int k, const arma::field<arma::field<arma::uvec>>& parents_list, const arma::field<arma::field<arma::uvec>>& children_list, const arma::field<arma::vec>& layer_names_list, const arma::field<arma::vec>& layer_gibbs_group_list, const arma::field<arma::field<arma::uvec>>& indexing_list, const arma::mat& set_unif_bounds_in, const arma::mat& beta_Vi, const arma::vec& sigmasq_ab, const arma::vec& tausq_ab, int matern_twonu, const arma::field<arma::mat>& start_w, const arma::mat& lambda, const arma::umat& lambda_mask, const arma::mat& theta, const arma::mat& beta, const arma::vec& tausq, const arma::mat& mcmcsd, int mcmc_keep, int mcmc_burn, int mcmc_thin, int mcmc_startfrom, int num_threads, int which_hmc, bool adapting, bool use_ps, bool verbose, bool debug, int print_every, bool low_mem, bool sample_beta, bool sample_tausq, bool sample_lambda, bool sample_theta, bool sample_w);
+RcppExport SEXP _bipps_multi_bipps_mcmc(SEXP y_listSEXP, SEXP familySEXP, SEXP X_listSEXP, SEXP coordsSEXP, SEXP kSEXP, SEXP parents_listSEXP, SEXP children_listSEXP, SEXP layer_names_listSEXP, SEXP layer_gibbs_group_listSEXP, SEXP indexing_listSEXP, SEXP set_unif_bounds_inSEXP, SEXP beta_ViSEXP, SEXP sigmasq_abSEXP, SEXP tausq_abSEXP, SEXP matern_twonuSEXP, SEXP start_wSEXP, SEXP lambdaSEXP, SEXP lambda_maskSEXP, SEXP thetaSEXP, SEXP betaSEXP, SEXP tausqSEXP, SEXP mcmcsdSEXP, SEXP mcmc_keepSEXP, SEXP mcmc_burnSEXP, SEXP mcmc_thinSEXP, SEXP mcmc_startfromSEXP, SEXP num_threadsSEXP, SEXP which_hmcSEXP, SEXP adaptingSEXP, SEXP use_psSEXP, SEXP verboseSEXP, SEXP debugSEXP, SEXP print_everySEXP, SEXP low_memSEXP, SEXP sample_betaSEXP, SEXP sample_tausqSEXP, SEXP sample_lambdaSEXP, SEXP sample_thetaSEXP, SEXP sample_wSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::field<arma::mat>& >::type y_list(y_listSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type family(familySEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::mat>& >::type X_list(X_listSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type coords(coordsSEXP);
+    Rcpp::traits::input_parameter< int >::type k(kSEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::field<arma::uvec>>& >::type parents_list(parents_listSEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::field<arma::uvec>>& >::type children_list(children_listSEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::vec>& >::type layer_names_list(layer_names_listSEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::vec>& >::type layer_gibbs_group_list(layer_gibbs_group_listSEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::field<arma::uvec>>& >::type indexing_list(indexing_listSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type set_unif_bounds_in(set_unif_bounds_inSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type beta_Vi(beta_ViSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type sigmasq_ab(sigmasq_abSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type tausq_ab(tausq_abSEXP);
+    Rcpp::traits::input_parameter< int >::type matern_twonu(matern_twonuSEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::mat>& >::type start_w(start_wSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< const arma::umat& >::type lambda_mask(lambda_maskSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type tausq(tausqSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type mcmcsd(mcmcsdSEXP);
+    Rcpp::traits::input_parameter< int >::type mcmc_keep(mcmc_keepSEXP);
+    Rcpp::traits::input_parameter< int >::type mcmc_burn(mcmc_burnSEXP);
+    Rcpp::traits::input_parameter< int >::type mcmc_thin(mcmc_thinSEXP);
+    Rcpp::traits::input_parameter< int >::type mcmc_startfrom(mcmc_startfromSEXP);
+    Rcpp::traits::input_parameter< int >::type num_threads(num_threadsSEXP);
+    Rcpp::traits::input_parameter< int >::type which_hmc(which_hmcSEXP);
+    Rcpp::traits::input_parameter< bool >::type adapting(adaptingSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_ps(use_psSEXP);
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    Rcpp::traits::input_parameter< bool >::type debug(debugSEXP);
+    Rcpp::traits::input_parameter< int >::type print_every(print_everySEXP);
+    Rcpp::traits::input_parameter< bool >::type low_mem(low_memSEXP);
+    Rcpp::traits::input_parameter< bool >::type sample_beta(sample_betaSEXP);
+    Rcpp::traits::input_parameter< bool >::type sample_tausq(sample_tausqSEXP);
+    Rcpp::traits::input_parameter< bool >::type sample_lambda(sample_lambdaSEXP);
+    Rcpp::traits::input_parameter< bool >::type sample_theta(sample_thetaSEXP);
+    Rcpp::traits::input_parameter< bool >::type sample_w(sample_wSEXP);
+    rcpp_result_gen = Rcpp::wrap(multi_bipps_mcmc(y_list, family, X_list, coords, k, parents_list, children_list, layer_names_list, layer_gibbs_group_list, indexing_list, set_unif_bounds_in, beta_Vi, sigmasq_ab, tausq_ab, matern_twonu, start_w, lambda, lambda_mask, theta, beta, tausq, mcmcsd, mcmc_keep, mcmc_burn, mcmc_thin, mcmc_startfrom, num_threads, which_hmc, adapting, use_ps, verbose, debug, print_every, low_mem, sample_beta, sample_tausq, sample_lambda, sample_theta, sample_w));
+    return rcpp_result_gen;
+END_RCPP
+}
 // cube_tcrossprod
 arma::cube cube_tcrossprod(const arma::cube& x);
 RcppExport SEXP _bipps_cube_tcrossprod(SEXP xSEXP) {
@@ -404,6 +453,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_bipps_mesh_graph_cpp3", (DL_FUNC) &_bipps_mesh_graph_cpp3, 1},
     {"_bipps_mesh_graph_hyper", (DL_FUNC) &_bipps_mesh_graph_hyper, 7},
     {"_bipps_repeat_centroid_perturb", (DL_FUNC) &_bipps_repeat_centroid_perturb, 2},
+    {"_bipps_multi_bipps_mcmc", (DL_FUNC) &_bipps_multi_bipps_mcmc, 39},
     {"_bipps_cube_tcrossprod", (DL_FUNC) &_bipps_cube_tcrossprod, 1},
     {"_bipps_cube_correl_from_lambda", (DL_FUNC) &_bipps_cube_correl_from_lambda, 1},
     {"_bipps_summary_list_mean", (DL_FUNC) &_bipps_summary_list_mean, 2},

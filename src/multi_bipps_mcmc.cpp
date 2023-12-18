@@ -8,23 +8,23 @@
 
 //[[Rcpp::export]]
 Rcpp::List multi_bipps_mcmc(
-    const arma::field<arma::mat>& y, // list of responses
+    const arma::field<arma::mat>& y_list, // list of responses
     const arma::uvec& family,
 
-    const arma::field<arma::mat>& X, // list of covariates
+    const arma::field<arma::mat>& X_list, // list of covariates
 
     const arma::mat& coords, // assuming that all coords are the same across samples (and all other derived features)
 
     int k,
 
-    const arma::field<arma::uvec>& parents, // similar to coords, but for the graph. same for all samples.
-    const arma::field<arma::uvec>& children,
+    const arma::field<arma::field<arma::uvec>>& parents_list, // similar to coords, but for the graph. same for all samples.
+    const arma::field<arma::field<arma::uvec>>& children_list,
 
-    const arma::vec& layer_names,
-    const arma::vec& layer_gibbs_group,
+    const arma::field<arma::vec>& layer_names_list,
+    const arma::field<arma::vec>& layer_gibbs_group_list,
 
 
-    const arma::field<arma::field<arma::uvec>>& indexing,
+    const arma::field<arma::field<arma::uvec>>& indexing_list,
 
     const arma::mat& set_unif_bounds_in,
     const arma::mat& beta_Vi,
@@ -92,8 +92,7 @@ Rcpp::List multi_bipps_mcmc(
   double tempr = 1;
 
   unsigned int d = coords.n_cols;
-  unsigned int q  = y[1].n_cols;
-
+  unsigned int q  = y_list[1].n_cols;
 
   if(verbose & debug){
     Rcpp::Rcout << "Limits to MCMC search for theta:\n";
@@ -110,7 +109,7 @@ Rcpp::List multi_bipps_mcmc(
     Rcpp::Rcout << "start theta \n" << theta;
   }
 
-  arma::cube b_mcmc = arma::zeros(X[1].n_cols, q, mcmc_thin*mcmc_keep);
+  arma::cube b_mcmc = arma::zeros(X_list[1].n_cols, q, mcmc_thin*mcmc_keep);
   arma::mat tausq_mcmc = arma::zeros(q, mcmc_thin*mcmc_keep);
   arma::cube theta_mcmc = arma::zeros(theta.n_rows, k, mcmc_thin*mcmc_keep);
 
@@ -120,15 +119,20 @@ Rcpp::List multi_bipps_mcmc(
     lambdastar_mcmc = arma::zeros(q, k, mcmc_thin*mcmc_keep);
   }
 
-  int num_samples = y.n_elem;
-  std::vector<Bipps> bipps_samples(num_samples);
+  int num_samples = y_list.n_elem;
+  std::vector<Bipps> bipps_samples;
+  bipps_samples.reserve(num_samples);
 
   for(int i = 0; i < num_samples; ++i) {
-    Bipps bipps(y[i], family,
-              X[i], coords, k,
-              parents, children, layer_names, layer_gibbs_group,
+    Bipps bipps(
+      y_list[i],
+      family,
+      X_list[i],
+       coords, 
+       k,
+              parents_list[i], children_list[i], layer_names_list[i], layer_gibbs_group_list[i],
 
-              indexing[i],
+              indexing_list[i],
 
               matern_twonu,
               start_w[i], beta, start_lambda, lambda_mask, start_theta, 1.0/tausq,
@@ -144,17 +148,27 @@ Rcpp::List multi_bipps_mcmc(
     bipps_samples.push_back(bipps);
   }
 
-  MultiBipps msp(bipps_samples, 
-    1.0/tausq, 
+  MultiBipps msp(
+    bipps_samples,
+    family,
+    beta,
+    start_lambda,
+    lambda_mask, 
     start_theta, 
+    1.0/tausq, 
     set_unif_bounds_in, 
     mcmcsd, 
     coords,
+    beta_Vi,
+    which_hmc,
     adapting,
+    matern_twonu,
     use_ps,
     num_threads,
-    matern_twonu
+    verbose,
+    debug
   );
+
 
   // what to do here?
   Rcpp::List caching_info;
@@ -184,12 +198,11 @@ Rcpp::List multi_bipps_mcmc(
     }
   }
 
-  bool acceptable = false;
   if(mcmc > 0){
     // what is going on here? just using this for the side effects I think.
     for(Bipps &bipps: msp.multi_bipps) {
-      acceptable = bipps.get_loglik_comps_w( bipps.param_data );
-      acceptable = bipps.get_loglik_comps_w( bipps.alter_data );
+      bipps.get_loglik_comps_w( bipps.param_data );
+      bipps.get_loglik_comps_w( bipps.alter_data );
     }
   }
 
