@@ -2,10 +2,11 @@
 .Rhistory
 .RData
 .Ruserdata
+examples/*.csv
+examples/data/*
+examples
 src/*.o
 src/*.so
 src/*.dll
 renv*
-examples/*.csv
-examples/data/*
 bipps.Rproj
