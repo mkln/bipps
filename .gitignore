@@ -8,3 +8,4 @@ src/*.dll
 renv*
 examples/*.csv
 examples/data/*
+bipps.Rproj
