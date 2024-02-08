@@ -1,12 +1,12 @@
 rm(list=ls())
-library(bipps)
+devtools::load_all()
 library(magrittr)
 library(dplyr)
 library(ggplot2)
 
 set.seed(2020)
 
-SS <- 20 # coord values for jth dimension 
+SS <- 20 # coord values for jth dimension
 dd <- 2 # spatial dimension
 n <- SS^2 # number of locations
 q <- 2 # number of outcomes
@@ -14,12 +14,12 @@ k <- 2 # number of spatial factors used to make the outcomes
 p <- 1 # number of covariates
 
 xlocs <- seq(0, 1, length.out=SS)
-coords <- expand.grid(list(xlocs, xlocs)) %>% 
-  as.data.frame() 
+coords <- expand.grid(list(xlocs, xlocs)) %>%
+  as.data.frame()
 
-clist <- 1:q %>% lapply(function(i) coords %>% 
-                          mutate(mv_id=i) %>% 
-                          as.matrix()) 
+clist <- 1:q %>% lapply(function(i) coords %>%
+                          mutate(mv_id=i) %>%
+                          as.matrix())
 
 philist <- c(1, 1) # spatial decay for each factor
 
@@ -35,7 +35,7 @@ wlist <- 1:k %>% lapply(function(i) LClist[[i]] %*% rnorm(n))
 WW <- do.call(cbind, wlist)
 
 # factor loadings
-Lambda <- matrix(0, q, ncol(WW))
+Lambda <- matrix(0, q,ncol(WW))
 diag(Lambda) <- runif(k, 1, 2)
 Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -1, 1)
 Lambda[2,2] <- .5
@@ -64,13 +64,13 @@ YY <- YY_full
 
 
 simdata <- coords %>%
-  cbind(data.frame(Outcome_full=YY_full, 
-                   Outcome_obs = YY)) 
+  cbind(data.frame(Outcome_full=YY_full,
+                   Outcome_obs = YY))
 
 simdata %>%
   tidyr::gather(Outcome, Value, -all_of(colnames(coords))) %>%
-  ggplot(aes(Var1, Var2, fill=Value)) + 
-  geom_raster() + 
+  ggplot(aes(Var1, Var2, fill=Value)) +
+  geom_raster() +
   facet_wrap(Outcome ~., ncol=2, scales="free") +
   scale_fill_viridis_c()
 
@@ -83,13 +83,13 @@ set.seed(1)
 mesh_total_time <- system.time({
   meshout <- bipps(YY, family="poisson", XX, coords, k = 2,
                       block_size=25,
-                      n_samples = mcmc_keep, n_burn = mcmc_burn, n_thin = mcmc_thin, 
+                      n_samples = mcmc_keep, n_burn = mcmc_burn, n_thin = mcmc_thin,
                       n_threads = 16,
                       starting=list(lambda = Lambda, beta=Beta, phi=1),
                       prior = list(btmlim= .01, toplim=1e3, phi=c(.1, 20), nu=c(.5, .5)),
                       settings = list(adapting=T, saving=F, ps=T, hmc=0),
                       verbose=10,
-                      debug=list(sample_beta=T, sample_tausq=F, 
+                      debug=list(sample_beta=T, sample_tausq=F,
                                  sample_theta=T, sample_w=T, sample_lambda=T,
                                  verbose=F, debug=F)
   )})
@@ -111,7 +111,7 @@ plot_cube(meshout$beta_mcmc, p, q, "Beta")
 
 # posterior means
 meshout$tausq_mcmc %>% apply(1, mean)
-meshout$lambda_mcmc %>% apply(1:2, mean) 
+meshout$lambda_mcmc %>% apply(1:2, mean)
 meshout$beta_mcmc %>% apply(1:2, mean)
 meshout$theta_mcmc %>% apply(1:2, mean)
 
@@ -122,15 +122,15 @@ colnames(wmesh) <- paste0("wmesh_", 1:k)
 ymesh <- data.frame(meshout$yhat_mcmc %>% summary_list_mean())
 colnames(ymesh) <- paste0("ymesh_", 1:q)
 
-mesh_df <- 
-  meshout$coordsdata %>% 
+mesh_df <-
+  meshout$coordsdata %>%
   cbind(ymesh)
 results <- simdata %>% left_join(mesh_df)
 
 # prediction rmse, out of sample
-results %>% filter(!complete.cases(Outcome_obs.1)) %>% 
+results %>% filter(!complete.cases(Outcome_obs.1)) %>%
   with((Outcome_full.1 - ymesh_1)^2) %>% mean() %>% sqrt()
-results %>% filter(!complete.cases(Outcome_obs.2)) %>% 
+results %>% filter(!complete.cases(Outcome_obs.2)) %>%
   with((Outcome_full.2 - ymesh_2)^2) %>% mean() %>% sqrt()
 
 (postmeans <- results %>% dplyr::select(Var1, Var2, ymesh_1) %>%

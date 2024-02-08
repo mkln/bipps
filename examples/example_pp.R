@@ -65,8 +65,8 @@ XX <- matrix(0,nrow=nrow(YY),ncol=ncol(YY))
 # XX <- NULL
 
 
-mcmc_keep <- 1000
-mcmc_burn <- 5000
+mcmc_keep <- 100
+mcmc_burn <- 500
 mcmc_thin <- 1
 
 q <- ncol(YY)
@@ -102,12 +102,12 @@ plot_cube <- function(cube_mcmc, q, k, name="Parameter"){
 # chain plots
 plot_cube(meshout$theta_mcmc, 1, k, "theta")
 plot_cube(meshout$lambda_mcmc, q, k, "Lambda")
-plot_cube(meshout$beta_mcmc, p, q, "Beta")
+# plot_cube(meshout$beta_mcmc, p, q, "Beta")
 
 # posterior means
-meshout$tausq_mcmc %>% apply(1, mean)
+# meshout$tausq_mcmc %>% apply(1, mean)
 (lambda <- meshout$lambda_mcmc %>% apply(1:2, mean))
-meshout$beta_mcmc %>% apply(1:2, mean)
+# meshout$beta_mcmc %>% apply(1:2, mean)
 meshout$theta_mcmc %>% apply(1:2, mean)
 
 # what are theta, tausq in this example? Can we just remove covariates if we don't have them?

@@ -159,7 +159,7 @@ mesh_df <-
   meshout$coordsdata %>%
   cbind(ymesh) %>%
   # cbind(wmesh) %>%
-  cbind(YY_obs)
+  cbind(YY)
 
 results <- simdata %>% left_join(mesh_df)
 
