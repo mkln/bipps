@@ -88,8 +88,8 @@ simdata <- coords %>%
 #   facet_wrap(Outcome ~., ncol=2, scales="free") +
 #   scale_fill_viridis_c()
 
-mcmc_keep <- 100
-mcmc_burn <- 500
+mcmc_keep <- 1000
+mcmc_burn <- 5000
 mcmc_thin <- 1
 
 # y_list <- YY
