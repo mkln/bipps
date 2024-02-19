@@ -7,7 +7,7 @@ output: html_document
 
 ```{r}
 library(tidyverse)
-devtools::load_all()
+library(bipps)
 set.seed(2020)
 
 grid <- expand_grid(
@@ -15,8 +15,10 @@ grid <- expand_grid(
   num_grids=c(20,30,40)
 )
 
+
 num_images = 30
 num_grids = 20
+
 purrr::pmap_df(grid,\(num_images,num_grids) {
   print(num_images)
   print(num_grids)
@@ -100,12 +102,13 @@ purrr::pmap_df(grid,\(num_images,num_grids) {
                         prior = list(btmlim= .01, toplim=1e3, phi=c(.1, 20), nu=c(.5, .5)),
                         settings = list(adapting=T, saving=F, ps=T, hmc=0),
                         verbose=10,
-                        debug=list(sample_beta=T, sample_tausq=F,
-                                   sample_theta=T, sample_w=T, sample_lambda=T,
+                        debug=list(sample_beta=F, sample_tausq=F,
+                                   sample_theta=F, sample_w=T, sample_lambda=T,
                                    verbose=T, debug=F)
     )})
 })
 ```
+
 
 ```{r}
 plot_cube <- function(cube_mcmc, q, k, name="Parameter"){
@@ -146,3 +149,4 @@ Lambda
 So fixing at the previously known values does not really guarantee that we will be able to accurately recover the other parameters.
 
 And doing the images at lower resolution seems totally fine. So I don't think I will go past 40 in my simulation study. I don't think it is buying any extra accuracy in estimating Lambda.
+
