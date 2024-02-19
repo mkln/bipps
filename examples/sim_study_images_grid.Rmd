@@ -15,6 +15,8 @@ grid <- expand_grid(
   num_grids=c(20,30,40,50,75,100)
 )
 
+num_images <- 5
+num_grids <- 20
 purrr::pmap_df(grid,\(num_images,num_grids) {
   print(num_images)
   print(num_grids)
@@ -98,10 +100,27 @@ purrr::pmap_df(grid,\(num_images,num_grids) {
                         prior = list(btmlim= .01, toplim=1e3, phi=c(.1, 20), nu=c(.5, .5)),
                         settings = list(adapting=T, saving=F, ps=T, hmc=0),
                         verbose=10,
-                        debug=list(sample_beta=T, sample_tausq=F,
-                                   sample_theta=T, sample_w=T, sample_lambda=T,
+                        debug=list(sample_beta=F, sample_tausq=F,
+                                   sample_theta=F, sample_w=T, sample_lambda=T,
                                    verbose=T, debug=F)
     )})
 })
+```
+
+
+```{r}
+plot_cube <- function(cube_mcmc, q, k, name="Parameter"){
+  par(mar=c(2.5,2,1,1), mfrow=c(q,k))
+  for(i in 1:q){
+    for(j in 1:k){
+      cube_mcmc[i, j,] %>% plot(type='l', main="{name} {i}, {j}" %>% glue::glue())
+    }
+  }
+}
+
+# chain plots
+plot_cube(meshout$theta_mcmc, 1, k, "theta")
+plot_cube(meshout$lambda_mcmc, q, k, "Lambda")
+plot_cube(meshout$beta_mcmc, p, q, "Beta")
 ```
 
