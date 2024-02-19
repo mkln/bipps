@@ -12,3 +12,4 @@ renv*
 example/data/
 .Rprofile
 .vscode
+_rslurm*

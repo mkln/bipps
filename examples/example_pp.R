@@ -43,7 +43,7 @@ extract_midpoints <- Vectorize(function(x) {
   midpoint(as.numeric(stringr::str_split(gsub("\\[|)|\\]", "", x), ",")[[1]]))
 })
 
-nx <- 20
+nx <- 40
 
 qd <- quadratcount(split(pp), nx = nx)
 

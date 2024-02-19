@@ -11,3 +11,4 @@ Imports: Rcpp (>= 1.0.5), stats, dplyr, glue, rlang, magrittr, FNN
 Suggests: ggplot2, abind, rmarkdown, knitr, tidyr
 LinkingTo: Rcpp, RcppArmadillo
 VignetteBuilder: knitr
+RoxygenNote: 7.2.3
