@@ -12,9 +12,11 @@ set.seed(2020)
 
 grid <- expand_grid(
   num_images=c(2,5,10,15,20,25,30),
-  num_grids=c(20,30,40,50,75,100)
+  num_grids=c(20,30,40)
 )
 
+num_images = 30
+num_grids = 20
 purrr::pmap_df(grid,\(num_images,num_grids) {
   print(num_images)
   print(num_grids)
@@ -93,7 +95,7 @@ purrr::pmap_df(grid,\(num_images,num_grids) {
     meshout <- multi_bipps(YY, family="poisson", XX, coords, k = 2,
                         block_size=25,
                         n_samples = mcmc_keep, n_burn = mcmc_burn, n_thin = mcmc_thin,
-                        n_threads = 1,
+                        n_threads = 8,
                         starting=list(lambda = Lambda, beta=Beta, phi=1),
                         prior = list(btmlim= .01, toplim=1e3, phi=c(.1, 20), nu=c(.5, .5)),
                         settings = list(adapting=T, saving=F, ps=T, hmc=0),
@@ -105,3 +107,42 @@ purrr::pmap_df(grid,\(num_images,num_grids) {
 })
 ```
 
+```{r}
+plot_cube <- function(cube_mcmc, q, k, name="Parameter"){
+  par(mar=c(2.5,2,1,1), mfrow=c(q,k))
+  for(i in 1:q){
+    for(j in 1:k){
+      cube_mcmc[i, j,] %>% plot(type='l', main="{name} {i}, {j}" %>% glue::glue())
+    }
+  }
+}
+
+# chain plots
+plot_cube(meshout$theta_mcmc, 1, k, "theta")
+plot_cube(meshout$lambda_mcmc, q, k, "Lambda")
+plot_cube(meshout$beta_mcmc, p, q, "Beta")
+```
+
+```{r}
+# posterior means
+meshout$tausq_mcmc %>% apply(1, mean)
+meshout$lambda_mcmc %>% apply(1:2, mean)
+meshout$beta_mcmc %>% apply(1:2, mean)
+meshout$theta_mcmc %>% apply(1:2, mean)
+```
+
+```{r}
+(lower <- meshout$lambda_mcmc %>%
+    apply(.,1:2,\(x) quantile(x,probs=c(0.025))))
+
+(upper <- meshout$lambda_mcmc %>%
+    apply(.,1:2,\(x) quantile(x,probs=c(0.975))))
+```
+
+```{r}
+Lambda
+```
+
+So fixing at the previously known values does not really guarantee that we will be able to accurately recover the other parameters.
+
+And doing the images at lower resolution seems totally fine. So I don't think I will go past 40 in my simulation study. I don't think it is buying any extra accuracy in estimating Lambda.
