@@ -101,8 +101,8 @@ Rcpp::List multi_bipps_mcmc(
   // adaptive params
   int mcmc = mcmc_thin*mcmc_keep + mcmc_burn;
 
-  arma::mat start_lambda = lambda *
-    ps_forward(theta, d, matern_twonu, use_ps);
+  arma::mat start_lambda = lambda; // *
+    //ps_forward(theta, d, matern_twonu, use_ps);
 
   arma::mat start_theta = theta;
   if(verbose & debug){
@@ -302,8 +302,8 @@ Rcpp::List multi_bipps_mcmc(
       //save
       logaccept_mcmc(m) = logaccept > 0 ? 0 : logaccept;
 
-      arma::mat lambda_transf_back = msp.multi_Lambda *
-        ps_back(msp.multi_theta, d, msp.matern.twonu, use_ps);
+      ///arma::mat lambda_transf_back = msp.multi_Lambda *
+      //  ps_back(msp.multi_theta, d, msp.matern.twonu, use_ps);
 
       double ll_joined = 0;
       double wll_joined = 0;
@@ -322,7 +322,7 @@ Rcpp::List multi_bipps_mcmc(
         if(use_ps){
           lambdastar_mcmc.slice(w_saved) = msp.multi_Lambda;
         }
-        lambda_mcmc.slice(w_saved) = lambda_transf_back;
+        lambda_mcmc.slice(w_saved) = msp.multi_Lambda;//lambda_transf_back;
 
         llsave(w_saved) = ll_joined;
         wllsave(w_saved) = wll_joined;
@@ -334,8 +334,8 @@ Rcpp::List multi_bipps_mcmc(
           arma::mat v_mcmc_joined;
           arma::mat yhat_mcmc_joined;
           for(Bipps &bipps: msp.multi_bipps) {
-            v_mcmc_joined = arma::join_vert(v_mcmc_joined, bipps.w * ps_forward(msp.multi_theta,
-                                                     d, msp.matern.twonu, use_ps));
+            //v_mcmc_joined = arma::join_vert(v_mcmc_joined, bipps.w * ps_forward(msp.multi_theta,
+            //                                         d, msp.matern.twonu, use_ps));
 
             Rcpp::RNGScope scope;
             bipps.predicty();
@@ -433,7 +433,7 @@ Rcpp::List multi_bipps_mcmc(
                 Rprintf("%.3f ", lvec(pp));
               }
             }
-            lvec = arma::vectorise(lambda_transf_back);
+            lvec = arma::vectorise(msp.multi_Lambda);
             Rprintf("\n  lambda = ");
             for(unsigned int pp=0; pp<n_print_lambda; pp++){
               Rprintf("%.3f ", lvec(pp));
