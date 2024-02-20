@@ -119,6 +119,8 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
     } 
     if(sample_lambda){
       multi_Lambda.submat(oneuv*j, subcols) = arma::trans(sampled.tail(subcols.n_elem));
+      // ensure positive diag
+      multi_Lambda = multi_Lambda * arma::diagmat(arma::sign(multi_Lambda.diag()));
     }
   
 

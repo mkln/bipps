@@ -1,4 +1,4 @@
-renv::activate(".")
+#renv::activate(".")
 rm(list=ls())
 devtools::load_all()
 library(magrittr)
@@ -8,12 +8,12 @@ library(ggplot2)
 
 set.seed(2020)
 
-num_images <- 2
+num_images <- 50
 
-SS <- 20 # coord values for jth dimension
+SS <- 16 # coord values for jth dimension
 dd <- 2 # spatial dimension
 n <- SS^2 # number of locations
-q <- 2 # number of outcomes
+q <- 4 # number of outcomes
 k <- 2 # number of spatial factors used to make the outcomes
 p <- 1 # number of covariates
 
@@ -25,12 +25,12 @@ clist <- 1:q %>% lapply(function(i) coords %>%
                           mutate(mv_id=i) %>%
                           as.matrix())
 
-philist <- c(1, 1) # spatial decay for each factor
+philist <- c(15, 15) # spatial decay for each factor
 
 # cholesky decomp of covariance matrix
 LClist <- 1:k %>% lapply(function(i) t(chol(
   #exp(- philist[i] * as.matrix(dist(clist[[i]])))))) #^2 + diag(nrow(clist[[i]]))*1e-5))))
-  bipps:::Cov_matern(clist[[i]], clist[[i]], 1, philist[i], 0.5, 0, T, 10))))
+  bipps:::Cov_matern(clist[[i]], clist[[i]], 1, philist[i], 1.5, 0, T, 10))))
 
 # generating the factors
 WW <- lapply(1:num_images,\(j) {
@@ -78,18 +78,27 @@ YY <- YY_full
 
 
 simdata <- coords %>%
-  cbind(data.frame(Outcome_full=YY_full,
-                   Outcome_obs = YY))
-#
-# simdata %>%
-#   tidyr::gather(Outcome, Value, -all_of(colnames(coords))) %>%
-#   ggplot(aes(Var1, Var2, fill=Value)) +
-#   geom_raster() +
-#   facet_wrap(Outcome ~., ncol=2, scales="free") +
-#   scale_fill_viridis_c()
+  cbind(data.frame(Outcome_full=YY_full#,
+                   #Outcome_obs = YY
+                   ))
+
 
 mcmc_keep <- 1000
 mcmc_burn <- 5000
+
+plotting_data <- FALSE
+if(plotting_data){
+ simdata %>%
+   tidyr::gather(Outcome, Value, -all_of(colnames(coords))) %>%
+   ggplot(aes(Var1, Var2, fill=Value)) +
+   geom_raster() +
+   facet_wrap(Outcome ~., ncol=2, scales="free") +
+   scale_fill_viridis_c()
+}
+
+mcmc_keep <- 10000
+mcmc_burn <- 2000
+
 mcmc_thin <- 1
 
 # y_list <- YY
@@ -111,16 +120,16 @@ mcmc_thin <- 1
 #            verbose=T, debug=T)
 
 
-devtools::load_all()
+#devtools::load_all()
 set.seed(1)
 mesh_total_time <- system.time({
   meshout <- multi_bipps(YY, family="poisson", XX, coords, k = 2,
                       block_size=25,
                       n_samples = mcmc_keep, n_burn = mcmc_burn, n_thin = mcmc_thin,
-                      n_threads = 1,
-                      starting=list(lambda = Lambda, beta=Beta, phi=1),
-                      prior = list(btmlim= .01, toplim=1e3, phi=c(.1, 20), nu=c(.5, .5)),
-                      settings = list(adapting=T, saving=F, ps=T, hmc=0),
+                      n_threads = 24,
+                      starting=list(lambda = Lambda, beta=Beta, phi=15),
+                      prior = list(btmlim= .01, toplim=1e3, phi=c(1, 40), nu=c(1.5, 1.5)),
+                      settings = list(adapting=T, saving=F, ps=F, hmc=0),
                       verbose=10,
                       debug=list(sample_beta=T, sample_tausq=F,
                                  sample_theta=T, sample_w=T, sample_lambda=T,
