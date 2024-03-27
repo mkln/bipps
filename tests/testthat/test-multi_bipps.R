@@ -7,8 +7,9 @@ test_that("Test of reproducibility across runs", {
   set.seed(2024)
   test_data <- get_test_data_multi()
 
-  set.seed(2024)
-  reference_data <- get_test_data_multi()
+  # set.seed(2024)
+  # reference_data <- get_test_data_multi()
+  reference_data <- readRDS("reference_data_multi.rds")
 
   expect_equal(test_data$beta_test,reference_data$beta_test)
   expect_equal(test_data$lambda_test,reference_data$lambda_test)
@@ -18,8 +19,7 @@ test_that("Test of reproducibility across runs", {
 
 test_that("Test of reproducibility betweem different numbers of threads of runs", {
 
-  set.seed(2024)
-  data1 <- get_test_data_multi(n_jobs = 1)
+  data1 <- readRDS("reference_data_multi.rds")
 
   set.seed(2024)
   data2 <- get_test_data_multi(n_jobs = 2)

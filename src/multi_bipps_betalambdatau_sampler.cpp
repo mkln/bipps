@@ -20,15 +20,10 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
   arma::vec tau_rnorm_precalc = mrstdnorm(q, 1);
   arma::vec tau_runif_precalc = vrunif(q);
   
-// #ifdef _OPENMP
-// #pragma omp parallel for 
-// #endif
-#pragma omp parallel 
-{
-  std::vector<arma::vec> sampleds_private;
-  std::vector<int> indices_private;
-  #pragma omp for nowait
-  for(int j=0; j<q; j++){
+#ifdef _OPENMP
+#pragma omp parallel for 
+#endif
+  for(auto j=0; j<q; j++){
     
     ///
     /// ** Beta & Lambda update **
@@ -45,10 +40,10 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
 
     for(Bipps& bipps : multi_bipps) {
       arma::vec offsets_obs = bipps.offsets(bipps.ix_by_q_a(j), oneuv * j);
-      arma::vec y_obs = bipps.y(bipps.ix_by_q_a(j), oneuv * j); // is this right??
+      arma::vec y_obs = bipps.y(bipps.ix_by_q_a(j), oneuv * j);
 
-      arma::mat WWj = bipps.w.submat(bipps.ix_by_q_a(j), subcols); // acts as X //*********
-      if(!sample) { apply2sd(WWj); } // ***
+      arma::mat WWj = bipps.w.submat(bipps.ix_by_q_a(j), subcols); // acts as X
+      if(!sample) { apply2sd(WWj); }
 
       arma::mat XW = arma::join_horiz(bipps.X.rows(bipps.ix_by_q_a(j)), WWj);
 
@@ -60,8 +55,6 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
     BL_Vi.submat(0, 0, p-1, p-1) = Vi; // prior precision for beta
     arma::vec BL_Vim = arma::zeros(XW_joined.n_cols);
     
-    // is this the right way of doing this? after instantiating like in the above?
-    // where to get tausq_inv from?
     NodeDataB& lambda_block = lambda_node.at(j);
     lambda_block.update_mv(offsets_joined, 1.0/tausq_inv(j), BL_Vim, BL_Vi);
     lambda_block.X = XW_joined;
@@ -95,7 +88,6 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
     arma::vec sampled;
     if(which_hmc == 0){
       // some form of manifold mala
-      // bug is in here!
       sampled = simpa_cpp(curLrow, lambda_block, lambda_adapt, 
                               rnorm_row, lambda_runif(j), lambda_runif2(j), 
                               debug);
@@ -137,28 +129,16 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
       bipps.XB.col(j) = bipps.X * bipps.Bcoeff.col(j); 
       bipps.LambdaHw.col(j) = bipps.w * arma::trans(bipps.Lambda.row(j));
     }
-    double means = arma::mean(arma::mean(sampled));
-    mat_sums += means;
-    sampleds_private.push_back(sampled);
-    indices_private.push_back(j);
-
-  }
-  #pragma omp critical 
-  {
-    sampleds.insert(sampleds.end(), sampleds_private.begin(), sampleds_private.end());
-    indices.insert(indices.end(), indices_private.begin(), indices_private.end());
-  }
 }
 
   if(sample_lambda) {
-    // ensure positive diag
+    // ensure positive diag, must be done outside of the OMP loop
     multi_Lambda = multi_Lambda * arma::diagmat(arma::sign(multi_Lambda.diag()));
   }
   
   if(verbose & debug){
     Rcpp::Rcout << "[sample_hmc_BetaLambdaTau] XW_joined samples\n";
   }
-  // Rcpp::Rcout << "mat_sums: " << mat_sums << endl;
   
 
   // refreshing density happens in the 'logpost_refresh_after_gibbs' function

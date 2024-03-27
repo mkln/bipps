@@ -90,10 +90,12 @@ void matern_halfint_inplace(arma::mat& res,
   double sigmasq_reparam = sigmasq/reparam;
   
   if(same){
+    arma::rowvec delta = arma::zeros<arma::rowvec>(coords.n_cols);
     for(unsigned int i=0; i<ix.n_rows; i++){
       arma::rowvec cri = coords.row(ix(i)); //x.row(i);
+      
       for(unsigned int j=i; j<iy.n_rows; j++){
-        arma::rowvec delta = cri - coords.row(iy(j)); //y.row(j);
+        delta = cri - coords.row(iy(j)); //y.row(j);
         double hphi = arma::norm(delta) * phi;
         if(hphi > 0.0){
           if(twonu == 1){
@@ -114,10 +116,11 @@ void matern_halfint_inplace(arma::mat& res,
     }
     res = arma::symmatu(res);
   } else {
+    arma::rowvec delta = arma::zeros<arma::rowvec>(coords.n_cols);
     for(unsigned int i=0; i<ix.n_rows; i++){
       arma::rowvec cri = coords.row(ix(i)); //x.row(i);
       for(unsigned int j=0; j<iy.n_rows; j++){
-        arma::rowvec delta = cri - coords.row(iy(j)); //y.row(j);
+        delta = cri - coords.row(iy(j)); //y.row(j);
         double hphi = arma::norm(delta) * phi;
         if(hphi > 0.0){
           if(twonu == 1){

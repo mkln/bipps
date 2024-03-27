@@ -9,7 +9,7 @@ library(jointprof)
 
 set.seed(2020)
 
-num_images <- 3
+num_images <- 10
 
 SS <- 16 # coord values for jth dimension
 dd <- 2 # spatial dimension
@@ -104,6 +104,7 @@ devtools::load_all()
 set.seed(1)
 # out_file <- tempfile("jointprof", fileext = ".out")
 # start_profiler(out_file)
+mesh_total_time <- system.time({
 meshout <- multi_bipps(YY, family="poisson", XX, coords, k = 2,
                     block_size=25,
                     n_samples = mcmc_keep, n_burn = mcmc_burn, n_thin = mcmc_thin,
@@ -116,16 +117,18 @@ meshout <- multi_bipps(YY, family="poisson", XX, coords, k = 2,
                                sample_theta=T, sample_w=T, sample_lambda=T,
                                verbose=T, debug=F)
 )
+})
 
+mesh_total_time
 
-idx <- seq(100,1000,100)
-
-test_data <- list(beta_test=meshout$beta_mcmc[idx],
-                  lambda_test=meshout$lambda_mcmc[idx],
-                  theta_test=meshout$theta_mcmc[idx],
-                  w_test=meshout$w_mcmc[idx])
-
-saveRDS(test_data,"tests/testthat/reference_data.rds")
+# idx <- seq(100,1000,100)
+#
+# test_data <- list(beta_test=meshout$beta_mcmc[idx],
+#                   lambda_test=meshout$lambda_mcmc[idx],
+#                   theta_test=meshout$theta_mcmc[idx],
+#                   w_test=meshout$w_mcmc[idx])
+#
+# saveRDS(test_data,"tests/testthat/reference_data.rds")
 
 # profile_data <- stop_profiler()
 # 40 seconds, unoptimized
