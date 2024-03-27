@@ -267,15 +267,19 @@ multi_bipps <- function(
         matern_fix_twonu <- floor(nu_limits)*2 + 1
         start_nu <- matern_fix_twonu
         matern_nu <- FALSE
-        strmessage <- paste0("nu set to ", start_nu/2)
-        message(strmessage)
+        if(verbose > 0){
+          strmessage <- paste0("nu set to ", start_nu/2)
+          message(strmessage)
+        }
       } else {
         if(diff(nu_limits) == 0){
           matern_fix_twonu <- floor(nu_limits[1])*2 + 1
           start_nu <- matern_fix_twonu
           matern_nu <- F
-          strmessage <- paste0("nu set to ", start_nu/2)
-          message(strmessage)
+          if(verbose > 0){
+            strmessage <- paste0("nu set to ", start_nu/2)
+            message(strmessage)
+          }
         } else {
           if(is.null(starting$nu)){
             start_nu <- mean(nu_limits)

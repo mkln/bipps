@@ -56,6 +56,12 @@ qd <- qd %>%
   rename_with(~ gsub(".Freq", "", .x), -c(x, y)) %>%
   mutate(across(c(x, y), extract_midpoints))
 
+qd %>%
+  pivot_longer(-c(x,y)) %>%
+  ggplot(aes(x,y,fill=value)) +
+  geom_tile() +
+  facet_wrap(~name)
+
 coords <- qd %>%
   select(x, y) %>%
   as.matrix()
@@ -135,7 +141,7 @@ colnames(YY_obs) <- paste0("obs_", colnames(YY))
 mesh_df <-
   meshout$coordsdata %>%
   cbind(ymesh) %>%
-  # cbind(wmesh) %>%
+  cbind(wmesh) %>%
   cbind(YY_obs)
 
 res <- mesh_df %>%

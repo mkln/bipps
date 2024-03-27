@@ -8,7 +8,14 @@ Maintainer: Michele Peruzzi <peruzzi@umich.edu>
 Description: Fits Bayesian regression models for analyzing multivariate point pattern data using latent Gaussian Processes
 License: GPL (>= 3)
 Imports: Rcpp (>= 1.0.5), stats, dplyr, glue, rlang, magrittr, FNN
-Suggests: ggplot2, abind, rmarkdown, knitr, tidyr
+Suggests: 
+    ggplot2,
+    abind,
+    rmarkdown,
+    knitr,
+    tidyr,
+    testthat (>= 3.0.0)
 LinkingTo: Rcpp, RcppArmadillo
 VignetteBuilder: knitr
 RoxygenNote: 7.2.3
+Config/testthat/edition: 3

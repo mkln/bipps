@@ -8,7 +8,10 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
   }
   start = std::chrono::steady_clock::now();
 
-  
+  double mat_sums = 0;
+  std::vector<arma::vec> sampleds;
+  std::vector<int> indices;
+
   Rcpp::RNGScope scope;
   arma::mat rnorm_precalc = mrstdnorm(q, k+p);
   arma::vec lambda_runif = vrunif(q);
@@ -17,10 +20,15 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
   arma::vec tau_rnorm_precalc = mrstdnorm(q, 1);
   arma::vec tau_runif_precalc = vrunif(q);
   
-#ifdef _OPENMP
-#pragma omp parallel for 
-#endif
-  for(auto j=0; j<q; j++){
+// #ifdef _OPENMP
+// #pragma omp parallel for 
+// #endif
+#pragma omp parallel 
+{
+  std::vector<arma::vec> sampleds_private;
+  std::vector<int> indices_private;
+  #pragma omp for nowait
+  for(int j=0; j<q; j++){
     
     ///
     /// ** Beta & Lambda update **
@@ -42,13 +50,11 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
       arma::mat WWj = bipps.w.submat(bipps.ix_by_q_a(j), subcols); // acts as X //*********
       if(!sample) { apply2sd(WWj); } // ***
 
-      // Rcpp::Rcout << "X.n_cols " << bipps.X.n_cols << endl;
       arma::mat XW = arma::join_horiz(bipps.X.rows(bipps.ix_by_q_a(j)), WWj);
 
       XW_joined = arma::join_vert(XW_joined, XW);
       offsets_joined = arma::join_vert(offsets_joined, offsets_obs);
     }
-
     arma::mat BL_Vi = arma::eye( XW_joined.n_cols, XW_joined.n_cols );
 
     BL_Vi.submat(0, 0, p-1, p-1) = Vi; // prior precision for beta
@@ -63,15 +69,14 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
     arma::vec curLrow = arma::join_vert(
       multi_Beta.col(j),
       arma::trans(multi_Lambda.submat(oneuv*j, subcols)));
+    
     arma::mat rnorm_row = arma::trans(rnorm_precalc.row(j).head(curLrow.n_elem));
     
-    arma::vec sampled;
-
     AdaptE& lambda_adapt = lambda_hmc_adapt.at(j);
+
     // nongaussian
     lambda_adapt.step();
 
-    //do I need a persistent lambda_hmc_started object?
     // may want to simplfy sampler selection
     if((lambda_hmc_started(j) == 0) && (lambda_adapt.i == 10)){
       // wait a few iterations before starting adaptation
@@ -86,6 +91,8 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
       lambda_hmc_started(j) = 1;
       // Rcpp::Rcout << "done initiating adapting scheme" << endl;
     }
+
+    arma::vec sampled;
     if(which_hmc == 0){
       // some form of manifold mala
       // bug is in here!
@@ -114,16 +121,12 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
     if(which_hmc == 7){
       Rcpp::stop("HMC algorithm 7 not implemented");
     }
+    if(sample_lambda){
+      multi_Lambda.submat(oneuv*j, subcols) = arma::trans(sampled.tail(subcols.n_elem));
+    }
     if(sample_beta){
       multi_Beta.col(j) = sampled.head(p);
     } 
-    if(sample_lambda){
-      multi_Lambda.submat(oneuv*j, subcols) = arma::trans(sampled.tail(subcols.n_elem));
-      // ensure positive diag
-      multi_Lambda = multi_Lambda * arma::diagmat(arma::sign(multi_Lambda.diag()));
-    }
-  
-
     for(Bipps& bipps: multi_bipps) {
       if(sample_beta){
         bipps.Bcoeff.col(j) = sampled.head(p);
@@ -134,10 +137,29 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
       bipps.XB.col(j) = bipps.X * bipps.Bcoeff.col(j); 
       bipps.LambdaHw.col(j) = bipps.w * arma::trans(bipps.Lambda.row(j));
     }
+    double means = arma::mean(arma::mean(sampled));
+    mat_sums += means;
+    sampleds_private.push_back(sampled);
+    indices_private.push_back(j);
 
   }
-  
+  #pragma omp critical 
+  {
+    sampleds.insert(sampleds.end(), sampleds_private.begin(), sampleds_private.end());
+    indices.insert(indices.end(), indices_private.begin(), indices_private.end());
+  }
+}
 
+  if(sample_lambda) {
+    // ensure positive diag
+    multi_Lambda = multi_Lambda * arma::diagmat(arma::sign(multi_Lambda.diag()));
+  }
+  
+  if(verbose & debug){
+    Rcpp::Rcout << "[sample_hmc_BetaLambdaTau] XW_joined samples\n";
+  }
+  // Rcpp::Rcout << "mat_sums: " << mat_sums << endl;
+  
 
   // refreshing density happens in the 'logpost_refresh_after_gibbs' function
   if(verbose & debug){
