@@ -8,10 +8,6 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
   }
   start = std::chrono::steady_clock::now();
 
-  double mat_sums = 0;
-  std::vector<arma::vec> sampleds;
-  std::vector<int> indices;
-
   Rcpp::RNGScope scope;
   arma::mat rnorm_precalc = mrstdnorm(q, k+p);
   arma::vec lambda_runif = vrunif(q);
@@ -118,23 +114,29 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
     }
     if(sample_beta){
       multi_Beta.col(j) = sampled.head(p);
-    } 
+    }
     for(Bipps& bipps: multi_bipps) {
       if(sample_beta){
         bipps.Bcoeff.col(j) = sampled.head(p);
       } 
-      if(sample_lambda){
-        bipps.Lambda.submat(oneuv*j, subcols) = arma::trans(sampled.tail(subcols.n_elem));
-      }
       bipps.XB.col(j) = bipps.X * bipps.Bcoeff.col(j); 
-      bipps.LambdaHw.col(j) = bipps.w * arma::trans(bipps.Lambda.row(j));
     }
-}
-
+  } 
   if(sample_lambda) {
     // ensure positive diag, must be done outside of the OMP loop
     multi_Lambda = multi_Lambda * arma::diagmat(arma::sign(multi_Lambda.diag()));
   }
+
+
+  for(Bipps& bipps: multi_bipps) {
+    if(sample_lambda){
+      bipps.Lambda = multi_Lambda;
+    }
+    for (auto j=0; j<q; j++) {
+      bipps.LambdaHw.col(j) = bipps.w * arma::trans(bipps.Lambda.row(j));
+    }
+  }
+
   
   if(verbose & debug){
     Rcpp::Rcout << "[sample_hmc_BetaLambdaTau] XW_joined samples\n";
