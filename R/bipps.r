@@ -1,3 +1,26 @@
+#' @title Bayesian Meshed GP regression model fit via Markov chain Monte Carlo
+#'
+#' @param y vector of response variable
+#' @param x matrix of covariates
+#' @param coords matrix of spatial coordinates
+#' @param k number of latent processes
+#' @param family family of the response variable
+#' @param axis_partition number of blocks in each axis
+#' @param block_size number of observations in each block
+#' @param n_samples number of MCMC samples
+#' @param n_burnin number of MCMC burn-in samples
+#' @param n_thin thinning rate for MCMC samples
+#' @param n_threads number of threads to use
+#' @param verbose verbosity level, integer, >= 0
+#' @param settings list of settings for the MCMC algorithm
+#' @param prior list of prior distribution parameters
+#' @param starting list of starting values for MCMC
+#' @param debug list of debugging options
+#' @param indpart logical, whether to use independent partitioning
+#' @param just_preprocess logical, whether to only preprocess the data
+#'
+#' @return list of MCMC samples
+#' @export
 bipps <- function(y, x, coords, k=NULL,
                   family = "poisson",
              axis_partition = NULL,

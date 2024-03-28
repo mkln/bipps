@@ -1,3 +1,26 @@
+#' Runs main multi_bipps MCMC sampling
+#'
+#' @param y_list list of vectors of response variables per image
+#' @param x_list list of matrices of covariates per image
+#' @param coords matrix of coordinates, common to all images
+#' @param k number of latent processes
+#' @param family family of the response variables
+#' @param axis_partition number of blocks per axis
+#' @param block_size number of observations per block
+#' @param n_samples number of MCMC samples
+#' @param n_burnin number of burn in samples
+#' @param n_thin thinning rate
+#' @param n_threads number of threads to use
+#' @param verbose integer of verbosity level, 0 for none
+#' @param settings list of settings for the MCMC
+#' @param prior list of prior parameters
+#' @param starting list of starting values
+#' @param debug list of debug options
+#' @param indpart whether to use independent partitioning
+#' @param just_preprocess whether to just preprocess the data
+#'
+#' @return list of MCMC samples
+#' @export
 multi_bipps <- function(
   y_list,
   x_list,
