@@ -2,6 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
+examples/*.csv
+examples/data/*
+examples
 src/*.o
 src/*.so
 src/*.dll
@@ -13,3 +16,4 @@ example/data/
 .Rprofile
 .vscode
 _rslurm*
+bipps.Rproj
