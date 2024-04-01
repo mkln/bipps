@@ -9,4 +9,10 @@ src/*.o
 src/*.so
 src/*.dll
 renv*
-bipps.Rproj
+*.Rproj
+*.csv
+*.pdf
+example/data/
+.Rprofile
+.vscode
+_rslurm*

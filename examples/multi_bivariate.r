@@ -1,15 +1,19 @@
+#renv::activate(".")
 rm(list=ls())
 devtools::load_all()
 library(magrittr)
 library(dplyr)
+library(tidyr)
 library(ggplot2)
 
 set.seed(2020)
 
-SS <- 20 # coord values for jth dimension
+num_images <- 50
+
+SS <- 16 # coord values for jth dimension
 dd <- 2 # spatial dimension
 n <- SS^2 # number of locations
-q <- 2 # number of outcomes
+q <- 4 # number of outcomes
 k <- 2 # number of spatial factors used to make the outcomes
 p <- 1 # number of covariates
 
@@ -21,21 +25,24 @@ clist <- 1:q %>% lapply(function(i) coords %>%
                           mutate(mv_id=i) %>%
                           as.matrix())
 
-philist <- c(1, 1) # spatial decay for each factor
+philist <- c(15, 15) # spatial decay for each factor
 
 # cholesky decomp of covariance matrix
 LClist <- 1:k %>% lapply(function(i) t(chol(
   #exp(- philist[i] * as.matrix(dist(clist[[i]])))))) #^2 + diag(nrow(clist[[i]]))*1e-5))))
-  bipps:::Cov_matern(clist[[i]], clist[[i]], 1, philist[i], 0.5, 0, T, 10))))
+  bipps:::Cov_matern(clist[[i]], clist[[i]], 1, philist[i], 1.5, 0, T, 10))))
 
 # generating the factors
-wlist <- 1:k %>% lapply(function(i) LClist[[i]] %*% rnorm(n))
+WW <- lapply(1:num_images,\(j) {
+  wlist <- 1:k %>% lapply(function(i) LClist[[i]] %*% rnorm(n))
 
-# factor matrix
-WW <- do.call(cbind, wlist)
+  # factor matrix
+  do.call(cbind, wlist)
+})
+
 
 # factor loadings
-Lambda <- matrix(0, q,ncol(WW))
+Lambda <- matrix(0, q, ncol(WW[[1]]))
 diag(Lambda) <- runif(k, 1, 2)
 Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -1, 1)
 Lambda[2,2] <- .5
@@ -44,17 +51,24 @@ Lambda[2,2] <- .5
 tau.sq <- rep(.01, q)
 TTsq <- matrix(1, nrow=n) %x% matrix(tau.sq, ncol=length(tau.sq))
 # measurement errors
+# double check these
 EE <- ( rnorm(n*length(tau.sq)) %>% matrix(ncol=length(tau.sq)) ) * TTsq^.5
 
-XX <- 1:p %>% lapply(function(i) rnorm(n, 0, .1)) %>% do.call(cbind, .)
+XX <- lapply(1:num_images,\(j) {
+  1:p %>% lapply(function(i) rnorm(n, 0, .1)) %>% do.call(cbind, .)
+})
 Beta <- matrix(rnorm(p*q), ncol=q) * 0
 
 # outcome matrix, fully observed
-linear_predictor <- XX %*% Beta + WW %*% t(Lambda)
-YY_full <- matrix(0, ncol=q, nrow=nrow(linear_predictor))
+linear_predictor <- lapply(1:num_images,\(i) XX[[i]] %*% Beta + WW[[i]] %*% t(Lambda))
+YY_full <- lapply(1:num_images,\(i) {
+  y <- matrix(0, ncol=q, nrow=nrow(linear_predictor[[i]]))
+  y <- lapply(1:q,\(j) {
+    rpois(n, exp(linear_predictor[[i]][,j]))
+  })
+  y <- do.call(cbind,y)
+})
 
-YY_full[,1] <- rpois(n, exp(linear_predictor[,1]))
-YY_full[,2] <- rpois(n, exp(linear_predictor[,2]))
 
 # .. introduce some NA values in the outcomes
 YY <- YY_full
@@ -64,30 +78,58 @@ YY <- YY_full
 
 
 simdata <- coords %>%
-  cbind(data.frame(Outcome_full=YY_full,
-                   Outcome_obs = YY))
+  cbind(data.frame(Outcome_full=YY_full#,
+                   #Outcome_obs = YY
+                   ))
 
-simdata %>%
-  tidyr::gather(Outcome, Value, -all_of(colnames(coords))) %>%
-  ggplot(aes(Var1, Var2, fill=Value)) +
-  geom_raster() +
-  facet_wrap(Outcome ~., ncol=2, scales="free") +
-  scale_fill_viridis_c()
 
 mcmc_keep <- 1000
 mcmc_burn <- 5000
+
+plotting_data <- FALSE
+if(plotting_data){
+ simdata %>%
+   tidyr::gather(Outcome, Value, -all_of(colnames(coords))) %>%
+   ggplot(aes(Var1, Var2, fill=Value)) +
+   geom_raster() +
+   facet_wrap(Outcome ~., ncol=2, scales="free") +
+   scale_fill_viridis_c()
+}
+
+mcmc_keep <- 10000
+mcmc_burn <- 2000
+
 mcmc_thin <- 1
 
+# y_list <- YY
+# x_list <- XX
+# k = 2
+# family <- "poisson"
+# axis_partition <- NULL
+# block_size=25
+# n_samples = mcmc_keep
+# n_burnin = mcmc_burn
+# n_thin = mcmc_thin
+# n_threads = 16
+# starting=list(lambda = Lambda, beta=Beta, phi=1)
+# prior = list(btmlim= .01, toplim=1e3, phi=c(.1, 20), nu=c(.5, .5))
+# settings = list(adapting=T, saving=F, ps=T, hmc=0)
+# verbose=10
+# debug=list(sample_beta=T, sample_tausq=F,
+#            sample_theta=T, sample_w=T, sample_lambda=T,
+#            verbose=T, debug=T)
 
+
+#devtools::load_all()
 set.seed(1)
 mesh_total_time <- system.time({
-  meshout <- bipps(YY, family="poisson", XX, coords, k = 2,
+  meshout <- multi_bipps(YY, family="poisson", XX, coords, k = 2,
                       block_size=25,
                       n_samples = mcmc_keep, n_burn = mcmc_burn, n_thin = mcmc_thin,
-                      n_threads = 16,
-                      starting=list(lambda = Lambda, beta=Beta, phi=1),
-                      prior = list(btmlim= .01, toplim=1e3, phi=c(.1, 20), nu=c(.5, .5)),
-                      settings = list(adapting=T, saving=F, ps=T, hmc=0),
+                      n_threads = 24,
+                      starting=list(lambda = Lambda, beta=Beta, phi=15),
+                      prior = list(btmlim= .01, toplim=1e3, phi=c(1, 40), nu=c(1.5, 1.5)),
+                      settings = list(adapting=T, saving=F, ps=F, hmc=0),
                       verbose=10,
                       debug=list(sample_beta=T, sample_tausq=F,
                                  sample_theta=T, sample_w=T, sample_lambda=T,
@@ -124,7 +166,10 @@ colnames(ymesh) <- paste0("ymesh_", 1:q)
 
 mesh_df <-
   meshout$coordsdata %>%
-  cbind(ymesh)
+  cbind(ymesh) %>%
+  # cbind(wmesh) %>%
+  cbind(YY)
+
 results <- simdata %>% left_join(mesh_df)
 
 # prediction rmse, out of sample
@@ -140,4 +185,23 @@ results %>% filter(!complete.cases(Outcome_obs.2)) %>%
     facet_wrap(Variable ~ ., ncol= 2) +
     scale_fill_viridis_c())
 
+res <- mesh_df %>%
+  pivot_longer(-c(x,y),names_pattern = "(pred|obs)_(.*)$",names_to=c(".value","type"))
 
+
+res %>%
+  pivot_longer(c(pred,obs)) %>%
+  ggplot(aes(x,y, fill=value)) +
+  geom_tile() +
+  facet_wrap(name ~ type, ncol= q) +
+  scico::scale_fill_scico(palette = "batlow")
+
+res %>%
+  group_by(type) %>%
+  summarise(rmse=sqrt(mean((pred-obs)^2)))
+
+(lower <- meshout$lambda_mcmc %>%
+    apply(.,1:2,\(x) quantile(x,probs=c(0.025))))
+
+(upper <- meshout$lambda_mcmc %>%
+    apply(.,1:2,\(x) quantile(x,probs=c(0.975))))

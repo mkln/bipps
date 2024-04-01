@@ -200,9 +200,7 @@ inline arma::mat simpa_cpp(arma::mat current_q,
   // currents
   arma::vec xgrad;
   double joint0, eps1, eps2;
-  
-  bool chol_error = false;
-  
+    
   bool adapting_preconditioner = !adaptparams.use_C_const(runifadapt);
   
   xgrad = postparams.compute_dens_and_grad(joint0, current_q);

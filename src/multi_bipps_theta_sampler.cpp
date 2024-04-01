@@ -1,63 +1,62 @@
-#include "bipps.h"
+#include "multi_bipps.h"
 
 using namespace std;
 
-void Bipps::metrop_theta(){
+void MultiBipps::metrop_theta(){
   if(verbose & debug){
     Rcpp::Rcout << "[metrop_theta] start\n";
   }
   
   theta_adapt.count_proposal();
   
-  arma::vec param = arma::vectorise(param_data.theta);
-  arma::vec new_param = arma::vectorise(param_data.theta);
+  arma::vec param = arma::vectorise(multi_theta);
+  arma::vec new_param = arma::vectorise(multi_theta);
   
   Rcpp::RNGScope scope;
   arma::vec U_update = mrstdnorm(new_param.n_elem, 1);
-  
   
   // theta
   new_param = par_huvtransf_back(par_huvtransf_fwd(param, theta_unif_bounds) + 
     theta_adapt.paramsd * U_update, theta_unif_bounds);
   
-  //new_param(1) = 1; //***
-  
-  //bool out_unif_bounds = unif_bounds(new_param, theta_unif_bounds);
-  
   arma::mat theta_proposal = 
     arma::mat(new_param.memptr(), new_param.n_elem/k, k);
+
+  std::vector<bool> acceptable_joined;
+
+  double current_loglik = 0;
+  double new_loglik = 0;
   
-  if(matern.using_ps == false){
-    theta_proposal.tail_rows(1).fill(1);
+  for(Bipps &bipps: multi_bipps) {
+    bipps.alter_data.theta = theta_proposal;
+    bool acceptable = bipps.get_loglik_comps_w( bipps.alter_data );
+    acceptable_joined.push_back(acceptable);
+
+    new_loglik += bipps.alter_data.loglik_w;
+    current_loglik += bipps.param_data.loglik_w;
   }
   
-  alter_data.theta = theta_proposal;
-  
- 
-  bool acceptable = get_loglik_comps_w( alter_data );
+  // loop over all logliks and add together?
   
   bool accepted = false;
   double logaccept = 0;
-  double current_loglik = 0;
-  double new_loglik = 0;
   double prior_logratio = 0;
   double jacobian = 0;
+
+  bool acceptable = std::all_of(acceptable_joined.begin(), acceptable_joined.end(), [](bool v) { return v; });
   
-  if(acceptable){
-    new_loglik = alter_data.loglik_w;
-    //acceptable = get_loglik_comps_w( param_data );
-    
-    current_loglik = param_data.loglik_w;
-    
+  if(acceptable){ 
+    // stay the same
     prior_logratio = calc_prior_logratio(
-        alter_data.theta.tail_rows(1).t(), param_data.theta.tail_rows(1).t(), 2, 1); // sigmasq
+        theta_proposal.tail_rows(1).t(), multi_theta.tail_rows(1).t(), 2, 1); // sigmasq
     
-    if(param_data.theta.n_rows > 5){
-      for(auto i=0; i<param_data.theta.n_rows-2; i++){
-        prior_logratio += arma::accu( -alter_data.theta.row(i) +param_data.theta.row(i) ); // exp
+    if(multi_theta.n_rows > 5){
+      for(int i=0; i<multi_theta.n_rows-2; i++){
+        prior_logratio += arma::accu( -theta_proposal.row(i) +multi_theta.row(i) ); // exp
       }
     }
     
+    // stay the same
     jacobian  = calc_jacobian(new_param, param, theta_unif_bounds);
     logaccept = new_loglik - current_loglik + 
       prior_logratio +
@@ -78,7 +77,10 @@ void Bipps::metrop_theta(){
     theta_adapt.count_accepted();
     
     accept_make_change();
-    param_data.theta = theta_proposal;
+    multi_theta = theta_proposal;
+    for(Bipps &bipps: multi_bipps) {
+      bipps.param_data.theta = theta_proposal;
+    }
     
     if(debug & verbose){
       Rcpp::Rcout << "[theta] accepted (log accept. " << logaccept << " : " << new_loglik << " " << current_loglik << 

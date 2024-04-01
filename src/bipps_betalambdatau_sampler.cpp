@@ -2,12 +2,6 @@
 
 using namespace std;
 
-void apply2sd(arma::mat& x){
-  for(unsigned int j=0; j<x.n_cols; j++){
-    x.col(j) = x.col(j) / arma::stddev(x.col(j));  
-  }
-}
-
 void Bipps::deal_with_BetaLambdaTau(BippsDataLMC& data, bool sample,
                                      bool sample_beta, bool sample_lambda, bool sample_tau){
   sample_hmc_BetaLambdaTau(sample, sample_beta, sample_lambda, sample_tau);

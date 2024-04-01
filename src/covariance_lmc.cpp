@@ -229,7 +229,7 @@ arma::mat Correlationf(
     if(!matern.estimating_nu){
       // exponential
       double phi = theta(0);
-      double sigmasq = theta(1);
+      double sigmasq = 1;//theta(1);
       
       int nutimes2 = matern.twonu;
       double reparam = 1.0; 
