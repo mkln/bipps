@@ -2,8 +2,7 @@
 
 S3method(predict,bipps)
 export("%>%")
-export(bipps)
-export(multi_bipps)
+export("bipps", "multi_bipps","summary_list_mean", "summary_list_q")
 importFrom(FNN,get.knnx)
 importFrom(Rcpp,sourceCpp)
 importFrom(dplyr,arrange)
@@ -22,5 +21,3 @@ importFrom(magrittr,add)
 importFrom(magrittr,divide_by)
 importFrom(stats,prcomp)
 useDynLib(bipps, .registration = TRUE)
-
-export("bipps", "multi_bipps", "summary_list_mean", "summary_list_q")
