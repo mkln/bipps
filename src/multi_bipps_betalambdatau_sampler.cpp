@@ -8,7 +8,6 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
   }
   start = std::chrono::steady_clock::now();
 
-  
   Rcpp::RNGScope scope;
   arma::mat rnorm_precalc = mrstdnorm(q, k+p);
   arma::vec lambda_runif = vrunif(q);
@@ -37,25 +36,21 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
 
     for(Bipps& bipps : multi_bipps) {
       arma::vec offsets_obs = bipps.offsets(bipps.ix_by_q_a(j), oneuv * j);
-      arma::vec y_obs = bipps.y(bipps.ix_by_q_a(j), oneuv * j); // is this right??
+      arma::vec y_obs = bipps.y(bipps.ix_by_q_a(j), oneuv * j);
 
-      arma::mat WWj = bipps.w.submat(bipps.ix_by_q_a(j), subcols); // acts as X //*********
-      if(!sample) { apply2sd(WWj); } // ***
+      arma::mat WWj = bipps.w.submat(bipps.ix_by_q_a(j), subcols); // acts as X
+      if(!sample) { apply2sd(WWj); }
 
-      // Rcpp::Rcout << "X.n_cols " << bipps.X.n_cols << endl;
       arma::mat XW = arma::join_horiz(bipps.X.rows(bipps.ix_by_q_a(j)), WWj);
 
       XW_joined = arma::join_vert(XW_joined, XW);
       offsets_joined = arma::join_vert(offsets_joined, offsets_obs);
     }
-
     arma::mat BL_Vi = arma::eye( XW_joined.n_cols, XW_joined.n_cols );
 
     BL_Vi.submat(0, 0, p-1, p-1) = Vi; // prior precision for beta
     arma::vec BL_Vim = arma::zeros(XW_joined.n_cols);
     
-    // is this the right way of doing this? after instantiating like in the above?
-    // where to get tausq_inv from?
     NodeDataB& lambda_block = lambda_node.at(j);
     lambda_block.update_mv(offsets_joined, 1.0/tausq_inv(j), BL_Vim, BL_Vi);
     lambda_block.X = XW_joined;
@@ -63,15 +58,14 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
     arma::vec curLrow = arma::join_vert(
       multi_Beta.col(j),
       arma::trans(multi_Lambda.submat(oneuv*j, subcols)));
+    
     arma::mat rnorm_row = arma::trans(rnorm_precalc.row(j).head(curLrow.n_elem));
     
-    arma::vec sampled;
-
     AdaptE& lambda_adapt = lambda_hmc_adapt.at(j);
+
     // nongaussian
     lambda_adapt.step();
 
-    //do I need a persistent lambda_hmc_started object?
     // may want to simplfy sampler selection
     if((lambda_hmc_started(j) == 0) && (lambda_adapt.i == 10)){
       // wait a few iterations before starting adaptation
@@ -86,9 +80,10 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
       lambda_hmc_started(j) = 1;
       // Rcpp::Rcout << "done initiating adapting scheme" << endl;
     }
+
+    arma::vec sampled;
     if(which_hmc == 0){
       // some form of manifold mala
-      // bug is in here!
       sampled = simpa_cpp(curLrow, lambda_block, lambda_adapt, 
                               rnorm_row, lambda_runif(j), lambda_runif2(j), 
                               debug);
@@ -114,30 +109,39 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
     if(which_hmc == 7){
       Rcpp::stop("HMC algorithm 7 not implemented");
     }
-    if(sample_beta){
-      multi_Beta.col(j) = sampled.head(p);
-    } 
     if(sample_lambda){
       multi_Lambda.submat(oneuv*j, subcols) = arma::trans(sampled.tail(subcols.n_elem));
-      // ensure positive diag
-      multi_Lambda = multi_Lambda * arma::diagmat(arma::sign(multi_Lambda.diag()));
     }
-  
-
+    if(sample_beta){
+      multi_Beta.col(j) = sampled.head(p);
+    }
     for(Bipps& bipps: multi_bipps) {
       if(sample_beta){
         bipps.Bcoeff.col(j) = sampled.head(p);
       } 
-      if(sample_lambda){
-        bipps.Lambda.submat(oneuv*j, subcols) = arma::trans(sampled.tail(subcols.n_elem));
-      }
       bipps.XB.col(j) = bipps.X * bipps.Bcoeff.col(j); 
+    }
+  } 
+  if(sample_lambda) {
+    // ensure lambda identifiability, must be done outside of the OMP loop
+    multi_Lambda = multi_Lambda * arma::diagmat(arma::sign(multi_Lambda.diag()));
+  }
+
+
+  for(Bipps& bipps: multi_bipps) {
+    if(sample_lambda){
+      bipps.Lambda = multi_Lambda;
+    }
+    for (auto j=0; j<q; j++) {
       bipps.LambdaHw.col(j) = bipps.w * arma::trans(bipps.Lambda.row(j));
     }
+  }
 
+  
+  if(verbose & debug){
+    Rcpp::Rcout << "[sample_hmc_BetaLambdaTau] XW_joined samples\n";
   }
   
-
 
   // refreshing density happens in the 'logpost_refresh_after_gibbs' function
   if(verbose & debug){

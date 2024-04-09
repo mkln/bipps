@@ -26,14 +26,28 @@ void MultiBipps::metrop_theta(){
 
   double current_loglik = 0;
   double new_loglik = 0;
-  
-  for(Bipps &bipps: multi_bipps) {
-    bipps.alter_data.theta = theta_proposal;
-    bool acceptable = bipps.get_loglik_comps_w( bipps.alter_data );
-    acceptable_joined.push_back(acceptable);
 
-    new_loglik += bipps.alter_data.loglik_w;
-    current_loglik += bipps.param_data.loglik_w;
+  // run get_loglik_comps_w on first bipps object, then copy relevant data to all others.
+
+  Bipps &first_bipps = multi_bipps[0];
+  first_bipps.alter_data.theta = theta_proposal;
+  bool first_acceptable = first_bipps.get_loglik_comps_w( first_bipps.alter_data );
+
+  if(first_acceptable) {
+    for(Bipps &bipps: multi_bipps) {
+      bipps.alter_data.CC_cache = first_bipps.alter_data.CC_cache;
+      bipps.alter_data.Kxxi_cache = first_bipps.alter_data.Kxxi_cache;
+      bipps.alter_data.Ri_chol_logdet = first_bipps.alter_data.Ri_chol_logdet;
+      bipps.alter_data.Ri_cache = first_bipps.alter_data.Ri_cache;
+      bipps.alter_data.H_cache = first_bipps.alter_data.H_cache;
+      bipps.alter_data.Kppi_cache = first_bipps.alter_data.Kppi_cache;
+
+      bool acceptable = bipps.calc_ywlogdens(bipps.alter_data);
+      acceptable_joined.push_back(acceptable);
+
+      new_loglik += bipps.alter_data.loglik_w;
+      current_loglik += bipps.param_data.loglik_w;
+    }
   }
   
   // loop over all logliks and add together?
@@ -51,7 +65,7 @@ void MultiBipps::metrop_theta(){
         theta_proposal.tail_rows(1).t(), multi_theta.tail_rows(1).t(), 2, 1); // sigmasq
     
     if(multi_theta.n_rows > 5){
-      for(int i=0; i<multi_theta.n_rows-2; i++){
+      for(auto i=0; i<multi_theta.n_rows-2; i++){
         prior_logratio += arma::accu( -theta_proposal.row(i) +multi_theta.row(i) ); // exp
       }
     }

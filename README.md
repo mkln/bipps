@@ -1,6 +1,8 @@
 ## Bayesian Inference of Point Patterns in Space 
 
-
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/mkln/bipps/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/mkln/bipps/actions/workflows/R-CMD-check.yaml)
+<!-- badges: end -->
 
 ### Install: 
 

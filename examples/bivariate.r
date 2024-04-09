@@ -21,7 +21,7 @@ clist <- 1:q %>% lapply(function(i) coords %>%
                           mutate(mv_id=i) %>%
                           as.matrix())
 
-philist <- c(1, 1) # spatial decay for each factor
+philist <- c(15, 15) # spatial decay for each factor
 
 # cholesky decomp of covariance matrix
 LClist <- 1:k %>% lapply(function(i) t(chol(
@@ -32,7 +32,7 @@ LClist <- 1:k %>% lapply(function(i) t(chol(
 wlist <- 1:k %>% lapply(function(i) LClist[[i]] %*% rnorm(n))
 
 # factor matrix
-WW <- do.call(cbind, wlist)
+WW <- do.call(cbind, wlist) * 1e-3
 
 # factor loadings
 Lambda <- matrix(0, q,ncol(WW))
@@ -65,7 +65,8 @@ YY <- YY_full
 
 simdata <- coords %>%
   cbind(data.frame(Outcome_full=YY_full,
-                   Outcome_obs = YY))
+                   # Outcome_obs = YY,
+                   linear_pred = linear_predictor))
 
 simdata %>%
   tidyr::gather(Outcome, Value, -all_of(colnames(coords))) %>%
@@ -124,7 +125,7 @@ colnames(ymesh) <- paste0("ymesh_", 1:q)
 
 mesh_df <-
   meshout$coordsdata %>%
-  cbind(ymesh)
+  cbind(ymesh,wmesh)
 results <- simdata %>% left_join(mesh_df)
 
 # prediction rmse, out of sample

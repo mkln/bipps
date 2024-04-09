@@ -69,55 +69,34 @@ YY_full <- lapply(1:num_images,\(i) {
   y <- do.call(cbind,y)
 })
 
-
-# .. introduce some NA values in the outcomes
 YY <- YY_full
 
-#YY[sample(1:n, n/5, replace=FALSE), 1] <- NA
-#YY[sample(1:n, n/5, replace=FALSE), 2] <- NA
 
-
-simdata <- coords %>%
-  cbind(data.frame(Outcome_full=YY_full#,
-                   #Outcome_obs = YY
-                   ))
-
-
-mcmc_keep <- 1000
-mcmc_burn <- 5000
+lapply(1:length(YY),\(i) {
+  y <- YY[[i]]
+  as_tibble(y) %>%
+    mutate(image = i) %>%
+    bind_cols(coords)
+}) %>%
+  bind_rows() %>%
+  rename(X = Var1, Y = Var2) %>%
+  mutate( image = factor(image)) -> simdata
 
 plotting_data <- FALSE
 if(plotting_data){
- simdata %>%
-   tidyr::gather(Outcome, Value, -all_of(colnames(coords))) %>%
-   ggplot(aes(Var1, Var2, fill=Value)) +
-   geom_raster() +
-   facet_wrap(Outcome ~., ncol=2, scales="free") +
-   scale_fill_viridis_c()
+  simdata %>%
+    pivot_longer(c(V1,V2,V3,V4)) %>%
+    filter(image %in% c(1:10)) %>%
+    mutate(name=factor(name)) %>%
+    ggplot(aes(X,Y,fill=log(value+1))) +
+    geom_raster() +
+    facet_grid(image~name)
 }
 
 mcmc_keep <- 10000
 mcmc_burn <- 2000
 
 mcmc_thin <- 1
-
-# y_list <- YY
-# x_list <- XX
-# k = 2
-# family <- "poisson"
-# axis_partition <- NULL
-# block_size=25
-# n_samples = mcmc_keep
-# n_burnin = mcmc_burn
-# n_thin = mcmc_thin
-# n_threads = 16
-# starting=list(lambda = Lambda, beta=Beta, phi=1)
-# prior = list(btmlim= .01, toplim=1e3, phi=c(.1, 20), nu=c(.5, .5))
-# settings = list(adapting=T, saving=F, ps=T, hmc=0)
-# verbose=10
-# debug=list(sample_beta=T, sample_tausq=F,
-#            sample_theta=T, sample_w=T, sample_lambda=T,
-#            verbose=T, debug=T)
 
 
 #devtools::load_all()
@@ -126,14 +105,14 @@ mesh_total_time <- system.time({
   meshout <- multi_bipps(YY, family="poisson", XX, coords, k = 2,
                       block_size=25,
                       n_samples = mcmc_keep, n_burn = mcmc_burn, n_thin = mcmc_thin,
-                      n_threads = 24,
+                      n_threads = 2,
                       starting=list(lambda = Lambda, beta=Beta, phi=15),
                       prior = list(btmlim= .01, toplim=1e3, phi=c(1, 40), nu=c(1.5, 1.5)),
                       settings = list(adapting=T, saving=F, ps=F, hmc=0),
                       verbose=10,
                       debug=list(sample_beta=T, sample_tausq=F,
                                  sample_theta=T, sample_w=T, sample_lambda=T,
-                                 verbose=F, debug=F)
+                                 verbose=T, debug=F)
   )})
 
 
