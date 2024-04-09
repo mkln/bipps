@@ -2,8 +2,10 @@
 
 S3method(predict,bipps)
 export("%>%")
-export("bipps", "multi_bipps")
-export("summary_list_mean", "summary_list_q")
+export("bipps")
+export("multi_bipps")
+export("summary_list_mean")
+export("summary_list_q")
 importFrom(FNN,get.knnx)
 importFrom(Rcpp,sourceCpp)
 importFrom(dplyr,arrange)
