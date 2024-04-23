@@ -334,8 +334,7 @@ Rcpp::List multi_bipps_mcmc(
           arma::mat v_mcmc_joined;
           arma::mat yhat_mcmc_joined;
           for(Bipps &bipps: msp.multi_bipps) {
-            //v_mcmc_joined = arma::join_vert(v_mcmc_joined, bipps.w * ps_forward(msp.multi_theta,
-            //                                         d, msp.matern.twonu, use_ps));
+            v_mcmc_joined = arma::join_vert(v_mcmc_joined, bipps.w);
 
             Rcpp::RNGScope scope;
             bipps.predicty();

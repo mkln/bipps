@@ -220,16 +220,19 @@ void Bipps::nongaussian_w(BippsDataLMC& data, bool sample){
   }
   
   
-  for(int j=0; j<k; j++){
-    w.col(j) = w.col(j) - arma::mean(w.col(j));
-  }
+  //for(int j=0; j<k; j++){
+  //  w.col(j) = w.col(j) - arma::mean(w.col(j));
+  //}
   
-  if(!matern.using_ps){
-    arma::mat Cw = arma::cov(w);
-    w = w * arma::inv(arma::trimatu(arma::chol(Cw, "upper")));   
-  }
+  //arma::mat Cw = arma::cov(w);
+  //arma::mat Hi = arma::chol(Cw, "upper");
+  //arma::mat H = arma::inv(arma::trimatu(Hi));
   
-  LambdaHw = w * Lambda.t();
+  //w = w * H;   
+  
+  //LambdaHw = w * Lambda.t();
+  //Lambda = Lambda * Hi.t();
+
   
   if(verbose & debug){
     end_overall = std::chrono::steady_clock::now();

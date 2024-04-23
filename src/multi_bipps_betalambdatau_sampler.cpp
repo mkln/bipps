@@ -124,7 +124,7 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
   } 
   if(sample_lambda) {
     // ensure lambda identifiability, must be done outside of the OMP loop
-    multi_Lambda = multi_Lambda * arma::diagmat(arma::sign(multi_Lambda.diag()));
+    //multi_Lambda = multi_Lambda * arma::diagmat(arma::sign(multi_Lambda.diag()));
   }
 
 
@@ -149,3 +149,4 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
   }
   
 }
+
