@@ -191,7 +191,7 @@ multi_bipps <- function(
   simdata_list <- lapply(1:num_images,\(i) {
     data.frame(ix=1:nrow(coords)) %>%
       cbind(coords, y_list[[i]], na_which[[i]], x_list[[i]]) %>%
-      as.data.frame() %>%
+      as.data.frame() %>% 
       arrange(!!!rlang::syms(paste0("Var", 1:dd)))
   })
 
@@ -536,7 +536,7 @@ multi_bipps <- function(
   names(coords_renamer) <- orig_coords_colnames
 
   coordsdata <- simdata_in_list[[1]] %>%
-    dplyr::select(all_of(1:dd)) %>%
+    dplyr::select(all_of(1:dd), ix) %>%
     dplyr::rename(!!!coords_renamer)
 
   if(verbose > 0){
