@@ -93,6 +93,7 @@ Rcpp::List multi_bipps_mcmc(
 
   unsigned int d = coords.n_cols;
   unsigned int q  = y_list[1].n_cols;
+  unsigned int n = y_list[1].n_rows;
 
   if(verbose & debug){
     Rcpp::Rcout << "Limits to MCMC search for theta:\n";
@@ -109,15 +110,12 @@ Rcpp::List multi_bipps_mcmc(
     Rcpp::Rcout << "start theta \n" << theta;
   }
 
+  arma::mat plus_icept_mcmc = arma::zeros(q, mcmc_thin*mcmc_keep);
   arma::cube b_mcmc = arma::zeros(X_list[1].n_cols, q, mcmc_thin*mcmc_keep);
   arma::mat tausq_mcmc = arma::zeros(q, mcmc_thin*mcmc_keep);
   arma::cube theta_mcmc = arma::zeros(theta.n_rows, k, mcmc_thin*mcmc_keep);
-
   arma::cube lambda_mcmc = arma::zeros(q, k, mcmc_thin*mcmc_keep);
-  arma::cube lambdastar_mcmc = arma::zeros(1,1,1);
-  if(use_ps){
-    lambdastar_mcmc = arma::zeros(q, k, mcmc_thin*mcmc_keep);
-  }
+  arma::cube vcov_mcmc = arma::zeros(k, k, mcmc_thin*mcmc_keep);
 
   int num_samples = y_list.n_elem;
   std::vector<Bipps> bipps_samples;
@@ -175,6 +173,16 @@ Rcpp::List multi_bipps_mcmc(
   // caching_info["coords"] = msp.coords_caching.n_elem;
   // caching_info["hrmats"] = msp.kr_caching.n_elem;
 
+  // save bipps index for long multi_bipps vectors
+  arma::field<arma::uvec> image_ix(msp.mb_size);
+  int Nn = msp.mb_size * n; 
+  for(int i=0; i<msp.mb_size; i++){
+    image_ix(i) = arma::regspace<arma::uvec>(n*i, n*(i+1)-1);
+  }
+  arma::mat v_temp = arma::zeros(Nn, k);
+  // --
+  
+  
   arma::vec param = arma::vectorise(msp.multi_theta);
 
   arma::vec logaccept_mcmc = arma::zeros(mcmc);
@@ -302,9 +310,6 @@ Rcpp::List multi_bipps_mcmc(
       //save
       logaccept_mcmc(m) = logaccept > 0 ? 0 : logaccept;
 
-      ///arma::mat lambda_transf_back = msp.multi_Lambda *
-      //  ps_back(msp.multi_theta, d, msp.matern.twonu, use_ps);
-
       double ll_joined = 0;
       double wll_joined = 0;
       for(Bipps &bipps: msp.multi_bipps) {
@@ -314,41 +319,50 @@ Rcpp::List multi_bipps_mcmc(
 
       if(mx >= 0){
         tausq_mcmc.col(w_saved) = 1.0 / msp.tausq_inv;
-        b_mcmc.slice(w_saved) = msp.multi_Beta;
-
         theta_mcmc.slice(w_saved) = msp.multi_theta;
-
-        // lambda here reconstructs based on 1/phi Matern reparametrization
-        if(use_ps){
-          lambdastar_mcmc.slice(w_saved) = msp.multi_Lambda;
+        
+        // calculate mean and cov of v
+        // save identifiable parts
+        for(int im=0; im<msp.mb_size; im++){
+          v_temp.rows(image_ix(im)) = msp.multi_bipps[im].w;
         }
-        lambda_mcmc.slice(w_saved) = msp.multi_Lambda;//lambda_transf_back;
-
+        arma::vec vmean = arma::trans(arma::mean(v_temp, 0));
+        
+        arma::mat vcov = arma::cov(v_temp);
+        vcov_mcmc.slice(w_saved) = vcov;
+        //arma::mat U = arma::chol(vcov, "upper");
+        //arma::mat Ui = arma::inv(arma::trimatu(U));
+        lambda_mcmc.slice(w_saved) = msp.multi_Lambda;// * U.t();
+        plus_icept_mcmc.col(w_saved) = msp.multi_Lambda * vmean;
+        // --
+        b_mcmc.slice(w_saved) = msp.multi_Beta;
+        
         llsave(w_saved) = ll_joined;
         wllsave(w_saved) = wll_joined;
         w_saved++;
+        
 
         if(mx % mcmc_thin == 0){
           std::string iname = std::to_string(mcmc_saved);
 
-          arma::mat v_mcmc_joined;
+          //arma::mat v_mcmc_joined; // replaced by v_temp
           arma::mat yhat_mcmc_joined;
           for(Bipps &bipps: msp.multi_bipps) {
-            v_mcmc_joined = arma::join_vert(v_mcmc_joined, bipps.w);
+            //v_mcmc_joined = arma::join_vert(v_mcmc_joined, bipps.w * H); 
 
             Rcpp::RNGScope scope;
             bipps.predicty();
             yhat_mcmc_joined = arma::join_vert(yhat_mcmc_joined, bipps.yhat);
           }
 
-          v_mcmc[iname] = Rcpp::wrap(v_mcmc_joined);
+          v_mcmc[iname] = Rcpp::wrap(v_temp);
           yhat_mcmc[iname] = Rcpp::wrap(yhat_mcmc_joined);
 
           if(!low_mem){
             arma::mat w_mcmc_joined;
             arma::mat lp_mcmc_joined;
             for(Bipps &bipps: msp.multi_bipps) {
-              w_mcmc_joined = arma::join_vert(w_mcmc_joined, bipps.LambdaHw);
+              w_mcmc_joined = arma::join_vert(w_mcmc_joined, bipps.LambdaHw); //** LambdaHw used here.
               lp_mcmc_joined = arma::join_vert(lp_mcmc_joined, bipps.linear_predictor);
             }
             w_mcmc[iname] = Rcpp::wrap(w_mcmc_joined);
@@ -458,11 +472,12 @@ Rcpp::List multi_bipps_mcmc(
       Rcpp::Named("v_mcmc") = v_mcmc,
       Rcpp::Named("w_mcmc") = w_mcmc,
       Rcpp::Named("lp_mcmc") = lp_mcmc,
+      Rcpp::Named("plus_icept_mcmc") = plus_icept_mcmc,
+      Rcpp::Named("vcov_mcmc") = vcov_mcmc,
       Rcpp::Named("beta_mcmc") = b_mcmc,
       Rcpp::Named("tausq_mcmc") = tausq_mcmc,
       Rcpp::Named("theta_mcmc") = theta_mcmc,
       Rcpp::Named("lambda_mcmc") = lambda_mcmc,
-      Rcpp::Named("lambdastar_mcmc") = lambdastar_mcmc,
       Rcpp::Named("paramsd") = msp.theta_adapt.paramsd,
       Rcpp::Named("mcmc") = mcmc,
       Rcpp::Named("mcmc_time") = mcmc_time/1000.0,
@@ -485,11 +500,12 @@ Rcpp::List multi_bipps_mcmc(
       Rcpp::Named("v_mcmc") = v_mcmc,
       Rcpp::Named("w_mcmc") = w_mcmc,
       Rcpp::Named("lp_mcmc") = lp_mcmc,
+      Rcpp::Named("plus_icept_mcmc") = plus_icept_mcmc,
+      Rcpp::Named("vcov_mcmc") = vcov_mcmc,
       Rcpp::Named("beta_mcmc") = b_mcmc,
       Rcpp::Named("tausq_mcmc") = tausq_mcmc,
       Rcpp::Named("theta_mcmc") = theta_mcmc,
       Rcpp::Named("lambda_mcmc") = lambda_mcmc,
-      Rcpp::Named("lambdastar_mcmc") = lambdastar_mcmc,
       Rcpp::Named("paramsd") = msp.theta_adapt.paramsd,
       Rcpp::Named("mcmc") = mcmc,
       Rcpp::Named("mcmc_time") = mcmc_time/1000.0,
