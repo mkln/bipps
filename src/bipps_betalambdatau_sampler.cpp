@@ -33,7 +33,7 @@ void Bipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sample_
     ///
     arma::uvec subcols = arma::find(Lambda_mask.row(j) == 1);
 
-    arma::vec offsets_obs = offsets(ix_by_q_a(j), oneuv * j);
+    arma::vec offsets_obs = offsets(ix_by_q_a(j), oneuv * j) + icept(j);
     
     // build W
     // filter: choose value of spatial processes at locations of Yj that are available
@@ -234,3 +234,4 @@ void Bipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sample_
   }
   
 }
+

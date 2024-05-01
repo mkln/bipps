@@ -102,6 +102,7 @@ public:
   
   arma::mat w;
   arma::mat Bcoeff; // sampled
+  arma::vec icept;
   
   // covariance info
   int nThreads;
@@ -225,6 +226,12 @@ public:
   std::vector<NodeDataB> beta_node; // std::vector
   std::vector<AdaptE> beta_hmc_adapt; // std::vector
   arma::uvec beta_hmc_started;
+  
+  std::vector<NodeDataB> icept_node; // std::vector
+  std::vector<AdaptE> icept_hmc_adapt; // std::vector
+  arma::uvec icept_hmc_started;
+  
+  void sample_hmc_icept();
   
   void deal_with_BetaLambdaTau(BippsDataLMC& data, bool sample, 
                                bool sample_beta, bool sample_lambda, bool sample_tau);

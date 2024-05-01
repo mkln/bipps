@@ -71,6 +71,8 @@ Rcpp::List multi_bipps_mcmc(
     Rcpp::Rcout << "Initializing.\n";
   }
 
+  
+  bool sample_intercept = true;
 
 #ifdef _OPENMP
   omp_set_num_threads(num_threads);
@@ -167,6 +169,7 @@ Rcpp::List multi_bipps_mcmc(
     debug
   );
 
+  arma::cube icept_ss_mcmc = arma::zeros(msp.mb_size, msp.q, mcmc_thin*mcmc_keep);
 
   // what to do here?
   Rcpp::List caching_info;
@@ -285,6 +288,17 @@ Rcpp::List multi_bipps_mcmc(
           }
         }
       }
+      
+      if(sample_intercept){
+        start = std::chrono::steady_clock::now();
+        msp.sample_icept();
+        end = std::chrono::steady_clock::now();
+        if(verbose_mcmc & verbose){
+          Rcpp::Rcout << "[sample_hmc_icept] "
+                      << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << "us.\n";
+        }
+      }
+      
       if(sample_lambda+sample_beta+sample_tausq){
         start = std::chrono::steady_clock::now();
         msp.sample_hmc_BetaLambdaTau(true, sample_beta, sample_lambda, sample_tausq); // true = sample
@@ -336,6 +350,8 @@ Rcpp::List multi_bipps_mcmc(
         plus_icept_mcmc.col(w_saved) = msp.multi_Lambda * vmean;
         // --
         b_mcmc.slice(w_saved) = msp.multi_Beta;
+        
+        icept_ss_mcmc.slice(w_saved) = msp.multi_ss_icept;
         
         llsave(w_saved) = ll_joined;
         wllsave(w_saved) = wll_joined;
@@ -473,6 +489,7 @@ Rcpp::List multi_bipps_mcmc(
       Rcpp::Named("w_mcmc") = w_mcmc,
       Rcpp::Named("lp_mcmc") = lp_mcmc,
       Rcpp::Named("plus_icept_mcmc") = plus_icept_mcmc,
+      Rcpp::Named("icept_ss_mcmc") = icept_ss_mcmc,
       Rcpp::Named("vcov_mcmc") = vcov_mcmc,
       Rcpp::Named("beta_mcmc") = b_mcmc,
       Rcpp::Named("tausq_mcmc") = tausq_mcmc,
@@ -501,6 +518,7 @@ Rcpp::List multi_bipps_mcmc(
       Rcpp::Named("w_mcmc") = w_mcmc,
       Rcpp::Named("lp_mcmc") = lp_mcmc,
       Rcpp::Named("plus_icept_mcmc") = plus_icept_mcmc,
+      Rcpp::Named("icept_ss_mcmc") = icept_ss_mcmc,
       Rcpp::Named("vcov_mcmc") = vcov_mcmc,
       Rcpp::Named("beta_mcmc") = b_mcmc,
       Rcpp::Named("tausq_mcmc") = tausq_mcmc,

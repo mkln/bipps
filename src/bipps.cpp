@@ -110,6 +110,7 @@ Bipps::Bipps(
   linear_predictor = arma::zeros(coords.n_rows, q);
   
   Bcoeff = beta_in; 
+  icept = arma::zeros(q);
   for(unsigned int j=0; j<q; j++){
     XB.col(j) = X * Bcoeff.col(j);
   }
@@ -1043,12 +1044,14 @@ void Bipps::init_for_mcmc(){
   }
   
   beta_node.reserve(q); // for beta
+  icept_node.reserve(q); // for icept
   lambda_node.reserve(q); // for lambda
   
   // start with small epsilon for a few iterations,
   // then find reasonable and then start adapting
   
   beta_hmc_started = arma::zeros<arma::uvec>(q);
+  icept_hmc_started = arma::zeros<arma::uvec>(q);
   lambda_hmc_started = arma::zeros<arma::uvec>(q);
   
   arma::mat LHW = w * Lambda.t();
@@ -1073,6 +1076,19 @@ void Bipps::init_for_mcmc(){
     beta_hmc_adapt.push_back(new_beta_hmc_adapt);
     
     beta_hmc_started(j) = 0;
+    
+    // Intercepts
+    
+    NodeDataB new_icept_block(yj_obs, offsets_for_beta, X_obs, family);
+    //new_beta_block.update_mv(offset_for_w, 1.0 / tausq_inv, Lambda);
+    
+    icept_node.push_back(new_icept_block);
+    
+    AdaptE new_icept_hmc_adapt;
+    new_icept_hmc_adapt.init(.05, 1, which_hmc);
+    icept_hmc_adapt.push_back(new_icept_hmc_adapt);
+    
+    icept_hmc_started(j) = 0;
     
     // Lambda
     NodeDataB new_lambda_block(yj_obs, offsets_for_beta, X_obs, family);
