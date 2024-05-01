@@ -337,10 +337,25 @@ Rcpp::List multi_bipps_mcmc(
         
         // calculate mean and cov of v
         // save identifiable parts
+        // multi_ss_icept stores the subject-specific intercepts
+        arma::mat multi_ss_icept = msp.multi_ss_icept;
+        
         for(int im=0; im<msp.mb_size; im++){
-          v_temp.rows(image_ix(im)) = msp.multi_bipps[im].w;
+          arma::vec plus_subj_icept = arma::trans(arma::mean(msp.multi_bipps[im].w, 0));
+          for(int j=0; j<k; j++){
+            v_temp(image_ix(im), msp.oneuv * j) = msp.multi_bipps[im].w.col(j) - plus_subj_icept(j); // subtract plus_subj_icept [1]
+          }
+          multi_ss_icept.row(im) += arma::trans(msp.multi_Lambda * plus_subj_icept); // add plus_subj_icept [1]
+        } 
+        arma::vec multi_ss_icept_means = arma::trans(arma::mean(multi_ss_icept, 0));
+        for(int j=0; j<q; j++){
+          multi_ss_icept.col(j) -= multi_ss_icept_means(j); // subtract multi_ss_icept_means [2]
         }
+        
         arma::vec vmean = arma::trans(arma::mean(v_temp, 0));
+        for(int j=0; j<k; j++){
+          v_temp.col(j) -= vmean(j); // subtract vmean (global) [3]
+        }
         
         arma::mat vcov = arma::cov(v_temp);
         vcov_mcmc.slice(w_saved) = vcov;
@@ -350,11 +365,14 @@ Rcpp::List multi_bipps_mcmc(
         //lambda_mcmc.slice(w_saved) = msp.multi_Lambda * U.t();
         
         lambda_mcmc.slice(w_saved) = msp.multi_Lambda;
-        plus_icept_mcmc.col(w_saved) = msp.multi_Lambda * vmean;
-        // --
-        b_mcmc.slice(w_saved) = msp.multi_Beta;
         
-        icept_ss_mcmc.slice(w_saved) = msp.multi_ss_icept;
+        // global intercept might be here but we leave b_mcmc as is
+        // the plus_icept_mcmc object stores the operation "add multi_ss_icept_means [2], add vmean (global) [3]"
+        // which we can do in postprocessing if Beta includes the intercept
+        b_mcmc.slice(w_saved) = msp.multi_Beta; 
+        plus_icept_mcmc.col(w_saved) = msp.multi_Lambda * vmean + multi_ss_icept_means; 
+        
+        icept_ss_mcmc.slice(w_saved) = multi_ss_icept;
         
         llsave(w_saved) = ll_joined;
         wllsave(w_saved) = wll_joined;
