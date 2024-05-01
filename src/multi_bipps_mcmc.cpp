@@ -344,9 +344,12 @@ Rcpp::List multi_bipps_mcmc(
         
         arma::mat vcov = arma::cov(v_temp);
         vcov_mcmc.slice(w_saved) = vcov;
+        
         //arma::mat U = arma::chol(vcov, "upper");
         //arma::mat Ui = arma::inv(arma::trimatu(U));
-        lambda_mcmc.slice(w_saved) = msp.multi_Lambda;// * U.t();
+        //lambda_mcmc.slice(w_saved) = msp.multi_Lambda * U.t();
+        
+        lambda_mcmc.slice(w_saved) = msp.multi_Lambda;
         plus_icept_mcmc.col(w_saved) = msp.multi_Lambda * vmean;
         // --
         b_mcmc.slice(w_saved) = msp.multi_Beta;
