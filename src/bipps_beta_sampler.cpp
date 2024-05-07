@@ -24,7 +24,7 @@ void Bipps::hmc_sample_beta(bool sample){
     //Rcpp::Rcout << "j: " << j << endl;
     arma::vec offsets_obs = offsets(ix_by_q_a(j), oneuv * j);
     arma::vec lw_obs = LHW(ix_by_q_a(j), oneuv * j);
-    arma::vec offsets_for_beta = offsets_obs + lw_obs;
+    arma::vec offsets_for_beta = offsets_obs + lw_obs + + icept(j);
     
     beta_node.at(j).update_mv(offsets_for_beta, 1.0/tausq_inv(j), Vim, Vi);
 

@@ -122,10 +122,6 @@ void MultiBipps::sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sa
       bipps.XB.col(j) = bipps.X * bipps.Bcoeff.col(j); 
     }
   } 
-  if(sample_lambda) {
-    // ensure lambda identifiability, must be done outside of the OMP loop
-    //multi_Lambda = multi_Lambda * arma::diagmat(arma::sign(multi_Lambda.diag()));
-  }
 
 
   for(Bipps& bipps: multi_bipps) {

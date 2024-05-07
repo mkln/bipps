@@ -8,6 +8,7 @@ public:
   arma::mat multi_Lambda;
   arma::mat multi_Beta;
   arma::mat multi_theta;
+  arma::mat multi_ss_icept;
 
   bool verbose;
   bool debug;
@@ -45,6 +46,7 @@ public:
   void init_matern(int num_threads, int matern_twonu_in, bool use_ps);
 
   void sample_hmc_BetaLambdaTau(bool sample, bool sample_beta, bool sample_lambda, bool sample_tau);
+  void sample_icept();
   void metrop_theta();
 
   void accept_make_change();

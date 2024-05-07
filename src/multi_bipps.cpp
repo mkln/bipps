@@ -35,6 +35,7 @@ MultiBipps::MultiBipps(
 
     multi_Beta = multi_Beta_in;
     multi_Lambda = multi_Lambda_in;
+    
     Lambda_mask = Lambda_mask_in;
     multi_theta = multi_theta_in;
     tausq_inv = tausq_inv_in;
@@ -45,11 +46,13 @@ MultiBipps::MultiBipps(
 
 
     q = familyid.n_elem;
-    p = multi_Beta.n_cols / q;
+    p = multi_Beta.n_cols / q; // ??
     k = multi_Lambda.n_cols;
     dd = coords.n_cols;
     which_hmc = which_hmc_in;
 
+    multi_ss_icept = arma::zeros(mb_size, q);
+    
     theta_unif_bounds = metrop_theta_bounds;
     theta_metrop_sd = metrop_theta_sd;
     theta_adapt = RAMAdapt(multi_theta_in.n_elem, theta_metrop_sd, 0.24);
