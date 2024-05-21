@@ -161,7 +161,6 @@ public:
   void tausq_update(double);
   
   // RAMA for theta
-  void metrop_theta();
   bool theta_adapt_active;
   int theta_mcmc_counter;
   RAMAdapt theta_adapt;
@@ -195,16 +194,12 @@ public:
   void init_betareg();
   void init_gaussian();
   void update_lly(int, BippsDataLMC&, const arma::mat& LamHw, bool map=false);
-  void calc_DplusSi(int, BippsDataLMC& data, const arma::mat& Lam, const arma::vec& tsqi);
   void update_block_w_cache(int, BippsDataLMC& data);
   void refresh_w_cache(BippsDataLMC& data);
   
   // W
   int which_hmc;
   bool w_do_hmc;
-  //bool w_hmc_nuts;
-  //bool w_hmc_rm;
-  //bool w_hmc_srm;
   void deal_with_w(BippsDataLMC& data, bool sample=true);
   
   void nongaussian_w(BippsDataLMC& data, bool sample);
@@ -219,25 +214,12 @@ public:
   bool calc_ywlogdens(BippsDataLMC& data);
   
   // Beta
-  void deal_with_beta(bool sample=true);
-  void hmc_sample_beta(bool sample=true);
   //void tester_beta(bool sample=true);
   std::vector<NodeDataB> beta_node; // std::vector
   std::vector<AdaptE> beta_hmc_adapt; // std::vector
   arma::uvec beta_hmc_started;
   
-  void deal_with_BetaLambdaTau(BippsDataLMC& data, bool sample, 
-                               bool sample_beta, bool sample_lambda, bool sample_tau);
-  arma::vec sample_BetaLambda_row(bool sample, int j, const arma::mat& rnorm_precalc);
-  void sample_hmc_BetaLambdaTau(bool sample, 
-                                bool sample_beta, bool sample_lambda, bool sample_tau);
-  
   // Lambda
-  void deal_with_Lambda(BippsDataLMC& data);
-  void sample_nc_Lambda_std(); // noncentered
-  void sample_nc_Lambda_fgrid(BippsDataLMC& data);
-  arma::vec sample_Lambda_row(int j);
-  void sample_hmc_Lambda();
   std::vector<NodeDataB> lambda_node; // std::vector
   std::vector<AdaptE> lambda_hmc_adapt; // std::vector
   arma::uvec lambda_hmc_started;

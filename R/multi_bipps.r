@@ -22,32 +22,67 @@
 #' @return list of MCMC samples
 #' @export
 multi_bipps <- function(
-  y_list,
-  x_list,
-  coords,
+  x,
+  y,
+  types,
+  image_ids,
+  covariates=NULL,
   k=NULL,
+  nx = 20,
+  ny = 20,
   family = "poisson",
-  axis_partition = NULL,
-  block_size = 30,
+  n_partition = NULL,
+  # axis_partition = NULL,
+  # block_size = 30, # how many times to partition n_x and n_y by? found such that resulting block size is not larger than 50, but also not too small
   n_samples = 1000,
   n_burnin = 100,
   n_thin = 1,
   n_threads = 4,
   verbose = 0,
-  settings = list(adapting=TRUE,
-                    ps=TRUE, saving=TRUE, low_mem=FALSE, hmc=0),
-  prior = list(beta=NULL, tausq=NULL, sigmasq = NULL,
-              phi=NULL, a=NULL, nu = NULL,
-              toplim = NULL, btmlim = NULL, set_unif_bounds=NULL),
-  starting = list(beta=NULL, tausq=NULL, theta=NULL,
-                  lambda=NULL, v=NULL,  a=NULL, nu = NULL,
-                  mcmcsd=.05, mcmc_startfrom=0),
-  debug = list(sample_beta=TRUE, sample_tausq=TRUE,
-              sample_theta=TRUE, sample_w=TRUE, sample_lambda=TRUE,
-              verbose=FALSE, debug=FALSE),
+  adapting=TRUE,
+  ps=TRUE, # remove
+  saving=TRUE,
+  low_mem=FALSE,
+  debug = list(
+    hmc=0,
+    sample_beta=TRUE,
+   sample_tausq=TRUE,
+   sample_theta=TRUE,
+   sample_w=TRUE,
+   sample_lambda=TRUE,
+   verbose=FALSE,
+   debug=FALSE,
+   prior = list(beta=NULL,
+                tausq=NULL,
+                sigmasq = NULL, # remove
+                phi=NULL,
+                a=NULL,
+                nu = NULL,
+                toplim = NULL, # check being used
+                btmlim = NULL,
+                set_unif_bounds=NULL # check
+   ),
+   starting = list(beta=NULL,
+                   tausq=NULL,
+                   theta=NULL,
+                   lambda=NULL,
+                   v=NULL,
+                   a=NULL,
+                   nu = NULL,
+                   mcmcsd=.05,
+                   mcmc_startfrom=0)
+   ),
   indpart=FALSE,
   just_preprocess=FALSE
 ){
+
+  # inputs:
+  # x,y,types, image_ids,k=sqrt(n_types) or log(n_types) or maybe larger - which is better in terms of prediction?,list of covariates, n_x=20,n_y=20, (or grid coordinates) check for extra intercept that is passed in and filter out.
+  # mean of (cell-level) covariates?
+  # covariates in empty space? covariates are aggregated into grids, so should be passed in on at least a finer grid.
+  # assume empty is zero.
+  # starting and prior should be in debug as well.
+  # dealing with non-square grids? empty space?
 
   # init
   if(verbose > 0){
@@ -72,52 +107,207 @@ multi_bipps <- function(
     )
   }
 
-  # data management pt 1
-  mcmc_keep <- n_samples
-  mcmc_burn <- n_burnin
-  mcmc_thin <- n_thin
-
-  which_hmc    <- settings$hmc %>% set_default(0)
-  if(!(which_hmc %in% c(0,1,2,3,4,6,7))){
-    warning("Invalid sampling algorithm choice. Choose settings$hmc in {0,1,2,3,4,6,7}")
-    which_hmc <- 0
+  if(!is.factor(image_ids)){
+    image_ids <- as.factor(image_ids)
+  }
+  if(!is.factor(types)){
+    types <- as.factor(types)
   }
 
-  mcmc_adaptive    <- settings$adapting %>% set_default(TRUE)
-  mcmc_verbose     <- debug$verbose %>% set_default(FALSE)
-  mcmc_debug       <- debug$debug %>% set_default(FALSE)
-  saving <- settings$saving %>% set_default(TRUE)
-  low_mem <- settings$low_mem %>% set_default(FALSE)
+  unique_images <- levels(image_ids)
+  num_images <- length(unique_images)
 
-  debugdag <- debug$dag %>% set_default(1)
+  # set MCMC sampling parameter defaults
+  # mcmc_keep <- n_samples
+  # mcmc_burn <- n_burnin
+  # mcmc_thin <- n_thin
+  #
+  # # no option, just keep at 0
+  # # or keep in debug
+  # which_hmc    <- settings$hmc %>% set_default(0)
+  # if(!(which_hmc %in% c(0,1,2,3,4,6,7))){
+  #   warning("Invalid sampling algorithm choice. Choose settings$hmc in {0,1,2,3,4,6,7}. Setting hmc to 0.")
+  #   which_hmc <- 0
+  # }
+  #
+  # mcmc_adaptive    <- settings$adapting %>% set_default(TRUE)
+  # mcmc_verbose     <- debug$verbose %>% set_default(FALSE)
+  # mcmc_debug       <- debug$debug %>% set_default(FALSE)
+  # saving <- settings$saving %>% set_default(TRUE)
+  # low_mem <- settings$low_mem %>% set_default(FALSE)
+  #
+  # debugdag <- debug$dag %>% set_default(1)
+
+  df <- data.frame(X = x, Y = y, type = types,image_id = image_ids)
+
+  # bottom-left corner at 0,0
+  df <- df %>%
+    group_by(image_id) %>%
+    mutate(X = X - min(X),
+           Y = Y - min(Y)) %>%
+    ungroup()
+
+  # find largest x and y dimensions
+  max_x <- max(df$X)
+  max_y <- max(df$Y)
+
+  df <- mutate(df, X = X/max_x, Y = Y/max_y)
+
+  total_grid <- expand_grid(gridded_x=1:nx,gridded_y=1:ny)
+
+  counts <- df %>%
+    mutate(gridded_x = floor((nx-1)*X) + 1,
+           gridded_y = floor((ny-1)*Y) + 1) %>%
+    count(gridded_x,gridded_y,type,image_id)
+    # group_by(type) %>%
+    # summarise(max_x = max(gridded_x),
+    #           max_y = max(gridded_y),
+    #           min_x = min(gridded_x),
+    #           min_y = min(gridded_y))
+    # pivot_wider(names_from = type, values_from = n)
+
+  # max_grids <- df %>%
+  #   group_by(image_id) %>%
+  #   summarise(max_x = max(gridded_x),
+  #             max_y = max(gridded_y))
+
+  # df %>%
+  #   filter(type == "B cells") %>%
+  #   ggplot(aes(gridded_x,gridded_y,fill=n)) +
+  #   geom_tile() +
+  #   facet_grid(type~image_id) +
+  #   theme_bw()
+  #
+  # data.frame(X = x, Y = y, type = types,image_id = image_ids) %>%
+  #   filter(type == "B cells") %>%
+  #   ggplot(aes(X,Y)) +
+  #   geom_point() +
+  #   facet_grid(type~image_id) +
+  #   theme_bw()
 
 
+  # find max grids in X and Y for each image
+  # for grids outside of those max, set all counts to NA
+  # for grids inside of those max, set counts to zero if not present
 
-  coords %<>% as.matrix()
+  counts <- counts %>%
+    pivot_wider(names_from = type, values_from = n) %>%
+    replace(is.na(.),0) %>%
+    group_by(image_id) %>%
+    group_modify(~{
+      .x %>%
+        right_join(total_grid, by = c("gridded_x","gridded_y"))
+    }) %>%
+    ungroup() %>%
+    arrange(image_id,gridded_x,gridded_y)
+
+# df %>%
+#     pivot_longer(-c(gridded_x,gridded_y,image_id), names_to = "type", values_to = "n") %>%
+#   filter(type == "B cells") %>%
+#   # mutate(n = ifelse(n == 0,NA,n)) %>%
+#     ggplot(aes(gridded_x,gridded_y,fill=n)) +
+#       geom_tile() +
+#       facet_grid(type~image_id) +
+#       theme_bw()
+
+# df %>%
+#   pivot_longer(-c(gridded_x,gridded_y,image_id), names_to = "type", values_to = "n") %>%
+#   group_by(type) %>%
+#   filter(!is.na(n)) %>%
+#   summarise(max_x = max(gridded_x))
+
+  # counts <- lapply(unique_images,\(id) {
+  #   df_filt <- df %>%
+  #     filter(image_id == id)
+  #   window <- owin(
+  #     xrange = c(min(df_filt$X), max(df_filt$X)),
+  #     yrange = c(min(df_filt$Y), max(df_filt$Y))
+  #   )
+  #   pp <- ppp(df_filt$X, df_filt$Y, marks = df_filt$type, window = window)
+  #   qd <- quadrats(pp, nx = nx,ny = ny)
+  #   tl <- tiles(qd)
+  #   pixel_area <- mean(tile.areas(qd)) # small numerical differences, remove with mean
+  #   cp <- lapply(tl,\(o) gridcentres(o,nx=1,ny=1)) %>%
+  #     do.call(rbind,.) %>%
+  #     as_tibble(rownames = "tile") %>%
+  #     unnest(c(x,y)) %>%
+  #     mutate(tile = gsub("Tile ","",tile))
+  #
+  #   qdc <- quadratcount(split(pp),tess=qd)
+  #
+  #   qdc <- lapply(qdc,\(q) {
+  #     rownames(q) <- paste0("row ",1:ny)
+  #     colnames(q) <- paste0("col ",rev(1:nx))
+  #     q
+  #   })
+  #
+  #   unique_types <- names(qdc)
+  #   lapply(1:length(qdc),\(i) {
+  #     o <- qdc[[i]]
+  #     nm <- unique_types[i]
+  #     as.data.frame(o) %>%
+  #       rename_with(~nm,"Freq")
+  #     }) %>%
+  #     Reduce(\(a,b) inner_join(a,b,by=c("x","y")),.) %>%
+  #     unite("tile", y, x, sep = ", ") %>%
+  #     inner_join(cp, by = "tile") %>%
+  #     mutate(image_id = id) %>%
+  #     pivot_longer(-c(x,y,image_id,tile), names_to = "type", values_to = "count") %>%
+  #     mutate(area = pixel_area)
+  # }) %>%
+  #   bind_rows() %>%
+  #   mutate(image_id = factor(image_id),
+  #          type = factor(type),
+  #          tile = factor(tile))
 
 
-  dd             <- ncol(coords)
-  p              <- ncol(x_list[[1]]) # check this
+  # remove only zero cell types in a given image - similar to presence-only data, rather than presence-absence. may need to look at simulation.
 
-  # data management part 0 - reshape/rename
-  num_images <- length(y_list)
+  # counts %>%
+  #   group_by(image_id) %>%
+  #   group_map(~{
+  #     dat <- .x
+  #     dat %>%
+  #       ggplot(aes(x, y, fill = count)) +
+  #       geom_raster() +
+  #       facet_wrap(~type) +
+  #       theme_minimal() +
+  #       ggtitle(.y) +
+  #       scico::scale_fill_scico(palette = "batlow")
+  #   })
 
-  y_list <- lapply(y_list,\(y) {
-    if(is.null(dim(y))){
-      y <- matrix(y, ncol=1)
-      orig_y_colnames <<- colnames(y) <- "Y_1"
-    } else {
-      if(is.null(colnames(y))){
-        orig_y_colnames <<- colnames(y) <- paste0('Y_', 1:ncol(y))
-      } else {
-        orig_y_colnames <<- colnames(y)
-        colnames(y)     <- paste0('Y_', 1:ncol(y))
-      }
-    }
-    y
-  })
+  # Set up identical square grid for each image (?). Need to scale other parameters to be on non-square grids??
+  # window <- owin()
+  # shared_qd <- quadrats(window,nx = nx, ny = ny)
+  # tl <- tiles(shared_qd)
+  # shared_coords <- lapply(tl,\(o) gridcentres(o,nx=1,ny=1)) %>%
+  #   do.call(rbind,.) %>%
+  #   as_tibble(rownames = "tile") %>%
+  #   unnest(c(x,y)) %>%
+  #   mutate(tile = gsub("Tile ","",tile)) %>%
+  #   rename(x_shared = x, y_shared = y)
 
+  # counts <- counts %>%
+  #   left_join(shared_coords, by = "tile")
 
+  y_list <- counts %>%
+    # pivot_wider(names_from = type, values_from = count) %>%
+    group_by(image_id) %>%
+    group_map(~{
+      .x %>%
+        select(-c(gridded_x,gridded_y)) %>%
+        # tibble::column_to_rownames("tile") %>%
+        as.matrix()
+    })
+
+  stopifnot("Images have differing numbers of outcomes!"=length(unique(sapply(y_list, ncol))) == 1)
+
+  q <- ncol(y_list[[1]])
+  p <- length(covariates)
+  if(p == 0) p <- 1 # CHECK!
+  k <- ifelse(is.null(k), q, k)
+
+  # MCMC verbosity
   if(verbose == 0){
     mcmc_print_every <- 0
   } else {
@@ -133,48 +323,20 @@ multi_bipps <- function(
     }
   }
 
-  x_list <- lapply(x_list,\(x) {
-    if(is.null(colnames(x))){
-      orig_X_colnames <<- colnames(x) <- paste0('X_', 1:ncol(x))
-    } else {
-      orig_X_colnames <<- colnames(x)
-      colnames(x)     <- paste0('X_', 1:ncol(x))
-    }
-    x
-  })
-
-
-  if(is.null(colnames(coords))){
-    orig_coords_colnames <- colnames(coords) <- paste0('Var', 1:dd)
-  } else {
-    orig_coords_colnames <- colnames(coords)
-    colnames(coords)     <- paste0('Var', 1:dd)
-  }
-
-  q              <- ncol(y_list[[1]]) # check this
-  k              <- ifelse(is.null(k), q, k)
-
   # family id
-  family <- if(length(family)==1){rep(family, q)} else {family}
-  use_ps <- settings$ps %>% set_default(TRUE)
+  family <- if(length(family) == 1){ rep(family, q) } else { family }
   family_in <- data.frame(family=family)
-  available_families <- data.frame(id=c(1,4), family=c("poisson", "negbinomial"))
 
-  suppressMessages(family_id <- family_in %>%
-                      left_join(available_families, by=c("family"="family")) %>% pull(id))
+  available_families <- data.frame(id=c(1,4), family=c("poisson", "negbinomial")) # CHECK THIS! numeric for family id?
+
+  family_id <- family_in %>%
+    left_join(available_families, by=c("family")) %>%
+    pull(id)
 
   # for spatial data: matern or expon, for spacetime: gneiting 2002
   #n_par_each_process <- ifelse(dd==2, 1, 3)
 
-  nr             <- nrow(x_list[[1]])
-
-  ## check this
-  if(length(axis_partition) == 1){
-    axis_partition <- rep(axis_partition, dd)
-  }
-  if(is.null(axis_partition)){
-    axis_partition <- rep(round((nr/block_size)^(1/dd)), dd)
-  }
+  axis_partition <- c(nx/n_partition, ny/n_partition)
 
   # what are we sampling
   sample_w       <- debug$sample_w %>% set_default(TRUE)
@@ -184,15 +346,15 @@ multi_bipps <- function(
   sample_lambda  <- debug$sample_lambda %>% set_default(TRUE)
 
 
-  # data management pt 2
+  # data management pt 2 - messy, need to clean up
 
   # what to do with different NAs in different images?
-  na_which <- lapply(y_list, \(y) apply(y, 1, \(i) ifelse(sum(is.na(i))==q,NA,1)))
+  all_na_which <- lapply(y_list, \(y) apply(y, 1, \(i) ifelse(sum(is.na(i))==q,NA,1)))
   simdata_list <- lapply(1:num_images,\(i) {
-    data.frame(ix=1:nrow(coords)) %>%
-      cbind(coords, y_list[[i]], na_which[[i]], x_list[[i]]) %>%
-      as.data.frame() %>% 
-      arrange(!!!rlang::syms(paste0("Var", 1:dd)))
+    data.frame(ix=1:nrow(shared_coords)) %>%
+      cbind(shared_coords, y_list[[i]], all_na_which[[i]]) %>%
+      as.data.frame()
+      # arrange(!!!rlang::syms(paste0("Var", 1:dd)))
   })
 
   coords <- simdata_list[[1]] %>%
@@ -268,6 +430,8 @@ multi_bipps <- function(
     indexing <- (1:nrow(simdata_in)-1) %>%
       split(blocking)
   })
+
+  # priors and starting values
 
   if(1){
     # prior and starting values for mcmc

@@ -11,55 +11,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// bipps_mcmc
-Rcpp::List bipps_mcmc(const arma::mat& y, const arma::uvec& family, const arma::mat& X, const arma::mat& coords, int k, const arma::field<arma::uvec>& parents, const arma::field<arma::uvec>& children, const arma::vec& layer_names, const arma::vec& layer_gibbs_group, const arma::field<arma::uvec>& indexing, const arma::mat& set_unif_bounds_in, const arma::mat& beta_Vi, const arma::vec& sigmasq_ab, const arma::vec& tausq_ab, int matern_twonu, const arma::mat& start_w, const arma::mat& lambda, const arma::umat& lambda_mask, const arma::mat& theta, const arma::mat& beta, const arma::vec& tausq, const arma::mat& mcmcsd, int mcmc_keep, int mcmc_burn, int mcmc_thin, int mcmc_startfrom, int num_threads, int which_hmc, bool adapting, bool use_ps, bool verbose, bool debug, int print_every, bool low_mem, bool sample_beta, bool sample_tausq, bool sample_lambda, bool sample_theta, bool sample_w);
-RcppExport SEXP _bipps_bipps_mcmc(SEXP ySEXP, SEXP familySEXP, SEXP XSEXP, SEXP coordsSEXP, SEXP kSEXP, SEXP parentsSEXP, SEXP childrenSEXP, SEXP layer_namesSEXP, SEXP layer_gibbs_groupSEXP, SEXP indexingSEXP, SEXP set_unif_bounds_inSEXP, SEXP beta_ViSEXP, SEXP sigmasq_abSEXP, SEXP tausq_abSEXP, SEXP matern_twonuSEXP, SEXP start_wSEXP, SEXP lambdaSEXP, SEXP lambda_maskSEXP, SEXP thetaSEXP, SEXP betaSEXP, SEXP tausqSEXP, SEXP mcmcsdSEXP, SEXP mcmc_keepSEXP, SEXP mcmc_burnSEXP, SEXP mcmc_thinSEXP, SEXP mcmc_startfromSEXP, SEXP num_threadsSEXP, SEXP which_hmcSEXP, SEXP adaptingSEXP, SEXP use_psSEXP, SEXP verboseSEXP, SEXP debugSEXP, SEXP print_everySEXP, SEXP low_memSEXP, SEXP sample_betaSEXP, SEXP sample_tausqSEXP, SEXP sample_lambdaSEXP, SEXP sample_thetaSEXP, SEXP sample_wSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type y(ySEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type family(familySEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type coords(coordsSEXP);
-    Rcpp::traits::input_parameter< int >::type k(kSEXP);
-    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type parents(parentsSEXP);
-    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type children(childrenSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type layer_names(layer_namesSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type layer_gibbs_group(layer_gibbs_groupSEXP);
-    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type indexing(indexingSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type set_unif_bounds_in(set_unif_bounds_inSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type beta_Vi(beta_ViSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type sigmasq_ab(sigmasq_abSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type tausq_ab(tausq_abSEXP);
-    Rcpp::traits::input_parameter< int >::type matern_twonu(matern_twonuSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type start_w(start_wSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type lambda(lambdaSEXP);
-    Rcpp::traits::input_parameter< const arma::umat& >::type lambda_mask(lambda_maskSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type theta(thetaSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type beta(betaSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type tausq(tausqSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type mcmcsd(mcmcsdSEXP);
-    Rcpp::traits::input_parameter< int >::type mcmc_keep(mcmc_keepSEXP);
-    Rcpp::traits::input_parameter< int >::type mcmc_burn(mcmc_burnSEXP);
-    Rcpp::traits::input_parameter< int >::type mcmc_thin(mcmc_thinSEXP);
-    Rcpp::traits::input_parameter< int >::type mcmc_startfrom(mcmc_startfromSEXP);
-    Rcpp::traits::input_parameter< int >::type num_threads(num_threadsSEXP);
-    Rcpp::traits::input_parameter< int >::type which_hmc(which_hmcSEXP);
-    Rcpp::traits::input_parameter< bool >::type adapting(adaptingSEXP);
-    Rcpp::traits::input_parameter< bool >::type use_ps(use_psSEXP);
-    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
-    Rcpp::traits::input_parameter< bool >::type debug(debugSEXP);
-    Rcpp::traits::input_parameter< int >::type print_every(print_everySEXP);
-    Rcpp::traits::input_parameter< bool >::type low_mem(low_memSEXP);
-    Rcpp::traits::input_parameter< bool >::type sample_beta(sample_betaSEXP);
-    Rcpp::traits::input_parameter< bool >::type sample_tausq(sample_tausqSEXP);
-    Rcpp::traits::input_parameter< bool >::type sample_lambda(sample_lambdaSEXP);
-    Rcpp::traits::input_parameter< bool >::type sample_theta(sample_thetaSEXP);
-    Rcpp::traits::input_parameter< bool >::type sample_w(sample_wSEXP);
-    rcpp_result_gen = Rcpp::wrap(bipps_mcmc(y, family, X, coords, k, parents, children, layer_names, layer_gibbs_group, indexing, set_unif_bounds_in, beta_Vi, sigmasq_ab, tausq_ab, matern_twonu, start_w, lambda, lambda_mask, theta, beta, tausq, mcmcsd, mcmc_keep, mcmc_burn, mcmc_thin, mcmc_startfrom, num_threads, which_hmc, adapting, use_ps, verbose, debug, print_every, low_mem, sample_beta, sample_tausq, sample_lambda, sample_theta, sample_w));
-    return rcpp_result_gen;
-END_RCPP
-}
 // bipps_predict
 Rcpp::List bipps_predict(const arma::mat& predx, const arma::mat& predcoords, const arma::uvec& predblock, const arma::mat& coords, const arma::field<arma::uvec>& parents, const arma::uvec& block_names, const arma::field<arma::uvec>& indexing, const arma::field<arma::mat>& v_sampled, const arma::cube& theta_sampled, const arma::cube& lambda_sampled, const arma::cube& beta_sampled, const arma::mat& tausq_sampled, int twonu, bool use_ps, bool verbose, int num_threads);
 RcppExport SEXP _bipps_bipps_predict(SEXP predxSEXP, SEXP predcoordsSEXP, SEXP predblockSEXP, SEXP coordsSEXP, SEXP parentsSEXP, SEXP block_namesSEXP, SEXP indexingSEXP, SEXP v_sampledSEXP, SEXP theta_sampledSEXP, SEXP lambda_sampledSEXP, SEXP beta_sampledSEXP, SEXP tausq_sampledSEXP, SEXP twonuSEXP, SEXP use_psSEXP, SEXP verboseSEXP, SEXP num_threadsSEXP) {
@@ -433,7 +384,6 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_bipps_bipps_mcmc", (DL_FUNC) &_bipps_bipps_mcmc, 39},
     {"_bipps_bipps_predict", (DL_FUNC) &_bipps_bipps_predict, 16},
     {"_bipps_Cov_matern", (DL_FUNC) &_bipps_Cov_matern, 8},
     {"_bipps_Cov_matern2", (DL_FUNC) &_bipps_Cov_matern2, 5},
