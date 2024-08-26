@@ -29,9 +29,6 @@ Rcpp::List multi_bipps_mcmc(
     const arma::mat& set_unif_bounds_in,
     const arma::mat& beta_Vi,
 
-    const arma::vec& sigmasq_ab,
-    const arma::vec& tausq_ab,
-
     int matern_twonu,
 
     const arma::field<arma::mat>& start_w,
@@ -134,7 +131,7 @@ Rcpp::List multi_bipps_mcmc(
 
               matern_twonu,
               start_w[i], beta, start_lambda, lambda_mask, start_theta, 1.0/tausq,
-              beta_Vi, tausq_ab,
+              beta_Vi,
 
               which_hmc,
               adapting,

@@ -274,7 +274,6 @@ public:
     const arma::vec& tausq_inv_in,
     
     const arma::mat& beta_Vi_in,
-    const arma::vec& tausq_ab_in,
     
     int which_hmc_in,
     bool adapting_theta,

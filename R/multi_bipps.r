@@ -2,7 +2,8 @@
 #'
 #' @param x x coordinate of each cell
 #' @param y y coordinate of each cell
-#' @param coords matrix of coordinates, common to all images
+#' @param types vector of cell types
+#' @param image_ids vector of image that each cell comes from
 #' @param k number of latent processes
 #' @param family family of the response variables
 #' @param axis_partition number of blocks per axis
@@ -37,40 +38,53 @@ multi_bipps <- function(
   n_thin = 1, # remove - initially for memory purposes
   n_threads = 4,
   verbose = 0,
-  adapting=TRUE,
-  saving=TRUE, # restart MCMC later - check what it saves. Still would need to save the last v.
-  low_mem=FALSE, # default to true, or just remove? we really only care about beta, lambda, theta. remove v, w, yhat
-  debug = list(
-   hmc=0,
-   sample_beta=TRUE,
-   sample_tausq=TRUE, # remove for now, since also useful for nb
-   sample_theta=TRUE,
-   sample_w=TRUE,
-   sample_lambda=TRUE,
-   verbose=FALSE,
-   debug=FALSE,
-   prior = list(beta=NULL,
-                tausq=NULL, # remove, nb
-                sigmasq = NULL, # remove
-                phi=NULL, # uniform typically for theta (on ine)
-                a=NULL, # remove, related to time?
-                nu = NULL, # matern, remove
-                toplim = NULL, # check being used, maybe remove
-                btmlim = NULL,
-                set_unif_bounds=NULL # check
-   ),
-   starting = list(beta=NULL,
-                   tausq=NULL, # remove
-                   theta=NULL,
-                   lambda=NULL,
-                   v=NULL,
-                   a=NULL, # remove
-                   nu = NULL, # remove
-                   mcmcsd=.05, # used to restart with adaptation
-                   mcmc_startfrom=0)
-   ),
-  indpart=FALSE, # put in debug
-  just_preprocess=FALSE # remove, do preprocessing only if mcmc = 0
+  settings = list(adapting=TRUE,
+                  saving=TRUE, low_mem=FALSE),
+  prior = list(beta=NULL, tausq=NULL, sigmasq = NULL,
+               phi=NULL, a=NULL, nu = NULL,
+               toplim = NULL, btmlim = NULL, set_unif_bounds=NULL),
+  starting = list(beta=NULL, tausq=NULL, theta=NULL,
+                  lambda=NULL, v=NULL,  a=NULL, nu = NULL,
+                  mcmcsd=.05, mcmc_startfrom=0),
+  debug = list(sample_beta=TRUE, sample_tausq=TRUE,
+               sample_theta=TRUE, sample_w=TRUE, sample_lambda=TRUE,
+               verbose=FALSE, debug=FALSE),
+  indpart=FALSE,
+  just_preprocess=FALSE
+  # adapting=TRUE,
+  # saving=TRUE, # restart MCMC later - check what it saves. Still would need to save the last v.
+  # low_mem=FALSE, # default to true, or just remove? we really only care about beta, lambda, theta. remove v, w, yhat
+  # debug = list(
+  #  hmc=0,
+  #  sample_beta=TRUE,
+  #  sample_tausq=TRUE, # remove for now, since also useful for nb
+  #  sample_theta=TRUE,
+  #  sample_w=TRUE,
+  #  sample_lambda=TRUE,
+  #  verbose=FALSE,
+  #  debug=FALSE,
+  #  prior = list(beta=NULL,
+  #               tausq=NULL, # remove, nb
+  #               sigmasq = NULL, # remove
+  #               phi=NULL, # uniform typically for theta (on ine)
+  #               a=NULL, # remove, related to time?
+  #               nu = NULL, # matern, remove
+  #               toplim = NULL, # check being used, maybe remove
+  #               btmlim = NULL,
+  #               set_unif_bounds=NULL # check
+  #  ),
+  #  starting = list(beta=NULL,
+  #                  tausq=NULL, # remove
+  #                  theta=NULL,
+  #                  lambda=NULL,
+  #                  v=NULL,
+  #                  a=NULL, # remove
+  #                  nu = NULL, # remove
+  #                  mcmcsd=.05, # used to restart with adaptation
+  #                  mcmc_startfrom=0)
+  #  ),
+  # indpart=FALSE, # put in debug
+  # just_preprocess=FALSE # remove, do preprocessing only if mcmc = 0
 ){
 
   # inputs:
@@ -113,13 +127,14 @@ multi_bipps <- function(
   #   which_hmc <- 0
   # }
   #
-  # mcmc_adaptive    <- settings$adapting %>% set_default(TRUE)
-  # mcmc_verbose     <- debug$verbose %>% set_default(FALSE)
-  # mcmc_debug       <- debug$debug %>% set_default(FALSE)
-  # saving <- settings$saving %>% set_default(TRUE)
-  # low_mem <- settings$low_mem %>% set_default(FALSE)
+
+  mcmc_adaptive    <- settings$adapting %>% set_default(TRUE)
+  mcmc_verbose     <- debug$verbose %>% set_default(FALSE)
+  mcmc_debug       <- debug$debug %>% set_default(FALSE)
+  saving <- settings$saving %>% set_default(TRUE)
+  low_mem <- settings$low_mem %>% set_default(FALSE)
   #
-  # debugdag <- debug$dag %>% set_default(1)
+  debugdag <- debug$dag %>% set_default(1)
 
   out <- create_y_list(X,Y,types,image_ids,nx,ny)
   y_list <- out$y_list
@@ -149,11 +164,11 @@ multi_bipps <- function(
   axis_partition <- ceiling(c(nx/n_partition, ny/n_partition))
 
   # what are we sampling - need to fix this
-  # sample_w       <- debug$sample_w %>% set_default(TRUE)
-  # sample_beta    <- debug$sample_beta %>% set_default(TRUE)
-  # sample_tausq   <- debug$sample_tausq %>% set_default(TRUE)
-  # sample_theta   <- debug$sample_theta %>% set_default(TRUE)
-  # sample_lambda  <- debug$sample_lambda %>% set_default(TRUE)
+  sample_w       <- debug$sample_w %>% set_default(TRUE)
+  sample_beta    <- debug$sample_beta %>% set_default(TRUE)
+  sample_tausq   <- debug$sample_tausq %>% set_default(TRUE)
+  sample_theta   <- debug$sample_theta %>% set_default(TRUE)
+  sample_lambda  <- debug$sample_lambda %>% set_default(TRUE)
 
 
   # data management pt 2 - messy, need to clean up
@@ -170,6 +185,9 @@ multi_bipps <- function(
 
   coords <- grid_list[[1]] %>%
     select(x,y)
+
+  # remove, since we are generating the coordinate system
+  sort_ix <- grid_list[[1]]$ix
 
 
   simdata_list <- lapply(1:num_images,\(i) {
@@ -231,6 +249,21 @@ multi_bipps <- function(
       dplyr::left_join(simdata_list[[i]])
   }))
 
+  x_list <- lapply(simdata_in_list,\(simdata_in) {
+    matrix(0,nrow=nrow(coords),1)
+  })
+
+
+  # remove x_list completely later
+  # x_list <- lapply(simdata_in_list,\(simdata_in) {
+  #   x <- simdata_in %>%
+  #     dplyr::select(dplyr::contains("X_")) %>%
+  #     as.matrix()
+  #   # colnames(x) <- orig_X_colnames
+  #   x[is.na(x)] <- 0 # NAs if added coords due to empty blocks
+  #   x
+  # })
+
   # should be common to all images
   indexing_list <- lapply(simdata_in_list,\(simdata_in) {
     blocking <- simdata_in$block %>%
@@ -241,273 +274,131 @@ multi_bipps <- function(
 
   # priors and starting values
 
-  if(1){
-    # prior and starting values for mcmc
+  # remove nu dependence later
+  start_nu <- 0.5
+  matern_fix_twonu <- 1
+  # prior and starting values for mcmc
 
-    # nu
-    if(is.null(prior$nu)){
-      matern_nu <- FALSE
-      if(is.null(starting$nu)){
-        start_nu <- 0.5
-        matern_fix_twonu <- 1
-      } else {
-        start_nu <- starting$nu
-        if(start_nu %in% c(0.5, 1.5, 2.5)){
-          matern_fix_twonu <- 2 * start_nu
-        }
-      }
+  if(is.null(prior$phi)){
+    stop("Need to specify the limits on the Uniform prior for phi via prior$phi.")
+  }
+  phi_limits <- prior$phi
+  if(is.null(starting$phi)){
+    start_phi <- mean(phi_limits)
+  } else {
+    start_phi <- starting$phi
+  }
+
+  if(is.null(prior$beta)){
+    beta_Vi <- diag(ncol(x_list[[1]])) * 1/100
+  } else {
+    beta_Vi <- prior$beta
+  }
+
+
+  btmlim <- prior$btmlim %>% set_default(1e-3)
+  toplim <- prior$toplim %>% set_default(1e3)
+
+  # starting values
+  if(is.null(starting$beta)){
+    start_beta   <- matrix(0, nrow=p, ncol=q)
+  } else {
+    start_beta   <- starting$beta
+  }
+
+  if(is.null(prior$set_unif_bounds)){
+    theta_names <- c("phi", "sigmasq")
+    npar <- length(theta_names)
+
+    start_theta <- matrix(0, ncol=k, nrow=npar)
+
+    set_unif_bounds <- matrix(0, nrow=npar*k, ncol=2)
+    # phi
+    set_unif_bounds[seq(1, npar*k, npar),] <- matrix(phi_limits,nrow=1) %x% matrix(1, nrow=k)
+    start_theta[1,] <- start_phi
+
+    # sigmasq expansion
+    set_unif_bounds[seq(2, npar*k, npar),] <- matrix(c(btmlim, toplim),nrow=1) %x% matrix(1, nrow=k)
+    if((q>1)){
+      # multivariate without expansion: sigmasq=1 fixed.
+      start_theta[2,] <- 1
     } else {
-      nu_limits <- prior$nu
-      if(length(nu_limits)==1){
-        matern_fix_twonu <- floor(nu_limits)*2 + 1
-        start_nu <- matern_fix_twonu
-        matern_nu <- FALSE
-        if(verbose > 0){
-          strmessage <- paste0("nu set to ", start_nu/2)
-          message(strmessage)
-        }
-      } else {
-        if(diff(nu_limits) == 0){
-          matern_fix_twonu <- floor(nu_limits[1])*2 + 1
-          start_nu <- matern_fix_twonu
-          matern_nu <- F
-          if(verbose > 0){
-            strmessage <- paste0("nu set to ", start_nu/2)
-            message(strmessage)
-          }
-        } else {
-          if(is.null(starting$nu)){
-            start_nu <- mean(nu_limits)
-          } else {
-            start_nu <- starting$nu
-          }
-          matern_nu <- TRUE
-          matern_fix_twonu <- 1 # not applicable
-        }
-      }
-
+      start_theta[2,] <- btmlim + 1
     }
+  } else {
+    set_unif_bounds <- prior$set_unif_bounds
+  }
 
-    if(is.null(prior$phi)){
-      stop("Need to specify the limits on the Uniform prior for phi via prior$phi.")
-    }
-    phi_limits <- prior$phi
-    if(is.null(starting$phi)){
-      start_phi <- mean(phi_limits)
+  # override defaults if starting values are provided
+  if(!is.null(starting$theta)){
+    start_theta <- starting$theta
+  }
+
+  n_par_each_process <- nrow(start_theta)
+  if(is.null(starting$mcmcsd)){
+    mcmc_mh_sd <- diag(k * n_par_each_process) * 0.05
+  } else {
+    if(length(starting$mcmcsd) == 1){
+      mcmc_mh_sd <- diag(k * n_par_each_process) * starting$mcmcsd
     } else {
-      start_phi <- starting$phi
+      mcmc_mh_sd <- starting$mcmcsd
     }
+  }
 
-    if(dd == 3){
-      if(is.null(prior$a)){
-        a_limits <- phi_limits
-      } else {
-        a_limits <- prior$a
-      }
-      if(is.null(starting$a)){
-        start_a <- mean(a_limits)
-      } else {
-        start_a <- starting$a
-      }
-    }
+  if(is.null(starting$tausq)){
+    start_tausq  <- family %>% sapply(function(ff) if(ff == "gaussian"){.1} else {1})
+  } else {
+    start_tausq  <- starting$tausq
+  }
 
-    if(is.null(prior$beta)){
-      beta_Vi <- diag(ncol(x_list[[1]])) * 1/100
+  if(is.null(starting$lambda)){
+    start_lambda <- matrix(0, nrow=q, ncol=k)
+    diag(start_lambda) <- 1
+  } else {
+    start_lambda <- starting$lambda
+  }
+
+  if(is.null(starting$lambda_mask)){
+    if(k<=q){
+      lambda_mask <- matrix(0, nrow=q, ncol=k)
+      lambda_mask[lower.tri(lambda_mask)] <- 1
+      diag(lambda_mask) <- 1 #***
     } else {
-      beta_Vi <- prior$beta
+      stop("starting$lambda_mask needs to be specified")
     }
+  } else {
+    lambda_mask <- starting$lambda_mask
+  }
 
-    if(is.null(prior$tausq)){
-      tausq_ab <- c(2, 1)
-    } else {
-      tausq_ab <- prior$tausq
-      if(length(tausq_ab) == 1){
-        tausq_ab <- c(tausq_ab[1], 0)
-      }
-    }
+  if(is.null(starting$mcmc_startfrom)){
+    mcmc_startfrom <- 0
+  } else {
+    mcmc_startfrom <- starting$mcmc_startfrom
+  }
 
-
-    btmlim <- prior$btmlim %>% set_default(1e-3)
-    toplim <- prior$toplim %>% set_default(1e3)
-
-    # starting values
-    if(is.null(starting$beta)){
-      start_beta   <- matrix(0, nrow=p, ncol=q)
-    } else {
-      start_beta   <- starting$beta
-    }
-
-    if(is.null(prior$set_unif_bounds)){
-      if(dd == 2){
-        if(matern_nu){
-          theta_names <- c("phi", "nu", "sigmasq")
-          npar <- length(theta_names)
-
-          start_theta <- matrix(0, ncol=k, nrow=npar)
-          set_unif_bounds <- matrix(0, nrow=npar*k, ncol=2)
-
-          # phi
-          set_unif_bounds[seq(1, npar*k, npar),] <- matrix(phi_limits,nrow=1) %x% matrix(1, nrow=k)
-          start_theta[1,] <- start_phi
-
-          # nu
-          set_unif_bounds[seq(2, npar*k, npar),] <- matrix(nu_limits,nrow=1) %x% matrix(1, nrow=k)
-          start_theta[2,] <- start_nu
-
-          # sigmasq expansion
-          set_unif_bounds[seq(3, npar*k, npar),] <- matrix(c(btmlim, toplim),nrow=1) %x% matrix(1, nrow=k)
-          if((q>1) & (!use_ps)){
-            # multivariate without expansion: sigmasq=1 fixed.
-            start_theta[3,] <- 1
-          } else {
-            start_theta[3,] <- btmlim + 1
-          }
-
-        } else {
-          theta_names <- c("phi", "sigmasq")
-          npar <- length(theta_names)
-
-          start_theta <- matrix(0, ncol=k, nrow=npar)
-
-          set_unif_bounds <- matrix(0, nrow=npar*k, ncol=2)
-          # phi
-          set_unif_bounds[seq(1, npar*k, npar),] <- matrix(phi_limits,nrow=1) %x% matrix(1, nrow=k)
-          start_theta[1,] <- start_phi
-
-          # sigmasq expansion
-          set_unif_bounds[seq(2, npar*k, npar),] <- matrix(c(btmlim, toplim),nrow=1) %x% matrix(1, nrow=k)
-          if((q>1) & (!use_ps)){
-            # multivariate without expansion: sigmasq=1 fixed.
-            start_theta[2,] <- 1
-          } else {
-            start_theta[2,] <- btmlim + 1
-          }
-        }
-      } else {
-        theta_names <- c("a", "phi", "beta", "sigmasq")
-        npar <- length(theta_names)
-
-        start_theta <- matrix(0, ncol=k, nrow=npar)
-        set_unif_bounds <- matrix(0, nrow=npar*k, ncol=2)
-
-        # a
-        set_unif_bounds[seq(1, npar*k, npar),] <- matrix(a_limits,nrow=1) %x% matrix(1, nrow=k)
-        start_theta[1,] <- start_a
-
-        # phi
-        set_unif_bounds[seq(2, npar*k, npar),] <- matrix(phi_limits,nrow=1) %x% matrix(1, nrow=k)
-        start_theta[2,] <- start_phi
-
-        # beta
-        set_unif_bounds[seq(3, npar*k, npar),] <- matrix(c(0,1),nrow=1) %x% matrix(1, nrow=k)
-        start_theta[3,] <- 0.5
-
-        # sigmasq expansion
-        set_unif_bounds[seq(4, npar*k, npar),] <- matrix(c(btmlim, toplim),nrow=1) %x% matrix(1, nrow=k)
-        if((q>1) & (!use_ps)){
-          # multivariate without expansion: sigmasq=1 fixed.
-          start_theta[4,] <- 1
-        } else {
-          start_theta[4,] <- btmlim + 1
-        }
-
-      }
-
-    } else {
-      set_unif_bounds <- prior$set_unif_bounds
-    }
-
-    # override defaults if starting values are provided
-    if(!is.null(starting$theta)){
-      start_theta <- starting$theta
-    }
-
-    n_par_each_process <- nrow(start_theta)
-    if(is.null(starting$mcmcsd)){
-      mcmc_mh_sd <- diag(k * n_par_each_process) * 0.05
-    } else {
-      if(length(starting$mcmcsd) == 1){
-        mcmc_mh_sd <- diag(k * n_par_each_process) * starting$mcmcsd
-      } else {
-        mcmc_mh_sd <- starting$mcmcsd
-      }
-    }
-
-    if(is.null(starting$tausq)){
-      start_tausq  <- family %>% sapply(function(ff) if(ff == "gaussian"){.1} else {1})
-    } else {
-      start_tausq  <- starting$tausq
-    }
-
-    if(is.null(starting$lambda)){
-      start_lambda <- matrix(0, nrow=q, ncol=k)
-      diag(start_lambda) <- if(use_ps){10} else {1}
-    } else {
-      start_lambda <- starting$lambda
-    }
-
-    if(is.null(starting$lambda_mask)){
-      if(k<=q){
-        lambda_mask <- matrix(0, nrow=q, ncol=k)
-        lambda_mask[lower.tri(lambda_mask)] <- 1
-        diag(lambda_mask) <- 1 #***
-      } else {
-        stop("starting$lambda_mask needs to be specified")
-      }
-    } else {
-      lambda_mask <- starting$lambda_mask
-    }
-
-    if(is.null(starting$mcmc_startfrom)){
-      mcmc_startfrom <- 0
-    } else {
-      mcmc_startfrom <- starting$mcmc_startfrom
-    }
-
-    if(is.null(starting$v)){
-      start_v <- lapply(1:num_images,\(i) matrix(0, nrow = nrow(simdata_in_list[[1]]), ncol = k))
-    } else {
-      # this is used to restart MCMC
-      # assumes the ordering and the sizing is correct,
-      # so no change is necessary and will be input directly to mcmc
-      start_v <- starting$v
-    }
+  if(is.null(starting$v)){
+    start_v <- lapply(1:num_images,\(i) matrix(0, nrow = nrow(simdata_in_list[[1]]), ncol = k))
+  } else {
+    # this is used to restart MCMC
+    # assumes the ordering and the sizing is correct,
+    # so no change is necessary and will be input directly to mcmc
+    start_v <- starting$v
   }
 
   # finally prepare data
 
 
-  x_list <- lapply(simdata_in_list,\(simdata_in) {
-    x <- simdata_in %>%
-      dplyr::select(dplyr::contains("X_")) %>%
-      as.matrix()
-    colnames(x) <- orig_X_colnames
-    x[is.na(x)] <- 0 # NAs if added coords due to empty blocks
-    x
-  })
-
-
   coords <- simdata_in_list[[1]] %>%
-    dplyr::select(dplyr::contains("Var")) %>%
+    dplyr::select(x,y) %>%
     as.matrix()
-
-
-  coords_renamer <- colnames(coords)
-  names(coords_renamer) <- orig_coords_colnames
-
-  coordsdata <- simdata_in_list[[1]] %>%
-    dplyr::select(all_of(1:dd), ix) %>%
-    dplyr::rename(!!!coords_renamer)
 
   if(verbose > 0){
     cat("Sending to MCMC.\n")
   }
 
-  mcmc_run <- multi_bipps_mcmc
-
   if(!just_preprocess){
     comp_time <- system.time({
-        results <- mcmc_run(
+        results <- multi_bipps_mcmc(
           y_list,
           family_id,
           x_list,
@@ -522,10 +413,6 @@ multi_bipps <- function(
           # check on removing all of below
           set_unif_bounds,
           beta_Vi,
-
-
-          sigmasq_ab,
-          tausq_ab,
 
           matern_fix_twonu,
 
@@ -546,10 +433,10 @@ multi_bipps <- function(
 
           n_threads,
 
-          which_hmc,
+          0, # which_hmc, remove later
           mcmc_adaptive, # adapting
 
-          use_ps,
+          TRUE, # use_ps, remove later
 
           mcmc_verbose, mcmc_debug, # verbose, debug
           mcmc_print_every, # print all iter

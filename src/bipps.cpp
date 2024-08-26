@@ -29,7 +29,6 @@ Bipps::Bipps(
   const arma::vec& tausq_inv_in,
   
   const arma::mat& beta_Vi_in,
-  const arma::vec& tausq_ab_in,
   
   int which_hmc_in,
   bool adapting_theta,
@@ -122,9 +121,7 @@ Bipps::Bipps(
    Vi    = beta_Vi_in;
    bprim = arma::zeros(p);
    Vim   = Vi * bprim;
-  
-  tausq_ab = tausq_ab_in;
-  
+    
   // init
   u_is_which_col_f    = arma::field<arma::field<arma::field<arma::uvec> > > (n_blocks);
   
