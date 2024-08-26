@@ -26,51 +26,51 @@ multi_bipps <- function(
   y,
   types,
   image_ids,
-  covariates=NULL,
+  covariates=NULL, # wait on these
   k=NULL,
   nx = 20,
   ny = 20,
-  family = "poisson",
-  n_partition = NULL,
+  # family = "poisson", # fix to poisson for now
+  # n_partition = NULL, # fix to something for now - so that # of grids in each (rectangular) block close to 30-50
   n_samples = 1000,
   n_burnin = 100,
-  n_thin = 1,
+  n_thin = 1, # remove - initially for memory purposes
   n_threads = 4,
   verbose = 0,
   adapting=TRUE,
-  saving=TRUE,
-  low_mem=FALSE,
+  saving=TRUE, # restart MCMC later - check what it saves. Still would need to save the last v.
+  low_mem=FALSE, # default to true, or just remove? we really only care about beta, lambda, theta. remove v, w, yhat
   debug = list(
    hmc=0,
    sample_beta=TRUE,
-   sample_tausq=TRUE,
+   sample_tausq=TRUE, # remove for now, since also useful for nb
    sample_theta=TRUE,
    sample_w=TRUE,
    sample_lambda=TRUE,
    verbose=FALSE,
    debug=FALSE,
    prior = list(beta=NULL,
-                tausq=NULL,
+                tausq=NULL, # remove, nb
                 sigmasq = NULL, # remove
-                phi=NULL,
-                a=NULL,
-                nu = NULL,
-                toplim = NULL, # check being used
+                phi=NULL, # uniform typically for theta (on ine)
+                a=NULL, # remove, related to time?
+                nu = NULL, # matern, remove
+                toplim = NULL, # check being used, maybe remove
                 btmlim = NULL,
                 set_unif_bounds=NULL # check
    ),
    starting = list(beta=NULL,
-                   tausq=NULL,
+                   tausq=NULL, # remove
                    theta=NULL,
                    lambda=NULL,
                    v=NULL,
-                   a=NULL,
-                   nu = NULL,
-                   mcmcsd=.05,
+                   a=NULL, # remove
+                   nu = NULL, # remove
+                   mcmcsd=.05, # used to restart with adaptation
                    mcmc_startfrom=0)
    ),
-  indpart=FALSE,
-  just_preprocess=FALSE
+  indpart=FALSE, # put in debug
+  just_preprocess=FALSE # remove, do preprocessing only if mcmc = 0
 ){
 
   # inputs:
@@ -161,6 +161,8 @@ multi_bipps <- function(
   # what to do with different NAs in different images?
   all_na_which <- lapply(y_list, \(y) apply(y, 1, \(i) ifelse(sum(is.na(i))==q,NA,1)))
 
+  # check if prop of NAs not too large in image
+  # fill in NAs in middle of image with zeros
 
   grid_list <- grid %>%
     group_by(image_id) %>%
@@ -168,8 +170,6 @@ multi_bipps <- function(
 
   coords <- grid_list[[1]] %>%
     select(x,y)
-
-  sort_ix <- grid_list[[1]]$ix
 
 
   simdata_list <- lapply(1:num_images,\(i) {
@@ -180,13 +180,14 @@ multi_bipps <- function(
 
   fixed_thresholds <- 1:2 %>% lapply(\(i) kthresholdscp(coords %>% pull(i), axis_partition[i]))
 
-  # guaranteed to produce blocks using Mv
+  # guaranteed to produce blocks using Mv - remove, since we already have full grid with NAs
   system.time(fake_coords_blocking <- coords %>%
                 as.matrix() %>%
                 gen_fake_coords(fixed_thresholds, 1) )
 
   # Domain partitioning and gibbs groups
 
+  # update this, since only NAs change between images
   system.time(coords_blocking_list <- lapply(all_na_which,\(na_which) {
     coords_blocking <- coords %>%
                   as.matrix() %>%
@@ -230,6 +231,7 @@ multi_bipps <- function(
       dplyr::left_join(simdata_list[[i]])
   }))
 
+  # should be common to all images
   indexing_list <- lapply(simdata_in_list,\(simdata_in) {
     blocking <- simdata_in$block %>%
       factor() %>% as.integer()
