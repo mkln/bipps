@@ -88,9 +88,8 @@ Rcpp::List multi_bipps_mcmc(
 
   double tempr = 1;
 
-  unsigned int d = coords.n_cols;
-  unsigned int q  = y_list[1].n_cols;
-  unsigned int n = y_list[1].n_rows;
+  unsigned int q  = y_list[0].n_cols;
+  unsigned int n = y_list[0].n_rows;
 
   if(verbose & debug){
     Rcpp::Rcout << "Limits to MCMC search for theta:\n";
@@ -103,12 +102,9 @@ Rcpp::List multi_bipps_mcmc(
     //ps_forward(theta, d, matern_twonu, use_ps);
 
   arma::mat start_theta = theta;
-  if(verbose & debug){
-    Rcpp::Rcout << "start theta \n" << theta;
-  }
 
   arma::mat plus_icept_mcmc = arma::zeros(q, mcmc_thin*mcmc_keep);
-  arma::cube b_mcmc = arma::zeros(X_list[1].n_cols, q, mcmc_thin*mcmc_keep);
+  arma::cube b_mcmc = arma::zeros(X_list[0].n_cols, q, mcmc_thin*mcmc_keep);
   arma::mat tausq_mcmc = arma::zeros(q, mcmc_thin*mcmc_keep);
   arma::cube theta_mcmc = arma::zeros(theta.n_rows, k, mcmc_thin*mcmc_keep);
   arma::cube lambda_mcmc = arma::zeros(q, k, mcmc_thin*mcmc_keep);

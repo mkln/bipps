@@ -457,18 +457,17 @@ multi_bipps <- function(
       anonList
     }
 
-    saved <- listN(y, x, coords_blocking, k,
+    saved <- listN(y_list, x_list, coords_blocking_list, k,
 
-                   family,
+                   family_id,
       parents, children,
       block_names, block_groups,
 
-      indexing,
+      indexing_list,
 
       set_unif_bounds,
       beta_Vi,
 
-      tausq_ab,
 
       start_v,
 
@@ -489,7 +488,6 @@ multi_bipps <- function(
 
       mcmc_adaptive, # adapting
 
-      use_ps,
       matern_fix_twonu,
 
       mcmc_verbose, mcmc_debug, # verbose, debug
@@ -504,7 +502,7 @@ multi_bipps <- function(
     saved <- "Model data not saved."
   }
 
-  returning <- list(coordsdata = coordsdata,
+  returning <- list(coords = coords,
                     savedata = saved)
 
 
