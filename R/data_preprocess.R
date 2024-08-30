@@ -39,14 +39,13 @@ create_y_list <- function(X,Y,types,image_ids,nx,ny) {
 
   names(y_list) <- levels(image_ids)
 
-  grid <- counts %>%
-    select(image_id,gridded_x,gridded_y) %>%
+  coords <- counts %>%
+    distinct(gridded_x,gridded_y) %>%
     mutate(x = gridded_x / max(gridded_x),
            y = gridded_y / max(gridded_y)) %>%
-    group_by(image_id) %>%
-    mutate(ix = 1:n())
+    select(x,y)
 
-  list(y_list=y_list,grid=grid)
+  list(y_list=y_list,coords=coords)
 }
 
 get_mcmc_verbosity <- function(verbose,mcmc_burn,mcmc_thin,mcmc_keep) {
