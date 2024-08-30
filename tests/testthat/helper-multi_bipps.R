@@ -1,6 +1,4 @@
-get_test_data_multi <- function(n_jobs=1) {
-
-  num_images <- 3
+get_test_data_multi <- function(n_jobs=1,num_images=3) {
 
   SS <- 16 # coord values for jth dimension
   dd <- 2 # spatial dimension

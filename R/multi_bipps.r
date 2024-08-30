@@ -90,6 +90,12 @@ multi_bipps <- function(
   coords %<>% as.matrix()
 
 
+  # check dimensions of coords and y_list/x_list
+  stopifnot("nrow(coords) != nrow(x)"=all(unlist(lapply(x_list,\(x) nrow(x) == nrow(coords)))))
+  stopifnot("nrow(coords) != nrow(y)"=all(unlist(lapply(y_list,\(y) nrow(y) == nrow(coords)))))
+  stopifnot("ncol(y) not all equal"=all(unlist(lapply(y_list,\(y) ncol(y) == ncol(y_list[[1]])))))
+
+
   dd             <- ncol(coords)
   p              <- ncol(x_list[[1]])
 
@@ -178,7 +184,6 @@ multi_bipps <- function(
 
   # data management pt 2
 
-  # what to do with different NAs in different images?
   all_na_which <- lapply(y_list, \(y) apply(y, 1, \(i) ifelse(sum(is.na(i))==q,NA,1)))
 
   fixed_thresholds <- 1:dd %>% lapply(function(i) kthresholdscp(coords[,i], axis_partition[i]))
