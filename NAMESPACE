@@ -3,6 +3,7 @@
 S3method(predict,bipps)
 export("%>%")
 export(multi_bipps)
+export(multi_bipps_v2)
 importFrom(FNN,get.knnx)
 importFrom(Rcpp,sourceCpp)
 importFrom(dplyr,arrange)

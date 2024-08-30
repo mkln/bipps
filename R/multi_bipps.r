@@ -21,14 +21,11 @@
 #'
 #' @return list of MCMC samples
 #' @export
-multi_bipps_orig <- function(
-  x,
-  y,
-  types,
-  image_ids,
+multi_bipps <- function(
+  y_list,
+  x_list,
+  coords,
   k=NULL,
-  nx=20,
-  ny=20,
   family = "poisson",
   axis_partition = NULL,
   block_size = 30,
@@ -93,17 +90,6 @@ multi_bipps_orig <- function(
   low_mem <- settings$low_mem %>% set_default(FALSE)
 
   debugdag <- debug$dag %>% set_default(1)
-
-  out <- create_y_list(x,y,types,image_ids,nx,ny)
-  images <- unique(image_ids)
-  n_samples <- length(images)
-  y_list <- out$y_list
-
-  coords <- out$coords
-
-  x_list <- lapply(y_list,\(yy) {
-    matrix(0,nrow = nrow(yy),ncol = 1)
-  })
 
   coords %<>% as.matrix()
 

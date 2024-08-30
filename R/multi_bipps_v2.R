@@ -22,7 +22,7 @@
 #'
 #' @return list of MCMC samples
 #' @export
-multi_bipps <- function(
+multi_bipps_v2 <- function(
   x,
   y,
   types,
