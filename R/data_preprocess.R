@@ -1,3 +1,14 @@
+#' Create y_list and coords objects for multi_bipps
+#'
+#' @param X vector of x coordinates
+#' @param Y vector of y coordinates
+#' @param types character vector of types
+#' @param image_ids character vector of image IDs
+#' @param nx integer, number of pixels on x axis
+#' @param ny integer, number of pixels on y axis
+#'
+#' @return list containg y_list and coords
+#' @export
 create_y_list <- function(X,Y,types,image_ids,nx,ny) {
   # bottom-left corner at 0,0, scale by max X and Y
   df <- data.frame(X = x, Y = y, type = types,image_id = image_ids) %>%
@@ -46,46 +57,4 @@ create_y_list <- function(X,Y,types,image_ids,nx,ny) {
     select(x,y)
 
   list(y_list=y_list,coords=coords)
-}
-
-get_mcmc_verbosity <- function(verbose,mcmc_burn,mcmc_thin,mcmc_keep) {
-  if(verbose == 0){
-    mcmc_print_every <- 0
-  } else {
-    if(verbose <= 20){
-      mcmc_tot <- mcmc_burn + mcmc_thin * mcmc_keep
-      mcmc_print_every <- 1+round(mcmc_tot / verbose)
-    } else {
-      if(is.infinite(verbose)){
-        mcmc_print_every <- 1
-      } else {
-        mcmc_print_every <- verbose
-      }
-    }
-  }
-  mcmc_print_every
-}
-
-get_family_id <- function(family,q) {
-  family <- if(length(family) == 1){ rep(family, q) } else { family }
-  family_in <- data.frame(family=family)
-
-  available_families <- data.frame(id=c(1,4), family=c("poisson", "negbinomial")) # CHECK THIS! numeric for family id?
-
-  family_id <- family_in %>%
-    left_join(available_families, by=c("family")) %>%
-    pull(id)
-}
-
-get_n_partition <- function(n_partition,nx,ny) {
-  if(!is.null(n_partition)){
-    n_partition
-  } else {
-    sqrt(nx*ny)
-  }
-}
-
-set_default <- function(value,default) {
-  if(is.null(value)) return(default)
-  else return(value)
 }

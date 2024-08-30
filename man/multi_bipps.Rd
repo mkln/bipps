@@ -17,7 +17,7 @@ multi_bipps(
   n_thin = 1,
   n_threads = 4,
   verbose = 0,
-  settings = list(adapting = TRUE, ps = TRUE, saving = TRUE, low_mem = FALSE, hmc = 0),
+  settings = list(adapting = TRUE, ps = TRUE, saving = TRUE, low_mem = TRUE),
   prior = list(beta = NULL, tausq = NULL, sigmasq = NULL, phi = NULL, a = NULL, nu =
     NULL, toplim = NULL, btmlim = NULL, set_unif_bounds = NULL),
   starting = list(beta = NULL, tausq = NULL, theta = NULL, lambda = NULL, v = NULL, a =
