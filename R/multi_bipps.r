@@ -35,7 +35,7 @@ multi_bipps <- function(
   n_threads = 4,
   verbose = 0,
   settings = list(adapting=TRUE,
-                    ps=TRUE, saving=TRUE, low_mem=FALSE, hmc=0),
+                    ps=TRUE, saving=TRUE, low_mem=FALSE),
   prior = list(beta=NULL, tausq=NULL, sigmasq = NULL,
               phi=NULL, a=NULL, nu = NULL,
               toplim = NULL, btmlim = NULL, set_unif_bounds=NULL),
@@ -77,11 +77,7 @@ multi_bipps <- function(
   mcmc_burn <- n_burnin
   mcmc_thin <- n_thin
 
-  which_hmc    <- settings$hmc %>% set_default(0)
-  if(!(which_hmc %in% c(0,1,2,3,4,6,7))){
-    warning("Invalid sampling algorithm choice. Choose settings$hmc in {0,1,2,3,4,6,7}")
-    which_hmc <- 0
-  }
+  which_hmc <- 0
 
   mcmc_adaptive    <- settings$adapting %>% set_default(TRUE)
   mcmc_verbose     <- debug$verbose %>% set_default(FALSE)
@@ -95,7 +91,7 @@ multi_bipps <- function(
 
 
   dd             <- ncol(coords)
-  p              <- ncol(x_list[[1]]) # check this
+  p              <- ncol(x_list[[1]])
 
   # data management part 0 - reshape/rename
   num_images <- length(y_list)
@@ -200,11 +196,6 @@ multi_bipps <- function(
 
   fixed_thresholds <- 1:dd %>% lapply(function(i) kthresholdscp(coords[,i], axis_partition[i]))
 
-  # guaranteed to produce blocks using Mv
-  system.time(fake_coords_blocking <- coords %>%
-                as.matrix() %>%
-                gen_fake_coords(fixed_thresholds, 1) )
-
   # Domain partitioning and gibbs groups
 
   system.time(coords_blocking_list <- lapply(simdata_list,\(simdata) {
@@ -212,19 +203,6 @@ multi_bipps <- function(
                   as.matrix() %>%
                   tessellation_axis_parallel_fix(fixed_thresholds, 1) %>%
                   dplyr::mutate(na_which = simdata$na_which, ix=sort_ix)
-
-    # check if some blocks come up totally empty
-    blocks_prop <- coords_blocking[,paste0("L", 1:dd)] %>% unique()
-    blocks_fake <- fake_coords_blocking[,paste0("L", 1:dd)] %>% unique()
-    if(nrow(blocks_fake) != nrow(blocks_prop)){
-      #cat("Adding fake coords to avoid empty blocks ~ don't like? Use lower [axis_partition]\n")
-      # with current Mv, some blocks are completely empty
-      # this messes with indexing. so we add completely unobserved coords
-      suppressMessages(adding_blocks <- blocks_fake %>% dplyr::setdiff(blocks_prop) %>%
-                         dplyr::left_join(fake_coords_blocking))
-      coords_blocking <- dplyr::bind_rows(coords_blocking, adding_blocks)
-
-    }
     coords_blocking
   }))
 
