@@ -287,8 +287,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // multi_bipps_mcmc
-Rcpp::List multi_bipps_mcmc(const arma::field<arma::mat>& y_list, const arma::uvec& family, const arma::field<arma::mat>& X_list, const arma::mat& coords, int k, const arma::field<arma::field<arma::uvec>>& parents_list, const arma::field<arma::field<arma::uvec>>& children_list, const arma::field<arma::vec>& layer_names_list, const arma::field<arma::vec>& layer_gibbs_group_list, const arma::field<arma::field<arma::uvec>>& indexing_list, const arma::mat& set_unif_bounds_in, const arma::mat& beta_Vi, int matern_twonu, const arma::field<arma::mat>& start_w, const arma::mat& lambda, const arma::umat& lambda_mask, const arma::mat& theta, const arma::mat& beta, const arma::vec& tausq, const arma::mat& mcmcsd, int mcmc_keep, int mcmc_burn, int mcmc_thin, int mcmc_startfrom, int num_threads, int which_hmc, bool adapting, bool use_ps, bool verbose, bool debug, int print_every, bool low_mem, bool sample_beta, bool sample_tausq, bool sample_lambda, bool sample_theta, bool sample_w);
-RcppExport SEXP _bipps_multi_bipps_mcmc(SEXP y_listSEXP, SEXP familySEXP, SEXP X_listSEXP, SEXP coordsSEXP, SEXP kSEXP, SEXP parents_listSEXP, SEXP children_listSEXP, SEXP layer_names_listSEXP, SEXP layer_gibbs_group_listSEXP, SEXP indexing_listSEXP, SEXP set_unif_bounds_inSEXP, SEXP beta_ViSEXP, SEXP matern_twonuSEXP, SEXP start_wSEXP, SEXP lambdaSEXP, SEXP lambda_maskSEXP, SEXP thetaSEXP, SEXP betaSEXP, SEXP tausqSEXP, SEXP mcmcsdSEXP, SEXP mcmc_keepSEXP, SEXP mcmc_burnSEXP, SEXP mcmc_thinSEXP, SEXP mcmc_startfromSEXP, SEXP num_threadsSEXP, SEXP which_hmcSEXP, SEXP adaptingSEXP, SEXP use_psSEXP, SEXP verboseSEXP, SEXP debugSEXP, SEXP print_everySEXP, SEXP low_memSEXP, SEXP sample_betaSEXP, SEXP sample_tausqSEXP, SEXP sample_lambdaSEXP, SEXP sample_thetaSEXP, SEXP sample_wSEXP) {
+Rcpp::List multi_bipps_mcmc(const arma::field<arma::mat>& y_list, const arma::uvec& family, const arma::field<arma::mat>& X_list, const arma::mat& coords, int k, const arma::field<arma::uvec>& parents, const arma::field<arma::uvec>& children, const arma::vec& layer_names, const arma::vec& layer_gibbs_group, const arma::field<arma::uvec>& indexing, const arma::mat& set_unif_bounds_in, const arma::mat& beta_Vi, int matern_twonu, const arma::field<arma::mat>& start_w, const arma::mat& lambda, const arma::umat& lambda_mask, const arma::mat& theta, const arma::mat& beta, const arma::vec& tausq, const arma::mat& mcmcsd, int mcmc_keep, int mcmc_burn, int mcmc_thin, int mcmc_startfrom, int num_threads, int which_hmc, bool adapting, bool use_ps, bool verbose, bool debug, int print_every, bool low_mem, bool sample_beta, bool sample_tausq, bool sample_lambda, bool sample_theta, bool sample_w);
+RcppExport SEXP _bipps_multi_bipps_mcmc(SEXP y_listSEXP, SEXP familySEXP, SEXP X_listSEXP, SEXP coordsSEXP, SEXP kSEXP, SEXP parentsSEXP, SEXP childrenSEXP, SEXP layer_namesSEXP, SEXP layer_gibbs_groupSEXP, SEXP indexingSEXP, SEXP set_unif_bounds_inSEXP, SEXP beta_ViSEXP, SEXP matern_twonuSEXP, SEXP start_wSEXP, SEXP lambdaSEXP, SEXP lambda_maskSEXP, SEXP thetaSEXP, SEXP betaSEXP, SEXP tausqSEXP, SEXP mcmcsdSEXP, SEXP mcmc_keepSEXP, SEXP mcmc_burnSEXP, SEXP mcmc_thinSEXP, SEXP mcmc_startfromSEXP, SEXP num_threadsSEXP, SEXP which_hmcSEXP, SEXP adaptingSEXP, SEXP use_psSEXP, SEXP verboseSEXP, SEXP debugSEXP, SEXP print_everySEXP, SEXP low_memSEXP, SEXP sample_betaSEXP, SEXP sample_tausqSEXP, SEXP sample_lambdaSEXP, SEXP sample_thetaSEXP, SEXP sample_wSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -297,11 +297,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::field<arma::mat>& >::type X_list(X_listSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type coords(coordsSEXP);
     Rcpp::traits::input_parameter< int >::type k(kSEXP);
-    Rcpp::traits::input_parameter< const arma::field<arma::field<arma::uvec>>& >::type parents_list(parents_listSEXP);
-    Rcpp::traits::input_parameter< const arma::field<arma::field<arma::uvec>>& >::type children_list(children_listSEXP);
-    Rcpp::traits::input_parameter< const arma::field<arma::vec>& >::type layer_names_list(layer_names_listSEXP);
-    Rcpp::traits::input_parameter< const arma::field<arma::vec>& >::type layer_gibbs_group_list(layer_gibbs_group_listSEXP);
-    Rcpp::traits::input_parameter< const arma::field<arma::field<arma::uvec>>& >::type indexing_list(indexing_listSEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type parents(parentsSEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type children(childrenSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type layer_names(layer_namesSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type layer_gibbs_group(layer_gibbs_groupSEXP);
+    Rcpp::traits::input_parameter< const arma::field<arma::uvec>& >::type indexing(indexingSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type set_unif_bounds_in(set_unif_bounds_inSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type beta_Vi(beta_ViSEXP);
     Rcpp::traits::input_parameter< int >::type matern_twonu(matern_twonuSEXP);
@@ -329,7 +329,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type sample_lambda(sample_lambdaSEXP);
     Rcpp::traits::input_parameter< bool >::type sample_theta(sample_thetaSEXP);
     Rcpp::traits::input_parameter< bool >::type sample_w(sample_wSEXP);
-    rcpp_result_gen = Rcpp::wrap(multi_bipps_mcmc(y_list, family, X_list, coords, k, parents_list, children_list, layer_names_list, layer_gibbs_group_list, indexing_list, set_unif_bounds_in, beta_Vi, matern_twonu, start_w, lambda, lambda_mask, theta, beta, tausq, mcmcsd, mcmc_keep, mcmc_burn, mcmc_thin, mcmc_startfrom, num_threads, which_hmc, adapting, use_ps, verbose, debug, print_every, low_mem, sample_beta, sample_tausq, sample_lambda, sample_theta, sample_w));
+    rcpp_result_gen = Rcpp::wrap(multi_bipps_mcmc(y_list, family, X_list, coords, k, parents, children, layer_names, layer_gibbs_group, indexing, set_unif_bounds_in, beta_Vi, matern_twonu, start_w, lambda, lambda_mask, theta, beta, tausq, mcmcsd, mcmc_keep, mcmc_burn, mcmc_thin, mcmc_startfrom, num_threads, which_hmc, adapting, use_ps, verbose, debug, print_every, low_mem, sample_beta, sample_tausq, sample_lambda, sample_theta, sample_w));
     return rcpp_result_gen;
 END_RCPP
 }

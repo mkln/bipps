@@ -17,14 +17,14 @@ Rcpp::List multi_bipps_mcmc(
 
     int k,
 
-    const arma::field<arma::field<arma::uvec>>& parents_list, // similar to coords, but for the graph. same for all samples.
-    const arma::field<arma::field<arma::uvec>>& children_list,
+    const arma::field<arma::uvec>& parents, // similar to coords, but for the graph. same for all samples.
+    const arma::field<arma::uvec>& children,
 
-    const arma::field<arma::vec>& layer_names_list,
-    const arma::field<arma::vec>& layer_gibbs_group_list,
+    const arma::vec& layer_names,
+    const arma::vec& layer_gibbs_group,
 
 
-    const arma::field<arma::field<arma::uvec>>& indexing_list,
+    const arma::field<arma::uvec>& indexing,
 
     const arma::mat& set_unif_bounds_in,
     const arma::mat& beta_Vi,
@@ -121,9 +121,9 @@ Rcpp::List multi_bipps_mcmc(
       X_list[i],
        coords, 
        k,
-              parents_list[i], children_list[i], layer_names_list[i], layer_gibbs_group_list[i],
+              parents, children, layer_names, layer_gibbs_group,
 
-              indexing_list[i],
+              indexing,
 
               matern_twonu,
               start_w[i], beta, start_lambda, lambda_mask, start_theta, 1.0/tausq,
@@ -190,10 +190,10 @@ Rcpp::List multi_bipps_mcmc(
   Rcpp::List yhat_mcmc;
 
   for(int i=0; i<mcmc_keep; i++){
-    std::string iname = std::to_string(i);
-    v_mcmc[iname] = Rcpp::wrap(arma::zeros(msp.w_joined_rows, k));
-    yhat_mcmc[iname] = Rcpp::wrap(arma::zeros(msp.y_joined_rows, q));
     if(!low_mem){
+      std::string iname = std::to_string(i);
+      v_mcmc[iname] = Rcpp::wrap(arma::zeros(msp.w_joined_rows, k));
+      yhat_mcmc[iname] = Rcpp::wrap(arma::zeros(msp.y_joined_rows, q));
       w_mcmc[iname] = Rcpp::wrap(arma::zeros(msp.w_joined_rows, q));
       lp_mcmc[iname] = Rcpp::wrap(arma::zeros(msp.y_joined_rows, q));
     }
@@ -336,22 +336,23 @@ Rcpp::List multi_bipps_mcmc(
         
 
         if(mx % mcmc_thin == 0){
-          std::string iname = std::to_string(mcmc_saved);
-
-          //arma::mat v_mcmc_joined; // replaced by v_temp
-          arma::mat yhat_mcmc_joined;
-          for(Bipps &bipps: msp.multi_bipps) {
-            //v_mcmc_joined = arma::join_vert(v_mcmc_joined, bipps.w * H); 
-
-            Rcpp::RNGScope scope;
-            bipps.predicty();
-            yhat_mcmc_joined = arma::join_vert(yhat_mcmc_joined, bipps.yhat);
-          }
-
-          v_mcmc[iname] = Rcpp::wrap(v_temp);
-          yhat_mcmc[iname] = Rcpp::wrap(yhat_mcmc_joined);
-
           if(!low_mem){
+            std::string iname = std::to_string(mcmc_saved);
+
+            //arma::mat v_mcmc_joined; // replaced by v_temp
+            arma::mat yhat_mcmc_joined;
+            for(Bipps &bipps: msp.multi_bipps) {
+              //v_mcmc_joined = arma::join_vert(v_mcmc_joined, bipps.w * H); 
+
+              Rcpp::RNGScope scope;
+              bipps.predicty();
+              yhat_mcmc_joined = arma::join_vert(yhat_mcmc_joined, bipps.yhat);
+            }
+
+            v_mcmc[iname] = Rcpp::wrap(v_temp);
+            yhat_mcmc[iname] = Rcpp::wrap(yhat_mcmc_joined);
+
+
             arma::mat w_mcmc_joined;
             arma::mat lp_mcmc_joined;
             for(Bipps &bipps: msp.multi_bipps) {

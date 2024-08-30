@@ -77,8 +77,8 @@ repeat_centroid_perturb <- function(x, times) {
     .Call(`_bipps_repeat_centroid_perturb`, x, times)
 }
 
-multi_bipps_mcmc <- function(y_list, family, X_list, coords, k, parents_list, children_list, layer_names_list, layer_gibbs_group_list, indexing_list, set_unif_bounds_in, beta_Vi, matern_twonu, start_w, lambda, lambda_mask, theta, beta, tausq, mcmcsd, mcmc_keep = 100L, mcmc_burn = 100L, mcmc_thin = 1L, mcmc_startfrom = 0L, num_threads = 1L, which_hmc = 0L, adapting = FALSE, use_ps = TRUE, verbose = FALSE, debug = FALSE, print_every = FALSE, low_mem = FALSE, sample_beta = TRUE, sample_tausq = TRUE, sample_lambda = TRUE, sample_theta = TRUE, sample_w = TRUE) {
-    .Call(`_bipps_multi_bipps_mcmc`, y_list, family, X_list, coords, k, parents_list, children_list, layer_names_list, layer_gibbs_group_list, indexing_list, set_unif_bounds_in, beta_Vi, matern_twonu, start_w, lambda, lambda_mask, theta, beta, tausq, mcmcsd, mcmc_keep, mcmc_burn, mcmc_thin, mcmc_startfrom, num_threads, which_hmc, adapting, use_ps, verbose, debug, print_every, low_mem, sample_beta, sample_tausq, sample_lambda, sample_theta, sample_w)
+multi_bipps_mcmc <- function(y_list, family, X_list, coords, k, parents, children, layer_names, layer_gibbs_group, indexing, set_unif_bounds_in, beta_Vi, matern_twonu, start_w, lambda, lambda_mask, theta, beta, tausq, mcmcsd, mcmc_keep = 100L, mcmc_burn = 100L, mcmc_thin = 1L, mcmc_startfrom = 0L, num_threads = 1L, which_hmc = 0L, adapting = FALSE, use_ps = TRUE, verbose = FALSE, debug = FALSE, print_every = FALSE, low_mem = FALSE, sample_beta = TRUE, sample_tausq = TRUE, sample_lambda = TRUE, sample_theta = TRUE, sample_w = TRUE) {
+    .Call(`_bipps_multi_bipps_mcmc`, y_list, family, X_list, coords, k, parents, children, layer_names, layer_gibbs_group, indexing, set_unif_bounds_in, beta_Vi, matern_twonu, start_w, lambda, lambda_mask, theta, beta, tausq, mcmcsd, mcmc_keep, mcmc_burn, mcmc_thin, mcmc_startfrom, num_threads, which_hmc, adapting, use_ps, verbose, debug, print_every, low_mem, sample_beta, sample_tausq, sample_lambda, sample_theta, sample_w)
 }
 
 cube_tcrossprod <- function(x) {
