@@ -9,11 +9,12 @@ Description: The bipps package fits Bayesian regression models for analyzing mul
 License: GPL (>= 3)
 Imports: 
     Rcpp (>= 1.0.5),
-    stats, 
-    dplyr, 
-    rlang, 
-    magrittr, 
-    FNN
+    stats,
+    dplyr,
+    rlang,
+    magrittr,
+    FNN,
+    posterior
 Suggests: 
     ggplot2,
     abind,

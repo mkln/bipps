@@ -9,7 +9,7 @@
 #'
 #' @return list containg y_list and coords
 #' @export
-create_y_list <- function(X,Y,types,image_ids,nx,ny) {
+create_y_list <- function(x,y,types,image_ids,nx,ny) {
   # bottom-left corner at 0,0, scale by max X and Y
   df <- data.frame(X = x, Y = y, type = types,image_id = image_ids) %>%
     dplyr::group_by(image_id) %>%
