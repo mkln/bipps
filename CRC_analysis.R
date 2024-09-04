@@ -5,6 +5,11 @@ library(tidyverse)
 
 set.seed(2020)
 
+# df_raw %>%
+#   select(X,Y,type,Spot) %>%
+#   write_csv("examples/data/CRC_lite.csv")
+
+# df_raw <- readr::read_csv("examples/data/CRC_lite.csv")
 df_raw <- readr::read_csv("examples/data/CRC_cleaned.csv") %>%
   # dplyr::mutate(type = as.factor(type)) %>%
   dplyr::rename(Spot = spots)
@@ -29,6 +34,8 @@ df_raw %>%
   pull(Spot) -> spots2
 
 # spots1 <- c("19_A","19_B")
+
+# spots1 <- c(spots1[1:2],spots1[36])
 
 dat1 <- df_raw %>%
   filter(Spot %in% spots1)
@@ -72,20 +79,25 @@ x_list1 <- lapply(y_list1,\(yy) {
   matrix(0,nrow = nrow(yy),ncol = 1)
 })
 
-# p1 <- plot_y_list(y_list1,coords1)
-#
-# p1
-out2 <- create_y_list(dat2$X,dat2$Y,dat2$type,dat2$Spot,nx,ny)
-y_list2 <- out2$y_list
-coords2 <- out2$coords
-x_list2 <- lapply(y_list2,\(yy) {
-  matrix(0,nrow = nrow(yy),ncol = 1)
-})
+p1 <- plot_y_list(y_list1,coords1)
+# #
+p1[36]
+
+# y_list1 <- lapply(y_list1,\(yy) {
+#   yy[is.na(yy)] <- 0
+#   yy
+# })
+# out2 <- create_y_list(dat2$X,dat2$Y,dat2$type,dat2$Spot,nx,ny)
+# y_list2 <- out2$y_list
+# coords2 <- out2$coords
+# x_list2 <- lapply(y_list2,\(yy) {
+#   matrix(0,nrow = nrow(yy),ncol = 1)
+# })
 
 n_samples <- 2000
 n_burnin <- 1000
 n_thin <- 1
-n_threads <- 16
+n_threads <- 1
 
 out1 <- multi_bipps(y_list1,
                     x_list1,
@@ -102,27 +114,35 @@ out1 <- multi_bipps(y_list1,
                     debug = list(
                       sample_beta = T, sample_tausq = F,
                       sample_theta = T, sample_w = T, sample_lambda = T,
-                      verbose = F, debug = F
+                      verbose = T, debug = T
                     ),
                     just_preprocess = F)
-saveRDS(out1,"out1_CRC_analysis.rds")
 
-out2 <- multi_bipps(y_list2,
-                    x_list2,
-                    coords2,
-                    k = 4,
-                    family = "poisson",
-                    block_size = 25,
-                    n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
-                    n_threads = n_threads,
-                    starting = list(phi = 100),
-                    prior = list(phi = c(0.1, 200)),
-                    settings = list(adapting = T, saving = T, ps = T),
-                    verbose = 10,
-                    debug = list(
-                      sample_beta = T, sample_tausq = F,
-                      sample_theta = T, sample_w = T, sample_lambda = T,
-                      verbose = F, debug = F
-                    ),
-                    just_preprocess = F)
-saveRDS(out2,"out2_CRC_analysis.rds")
+cbl <- out1$savedata$coords_blocking_list
+
+cbl[[1]] %>%
+  group_by(Var1,Var2) %>%
+  summarise_all(mean) %>%
+  ggplot(aes(Var1,Var2,label=block)) +
+  geom_text()
+# saveRDS(out1,"out1_CRC_analysis.rds")
+#
+# out2 <- multi_bipps(y_list2,
+#                     x_list2,
+#                     coords2,
+#                     k = 4,
+#                     family = "poisson",
+#                     block_size = 25,
+#                     n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
+#                     n_threads = n_threads,
+#                     starting = list(phi = 100),
+#                     prior = list(phi = c(0.1, 200)),
+#                     settings = list(adapting = T, saving = T, ps = T),
+#                     verbose = 10,
+#                     debug = list(
+#                       sample_beta = T, sample_tausq = F,
+#                       sample_theta = T, sample_w = T, sample_lambda = T,
+#                       verbose = F, debug = F
+#                     ),
+#                     just_preprocess = F)
+# saveRDS(out2,"out2_CRC_analysis.rds")

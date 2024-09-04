@@ -20,6 +20,8 @@
 class Bipps {
 public:
   arma::uvec familyid;
+
+  unsigned int image_id;
   
   // meta
   unsigned int n; // number of locations, total
@@ -253,6 +255,7 @@ public:
     const arma::mat& X_in, 
     
     const arma::mat& coords_in, 
+    const unsigned int image_id,
     
     int k_in,
     
