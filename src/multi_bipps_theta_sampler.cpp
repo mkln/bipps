@@ -61,16 +61,6 @@ void MultiBipps::metrop_theta(){
   
   if(acceptable){ 
     // stay the same
-    prior_logratio = calc_prior_logratio(
-        theta_proposal.tail_rows(1).t(), multi_theta.tail_rows(1).t(), 2, 1); // sigmasq
-    
-    if(multi_theta.n_rows > 5){
-      for(auto i=0; i<multi_theta.n_rows-2; i++){
-        prior_logratio += arma::accu( -theta_proposal.row(i) +multi_theta.row(i) ); // exp
-      }
-    }
-    
-    // stay the same
     jacobian  = calc_jacobian(new_param, param, theta_unif_bounds);
     logaccept = new_loglik - current_loglik + 
       prior_logratio +

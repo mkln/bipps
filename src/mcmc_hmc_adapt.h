@@ -60,7 +60,7 @@ inline void AdaptE::init(double eps0, int size, int which_hmc_in, int M_adapt_in
   H_bar = 0;
   gamma = .05;
   t0 = 10;
-  kappa = 0.75;
+  kappa = 0.55;
   delta = which_hmc == 2? 0.7 : 0.575; // target accept
   M_adapt = M_adapt_in; // default is no adaptation
   
@@ -69,7 +69,7 @@ inline void AdaptE::init(double eps0, int size, int which_hmc_in, int M_adapt_in
   
   adapt_C = which_hmc == 0;
   
-  T = 500;
+  T = 1000;
   n = size;
 
   C_const = arma::eye(n, n);
