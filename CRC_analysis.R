@@ -158,7 +158,7 @@ out2 <- multi_bipps(y_list2,
                     debug = list(
                       sample_beta = T, sample_tausq = F,
                       sample_theta = T, sample_w = T, sample_lambda = T,
-                      verbose = T, debug = T
+                      verbose = F, debug = F
                     ),
                     just_preprocess = F)
 saveRDS(out2,"out2_CRC_analysis.rds")
