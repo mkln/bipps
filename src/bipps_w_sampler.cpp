@@ -71,7 +71,7 @@ void Bipps::refresh_w_cache(BippsDataLMC& data){
 
 void Bipps::nongaussian_w(BippsDataLMC& data, bool sample){
   if(verbose & debug){
-    Rcpp::Rcout << "[hmc_sample_w] " << endl;
+    Rcpp::Rcout << "[hmc_sample_w, image_id: " << image_id << "] " << endl;
   }
   
   start_overall = std::chrono::steady_clock::now();

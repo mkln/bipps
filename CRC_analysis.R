@@ -26,6 +26,7 @@ df_raw <- readr::read_csv("examples/data/CRC_cleaned.csv") %>%
 df_raw %>%
   distinct(Spot,groups) %>%
   filter(groups == 1) %>%
+  filter(!(Spot %in% c("57_A","67_B"))) %>%
   pull(Spot) -> spots1
 
 df_raw %>%
@@ -71,7 +72,7 @@ dat1 <- dat1 %>%
 dat2 <- dat2 %>%
   filter(type %in% types_intersect)
 
-nx <- ny <- 10
+nx <- ny <- 20
 out1 <- create_y_list(dat1$X,dat1$Y,dat1$type,dat1$Spot,nx,ny)
 y_list1 <- out1$y_list
 coords1 <- out1$coords
@@ -79,9 +80,9 @@ x_list1 <- lapply(y_list1,\(yy) {
   matrix(0,nrow = nrow(yy),ncol = 1)
 })
 
-p1 <- plot_y_list(y_list1,coords1)
+# p1 <- plot_y_list(y_list1,coords1)
 # #
-p1[36]
+# p1[49]
 
 # y_list1 <- lapply(y_list1,\(yy) {
 #   yy[is.na(yy)] <- 0
@@ -104,9 +105,9 @@ out1 <- multi_bipps(y_list1,
                     coords1,
                     k = 4,
                     family = "poisson",
-                    block_size = 75,
+                    block_size = 35,
                     n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
-                    n_threads = n_threads,
+                    n_threads = 12,
                     starting = list(phi = 100),
                     prior = list(phi = c(0.1, 200)),
                     settings = list(adapting = T, saving = T, ps = T),
@@ -118,14 +119,29 @@ out1 <- multi_bipps(y_list1,
                     ),
                     just_preprocess = F)
 
-cbl <- out1$savedata$coords_blocking_list
+# cbl <- out1$savedata$coords_blocking_list
 
-cbl[[1]] %>%
-  group_by(Var1,Var2) %>%
-  summarise_all(mean) %>%
-  ggplot(aes(Var1,Var2,label=block)) +
-  geom_text()
-# saveRDS(out1,"out1_CRC_analysis.rds")
+# all_blocks <- lapply(1:length(cbl),\(i) {
+#   cb <- cbl[[i]]
+#   spot <- names(cbl)[i]
+#   cb %<>%
+#     dplyr::group_by(.data$L1, .data$L2, .data$block) %>%
+#     dplyr::summarize(na_which = sum(.data$na_which, na.rm=TRUE)/dplyr::n()) %>%
+#     mutate(id=spot)
+# }) %>%
+#   bind_rows() %>%
+#   ungroup()
+#
+# all_blocks %>%
+#   filter(na_which == 0) %>%
+#   distinct(id)
+
+# cbl[[1]] %>%
+#   group_by(Var1,Var2) %>%
+#   summarise_all(mean) %>%
+#   ggplot(aes(Var1,Var2,label=block)) +
+#   geom_text()
+saveRDS(out1,"out1_CRC_analysis.rds")
 #
 # out2 <- multi_bipps(y_list2,
 #                     x_list2,
