@@ -730,13 +730,7 @@ void Bipps::update_block_wlogdens(int u, BippsDataLMC& data){
   //message("[update_block_wlogdens].");
   arma::mat wx = w.rows(indexing(u));
   arma::mat wcoresum = arma::zeros(1, k);
-  if(verbose & debug){
-    Rcpp::Rcout << "update_block_wlogdens, parents_indexing size " << parents_indexing(u).n_elem << "\n";
-  }
   if( parents(u).n_elem > 0 ){
-    Rcpp::Rcout << "update_block_wlogdens, H size" << arma::size((*data.w_cond_mean_K_ptr.at(u)).slice(0)) << "\n";
-    Rcpp::Rcout << "parents[u]: " << parents(u) << "\n";
-    Rcpp::Rcout << "u: " << u << "\n";
     arma::mat wpar = w.rows(parents_indexing(u));
     for(unsigned int j=0; j<k; j++){
       wx.col(j) = wx.col(j) - 

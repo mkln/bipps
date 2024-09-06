@@ -71,7 +71,7 @@ dat1 <- dat1 %>%
 dat2 <- dat2 %>%
   filter(type %in% types_intersect)
 
-nx <- ny <- 20
+nx <- ny <- 10
 out1 <- create_y_list(dat1$X,dat1$Y,dat1$type,dat1$Spot,nx,ny)
 y_list1 <- out1$y_list
 coords1 <- out1$coords
@@ -104,7 +104,7 @@ out1 <- multi_bipps(y_list1,
                     coords1,
                     k = 4,
                     family = "poisson",
-                    block_size = 25,
+                    block_size = 75,
                     n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
                     n_threads = n_threads,
                     starting = list(phi = 100),
@@ -114,7 +114,7 @@ out1 <- multi_bipps(y_list1,
                     debug = list(
                       sample_beta = T, sample_tausq = F,
                       sample_theta = T, sample_w = T, sample_lambda = T,
-                      verbose = T, debug = T
+                      verbose = F, debug = F
                     ),
                     just_preprocess = F)
 

@@ -43,14 +43,14 @@ create_y_list <- function(x,y,types,image_ids,nx,ny) {
 
   in_hull <- lapply(unique(image_ids),\(id) {
     hull <- spatstat.geom::convexhull.xy(df %>% filter(image_id == id) %>% select(X,Y))
-    tibble(in_hull=inside.owin(coords$x,coords$y,hull))
+    tibble::tibble(in_hull=spatstat.geom::inside.owin(coords$x,coords$y,hull))
   }) %>%
-    bind_rows()
+    dplyr::bind_rows()
 
   counts <- counts %>%
-    bind_cols(in_hull) %>%
-    mutate(across(-c(image_id,gridded_x,gridded_y,in_hull),~ifelse(is.na(.x) & in_hull,0,.x))) %>%
-    select(-in_hull)
+    dplyr::bind_cols(in_hull) %>%
+    dplyr::mutate(dplyr::across(-c(image_id,gridded_x,gridded_y,in_hull),~ifelse(is.na(.x) & in_hull,0,.x))) %>%
+    dplyr::select(-in_hull)
 
   y_list <- counts %>%
     dplyr::group_by(image_id) %>%
