@@ -162,3 +162,72 @@ out2 <- multi_bipps(y_list2,
                     ),
                     just_preprocess = F)
 saveRDS(out2,"out2_CRC_analysis.rds")
+
+out1 <- readRDS("out1_CRC_analysis.rds")
+out2 <- readRDS("out2_CRC_analysis.rds")
+
+hs <- seq(0,0.5,0.05)
+
+xl1 <- cross_list(out1,hs)
+xl2 <- cross_list(out2,hs)
+
+xl_diff <- lapply(1:length(hs),\(i) {
+  x1 <- xl1[[i]]
+  x2 <- xl2[[i]]
+
+  x1 - x2
+})
+
+unique_combinations_with_self <- function(data) {
+  # Generate all pairs including self-pairings
+  all_pairs <- expand.grid(data, data)
+
+  # Sort the pairs and remove duplicates
+  all_pairs <- t(apply(all_pairs, 1, sort))
+  unique_pairs <- unique(all_pairs)
+
+  return(unique_pairs)
+}
+
+library(posterior)
+unique_combinations_with_self(types_intersect) %>%
+  as.data.frame() %>%
+  as_tibble() %>%
+  magrittr::set_colnames(c("t1","t2")) %>%
+  group_by(t1,t2) %>%
+  group_modify(~{
+    ix1 <- which(types_intersect == .y$t1)
+    ix2 <- which(types_intersect == .y$t2)
+
+    mu <- unlist(lapply(xl_diff,\(x) {
+      E(x[ix1,ix2])
+    }))
+
+    int_val <- integrate(approxfun(hs,abs(mu)),hs[1],hs[length(hs)])$value
+
+    sigma <- unlist(lapply(xl_diff,\(x) {
+      sd(x[ix1,ix2])
+    }))
+
+    lb <- unlist(lapply(xl_diff,\(x) {
+      quantile(x[ix1,ix2],probs = 0.025)
+    }))
+
+    ub <- unlist(lapply(xl_diff,\(x) {
+      quantile(x[ix1,ix2],probs = 0.975)
+    }))
+    tibble(mu=mu,lb=lb,ub=ub,hs=hs,auc=int_val)
+  }) %>%
+  ungroup() -> xldiff_e
+
+xldiff_e %>%
+  filter(auc %in% sort(unique(auc),decreasing = TRUE)[1:10]) %>%
+  # mutate(ub = mu+sigma,
+  #        lb = mu-sigma) %>%
+  ggplot(aes(hs,mu)) +
+  geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
+  geom_line() +
+  geom_hline(yintercept = 0,color="red") +
+  theme_bw() +
+  facet_wrap(t1~t2) +
+  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1))
