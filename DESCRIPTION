@@ -14,7 +14,8 @@ Imports:
     rlang,
     magrittr,
     FNN,
-    posterior
+    posterior,
+    spatstat.geom
 Suggests: 
     ggplot2,
     abind,
