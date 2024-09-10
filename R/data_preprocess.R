@@ -35,6 +35,23 @@ create_y_list <- function(x,y,types,image_ids,nx,ny) {
     dplyr::ungroup() %>%
     dplyr::arrange(image_id,gridded_x,gridded_y)
 
+  coords <- counts %>%
+    dplyr::distinct(gridded_x,gridded_y) %>%
+    dplyr::mutate(x = gridded_x / max(gridded_x),
+                  y = gridded_y / max(gridded_y)) %>%
+    dplyr::select(x,y)
+
+  in_hull <- lapply(unique(image_ids),\(id) {
+    hull <- spatstat.geom::convexhull.xy(df %>% filter(image_id == id) %>% select(X,Y))
+    tibble::tibble(in_hull=spatstat.geom::inside.owin(coords$x,coords$y,hull))
+  }) %>%
+    dplyr::bind_rows()
+
+  counts <- counts %>%
+    dplyr::bind_cols(in_hull) %>%
+    dplyr::mutate(dplyr::across(-c(image_id,gridded_x,gridded_y,in_hull),~ifelse(is.na(.x) & in_hull,0,.x))) %>%
+    dplyr::select(-in_hull)
+
   y_list <- counts %>%
     dplyr::group_by(image_id) %>%
     dplyr::group_map(~{
@@ -44,12 +61,6 @@ create_y_list <- function(x,y,types,image_ids,nx,ny) {
     })
 
   names(y_list) <- unique(image_ids)
-
-  coords <- counts %>%
-    dplyr::distinct(gridded_x,gridded_y) %>%
-    dplyr::mutate(x = gridded_x / max(gridded_x),
-           y = gridded_y / max(gridded_y)) %>%
-    dplyr::select(x,y)
 
   list(y_list=y_list,coords=coords)
 }

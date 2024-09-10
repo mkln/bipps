@@ -53,7 +53,7 @@ void Bipps::update_block_w_cache(int u, BippsDataLMC& data){
 
 void Bipps::refresh_w_cache(BippsDataLMC& data){
   if(verbose & debug){
-    Rcpp::Rcout << "[refresh_w_cache] \n";
+    Rcpp::Rcout << "[refresh_w_cache, image_id: " << image_id << " ] \n";
   }
   start_overall = std::chrono::steady_clock::now();
   for(unsigned int i=0; i<n_blocks; i++){
@@ -71,7 +71,7 @@ void Bipps::refresh_w_cache(BippsDataLMC& data){
 
 void Bipps::nongaussian_w(BippsDataLMC& data, bool sample){
   if(verbose & debug){
-    Rcpp::Rcout << "[hmc_sample_w] " << endl;
+    Rcpp::Rcout << "[hmc_sample_w, image_id: " << image_id << "] " << endl;
   }
   
   start_overall = std::chrono::steady_clock::now();

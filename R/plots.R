@@ -6,12 +6,14 @@
 #' @return list of ggplot2 plots
 #' @export
 plot_y_list <- function(y_list,coords) {
-  plots <- lapply(y_list,\(y) {
+  plots <- lapply(1:length(y_list),\(i) {
+    y <- y_list[[i]]
     dplyr::bind_cols(y,coords) %>%
       tidyr::pivot_longer(-c(x,y),names_to = "type",values_to = "count") %>%
       ggplot2::ggplot(ggplot2::aes(x,y,fill=count)) +
       ggplot2::geom_tile() +
       ggplot2::facet_wrap(~type) +
-      ggplot2::scale_fill_viridis_c(name="magma")
+      ggplot2::scale_fill_viridis_c(name="magma") +
+      ggtitle(names(y_list)[i])
   })
 }

@@ -43,23 +43,60 @@ extract_midpoints <- Vectorize(function(x) {
   midpoint(as.numeric(stringr::str_split(gsub("\\[|)|\\]", "", x), ",")[[1]]))
 })
 
-nx <- 40
+nx <- ny <- 40
 
-qd <- quadratcount(split(pp), nx = nx)
+as.data.frame(qd)
+
+qd <- quadrats(pp, nx = nx,ny = nx)
+
+# tilenames(qd) <- paste0("grid_", 1:(nx^2))
+
+tl <- tiles(qd)
+
+cp <- lapply(tl,\(o) gridcentres(o,nx=1,ny=1)) %>%
+  do.call(rbind,.) %>%
+  as_tibble(rownames = "tile") %>%
+  unnest(c(x,y)) %>%
+  mutate(tile = gsub("Tile ","",tile))
+  # pull(y) %>%
+  # unique() %>%
+  # unlist() %>%
+  # diff() %>%
+  # table()
+
+qdc <- quadratcount(split(pp), nx = nx,ny = nx,tess=qd)
+
+qdc <- lapply(qdc,\(q) {
+  rownames(q) <- paste0("row ",1:ny)
+  colnames(q) <- paste0("col ",rev(1:nx))
+  q
+})
+
+# tesselation indexing starts in top-left
+
+ts <- as.tess(qdc[[1]]) %>%
+  as.data.frame()
+plot(ts)
 
 plot(qd)
 
-qd <- qd %>%
+qdc <- qdc %>%
   as.data.frame() %>%
   rename(x = 2, y = 1) %>%
   select(-contains(".x"), -contains(".y")) %>%
   rename_with(~ gsub(".Freq", "", .x), -c(x, y)) %>%
-  mutate(across(c(x, y), extract_midpoints))
+  unite("tile", y, x, sep = ", ") %>%
+  inner_join(cp, by = "tile")
+  # mutate(across(c(x, y), extract_midpoints))
+  # pull(x) %>%
+  # unique() %>%
+  # diff()
 
-qd %>%
+qdc %>%
+  select(-tile) %>%
   pivot_longer(-c(x,y)) %>%
   ggplot(aes(x,y,fill=value)) +
-  geom_tile() +
+  geom_raster() +
   facet_wrap(~name)
 
 coords <- qd %>%

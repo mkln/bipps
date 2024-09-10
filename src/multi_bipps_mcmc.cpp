@@ -114,12 +114,13 @@ Rcpp::List multi_bipps_mcmc(
   std::vector<Bipps> bipps_samples;
   bipps_samples.reserve(num_samples);
 
-  for(int i = 0; i < num_samples; ++i) {
+  for(unsigned int i = 0; i < num_samples; ++i) {
     Bipps bipps(
       y_list[i],
       family,
       X_list[i],
        coords, 
+       i,
        k,
               parents, children, layer_names, layer_gibbs_group,
 

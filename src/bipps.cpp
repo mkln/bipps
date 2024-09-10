@@ -9,6 +9,7 @@ Bipps::Bipps(
   const arma::mat& X_in, 
   
   const arma::mat& coords_in, 
+  const unsigned int image_id_in,
   
   int k_in,
   
@@ -57,6 +58,8 @@ Bipps::Bipps(
   y = y_in;
   
   familyid = familyid_in;
+
+  image_id = image_id_in;
   
   offsets = arma::zeros(arma::size(y));
   Z = arma::ones(y.n_rows);
@@ -863,7 +866,7 @@ bool Bipps::calc_ywlogdens(BippsDataLMC& data){
   // and Sigma for adjusting the error terms
 
   if(verbose & debug){
-    Rcpp::Rcout << "[calc_ywlogdens] start.\n";
+    Rcpp::Rcout << "[calc_ywlogdens, image_id: " << image_id << "] start.\n";
   }
   
 #ifdef _OPENMP
