@@ -5,28 +5,15 @@ library(tidyverse)
 
 set.seed(2020)
 
-# df_raw %>%
-#   select(X,Y,type,Spot) %>%
-#   write_csv("examples/data/CRC_lite.csv")
-
-# df_raw <- readr::read_csv("examples/data/CRC_lite.csv")
 df_raw <- readr::read_csv("examples/data/CRC_cleaned.csv") %>%
   # dplyr::mutate(type = as.factor(type)) %>%
   dplyr::rename(Spot = spots)
 # mutate(Spot = factor(Spot))
 
-# df_raw %>%
-#   filter(Spot == "19_B") %>%
-#   select(X,Y) %>%
-#   as.matrix() %>%
-#   spatstat.geom::convexhull.xy() %>% plot()
-#   ggplot(aes(X,Y,color=type)) +
-#   geom_point()
 
 df_raw %>%
   distinct(Spot,groups) %>%
   filter(groups == 1) %>%
-  filter(!(Spot %in% c("57_A","67_B"))) %>%
   pull(Spot) -> spots1
 
 df_raw %>%
@@ -34,17 +21,8 @@ df_raw %>%
   filter(groups == 2) %>%
   pull(Spot) -> spots2
 
-# spots1 <- c("19_A","19_B")
-
-# spots1 <- c(spots1[1:2],spots1[36])
-
 dat1 <- df_raw %>%
   filter(Spot %in% spots1)
-
-x <- dat1$X
-y <- dat1$Y
-types <- dat1$type
-image_ids <- dat1$Spot
 
 dat2 <- df_raw %>%
   filter(Spot %in% spots2)
@@ -73,21 +51,13 @@ dat2 <- dat2 %>%
   filter(type %in% types_intersect)
 
 nx <- ny <- 20
-# out1 <- create_y_list(dat1$X,dat1$Y,dat1$type,dat1$Spot,nx,ny)
-# y_list1 <- out1$y_list
-# coords1 <- out1$coords
-# x_list1 <- lapply(y_list1,\(yy) {
-#   matrix(0,nrow = nrow(yy),ncol = 1)
-# })
+out1 <- create_y_list(dat1$X,dat1$Y,dat1$type,dat1$Spot,nx,ny)
+y_list1 <- out1$y_list
+coords1 <- out1$coords
+x_list1 <- lapply(y_list1,\(yy) {
+  matrix(0,nrow = nrow(yy),ncol = 1)
+})
 
-# p1 <- plot_y_list(y_list1,coords1)
-# #
-# p1[49]
-
-# y_list1 <- lapply(y_list1,\(yy) {
-#   yy[is.na(yy)] <- 0
-#   yy
-# })
 out2 <- create_y_list(dat2$X,dat2$Y,dat2$type,dat2$Spot,nx,ny)
 y_list2 <- out2$y_list
 coords2 <- out2$coords
@@ -98,61 +68,42 @@ x_list2 <- lapply(y_list2,\(yy) {
 n_samples <- 2000
 n_burnin <- 1000
 n_thin <- 1
-n_threads <- 1
+n_threads <- 16
+block_size <- 35
+k <- 4
+starting <- list(phi = 100)
+prior <- list(phi = c(0.1, 200))
 
-# out1 <- multi_bipps(y_list1,
-#                     x_list1,
-#                     coords1,
-#                     k = 4,
-#                     family = "poisson",
-#                     block_size = 35,
-#                     n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
-#                     n_threads = 12,
-#                     starting = list(phi = 100),
-#                     prior = list(phi = c(0.1, 200)),
-#                     settings = list(adapting = T, saving = T, ps = T),
-#                     verbose = 10,
-#                     debug = list(
-#                       sample_beta = T, sample_tausq = F,
-#                       sample_theta = T, sample_w = T, sample_lambda = T,
-#                       verbose = F, debug = F
-#                     ),
-#                     just_preprocess = F)
+out1 <- multi_bipps(y_list1,
+                    x_list1,
+                    coords1,
+                    k = k,
+                    family = "poisson",
+                    block_size = block_size,
+                    n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
+                    n_threads = n_threads,
+                    starting = starting,
+                    prior = prior,
+                    settings = list(adapting = T, saving = T, ps = T),
+                    verbose = 10,
+                    debug = list(
+                      sample_beta = T, sample_tausq = F,
+                      sample_theta = T, sample_w = T, sample_lambda = T,
+                      verbose = F, debug = F
+                    ),
+                    just_preprocess = F)
+saveRDS(out1,"out1_CRC_analysis.rds")
 
-# cbl <- out1$savedata$coords_blocking_list
-
-# all_blocks <- lapply(1:length(cbl),\(i) {
-#   cb <- cbl[[i]]
-#   spot <- names(cbl)[i]
-#   cb %<>%
-#     dplyr::group_by(.data$L1, .data$L2, .data$block) %>%
-#     dplyr::summarize(na_which = sum(.data$na_which, na.rm=TRUE)/dplyr::n()) %>%
-#     mutate(id=spot)
-# }) %>%
-#   bind_rows() %>%
-#   ungroup()
-#
-# all_blocks %>%
-#   filter(na_which == 0) %>%
-#   distinct(id)
-
-# cbl[[1]] %>%
-#   group_by(Var1,Var2) %>%
-#   summarise_all(mean) %>%
-#   ggplot(aes(Var1,Var2,label=block)) +
-#   geom_text()
-# saveRDS(out1,"out1_CRC_analysis.rds")
-#
 out2 <- multi_bipps(y_list2,
                     x_list2,
                     coords2,
-                    k = 4,
+                    k = k,
                     family = "poisson",
-                    block_size = 35,
+                    block_size = block_size,
                     n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
-                    n_threads = 12,
-                    starting = list(phi = 100),
-                    prior = list(phi = c(0.1, 200)),
+                    n_threads = n_threads,
+                    starting = starting,
+                    prior = prior,
                     settings = list(adapting = T, saving = T, ps = T),
                     verbose = 10,
                     debug = list(
