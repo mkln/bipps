@@ -1,7 +1,7 @@
 #' Create y_list and coords objects for multi_bipps
 #'
-#' @param X vector of x coordinates
-#' @param Y vector of y coordinates
+#' @param x vector of x coordinates
+#' @param y vector of y coordinates
 #' @param types character vector of types
 #' @param image_ids character vector of image IDs
 #' @param nx integer, number of pixels on x axis
@@ -43,7 +43,7 @@ create_y_list <- function(x,y,types,image_ids,nx,ny) {
 
   in_hull <- lapply(unique(image_ids),\(id) {
     hull <- spatstat.geom::convexhull.xy(df %>% dplyr::filter(image_id == id) %>% dplyr::select(X,Y))
-    tibble::tibble(in_hull=spatstat.geom::inside.owin(coords$x,coords$y,hull))
+    data.frame(in_hull=spatstat.geom::inside.owin(coords$x,coords$y,hull))
   }) %>%
     dplyr::bind_rows()
 

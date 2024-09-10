@@ -15,7 +15,8 @@ Imports:
     magrittr,
     FNN,
     posterior,
-    spatstat.geom
+    spatstat.geom,
+    vctrs
 Suggests: 
     ggplot2,
     abind,
