@@ -227,6 +227,9 @@ public:
   arma::uvec icept_hmc_started;
   
   void sample_hmc_icept();
+
+  void deal_with_beta(bool sample);
+  void hmc_sample_beta(bool sample);
   
   void deal_with_BetaLambdaTau(BippsDataLMC& data, bool sample, 
                                bool sample_beta, bool sample_lambda, bool sample_tau);

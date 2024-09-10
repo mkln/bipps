@@ -42,7 +42,7 @@ create_y_list <- function(x,y,types,image_ids,nx,ny) {
     dplyr::select(x,y)
 
   in_hull <- lapply(unique(image_ids),\(id) {
-    hull <- spatstat.geom::convexhull.xy(df %>% filter(image_id == id) %>% select(X,Y))
+    hull <- spatstat.geom::convexhull.xy(df %>% dplyr::filter(image_id == id) %>% dplyr::select(X,Y))
     tibble::tibble(in_hull=spatstat.geom::inside.owin(coords$x,coords$y,hull))
   }) %>%
     dplyr::bind_rows()
