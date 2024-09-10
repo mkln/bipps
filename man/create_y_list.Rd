@@ -4,13 +4,9 @@
 \alias{create_y_list}
 \title{Create y_list and coords objects for multi_bipps}
 \usage{
-create_y_list(X, Y, types, image_ids, nx, ny)
+create_y_list(x, y, types, image_ids, nx, ny)
 }
 \arguments{
-\item{X}{vector of x coordinates}
-
-\item{Y}{vector of y coordinates}
-
 \item{types}{character vector of types}
 
 \item{image_ids}{character vector of image IDs}
@@ -18,6 +14,10 @@ create_y_list(X, Y, types, image_ids, nx, ny)
 \item{nx}{integer, number of pixels on x axis}
 
 \item{ny}{integer, number of pixels on y axis}
+
+\item{X}{vector of x coordinates}
+
+\item{Y}{vector of y coordinates}
 }
 \value{
 list containg y_list and coords

@@ -28,11 +28,26 @@ cross_covar <- function(out,h) {
   covs <- lambda %*% W %*% t(lambda)
 }
 
+#' Get cross-correlation matrix rvar at length-scale h
+#'
+#' @param out output from multi_bipps
+#' @param h length scale (in [0,1])
+#'
+#' @return cross-correlation rvar object
+#' @export
 cross_cor <- function(out,h) {
   covs <- cross_covar(out,h)
   cov2cor_rfun(covs)
 }
 
+#' List of cross-cor/covar matrices at multiple length scales
+#'
+#' @param out output from multi_bipps
+#' @param hs vector of length scales (in [0,1])
+#' @param method either "cor" or "covar"
+#'
+#' @return list of cross matrices, one per value in hs
+#' @export
 cross_list <- function(out,hs,method="cor") {
   if(method == "cor") {
     f <- cross_cor
