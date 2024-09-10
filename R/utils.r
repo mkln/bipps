@@ -32,6 +32,8 @@ mesh_graph_build <- function(coords_blocking, Mv, verbose=TRUE, n_threads=1, deb
       dplyr::group_by(.data$L1, .data$L2, .data$block) %>%
       dplyr::summarize(na_which = sum(.data$na_which, na.rm=TRUE)/dplyr::n())#, color=unique(color))
   }
+
+  stopifnot("Some blocks consist entirely of NAs; please try increasing block size or pixel size (smaller nx or ny)"=all(cbl$na_which > 0))
   blocks_descr <- unique(cbl) %>%
     as.matrix()
 

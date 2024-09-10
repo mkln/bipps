@@ -201,20 +201,26 @@ multi_bipps <- function(
   # this depends on there being no all NA blocks, otherwise the coords_blocking_list
   # will not be the same across images. Change this?
   # DAG
-  system.time(
+  no_errors <- TRUE
+  system.time(pc_list <- lapply(1:length(coords_blocking_list),\(i) {
     if(dd < 4){
-      pc <- mesh_graph_build(coords_blocking_list[[1]], axis_partition, FALSE, n_threads, debugdag)
+      tryCatch({
+        pc <- mesh_graph_build(coords_blocking_list[[i]], axis_partition, FALSE, n_threads, debugdag)
+      },error=\(e) {
+        no_errors <<- FALSE
+        print(e)
+        cat("The offending image was: ",i,"\n")
+      })
     } else {
       stop("Input dimension is too high?!")
     }
-  )
+  }))
+  stopifnot("Errors from NA blocks"=no_errors)
 
-
-
-  parents                      <- pc[["parents"]]
-  children                     <- pc[["children"]]
-  block_names                  <- pc[["names"]]
-  block_groups                 <- pc[["groups"]]
+  parents                      <- pc_list[[1]][["parents"]]
+  children                     <- pc_list[[1]][["children"]]
+  block_names                  <- pc_list[[1]][["names"]]
+  block_groups                 <- pc_list[[1]][["groups"]]
 
   if(indpart){
     parents %<>% lapply(function(x) lapply(x,\(x_i) numeric(0)))

@@ -7,16 +7,20 @@ library(tidyverse)
 
 set.seed(2020)
 
-# df_raw <- readr::read_csv("examples/data/CRC_cleaned.csv") %>%
-#   dplyr::mutate(type = as.factor(type)) %>%
-#   dplyr::rename(Spot = spots)
-#
-# dat <- df_raw %>%
-#   filter(Spot %in% c("59_A")) %>%
-#   droplevels()
+df_raw <- readr::read_csv("examples/data/CRC_cleaned.csv") %>%
+  dplyr::mutate(type = as.factor(type)) %>%
+  dplyr::rename(Spot = spots)
+
+dat <- df_raw %>%
+  filter(Spot %in% c("40_A")) %>%
+  droplevels()
   #,"59_B","60_A","60_B"))
 #
 # rm(df_raw)
+
+dat %>%
+  ggplot(aes(X,Y)) +
+  geom_point()
 
 # write_csv(dat,"examples/data/dat_59_A.csv")
 dat <- read_csv("examples/data/dat_59_A.csv") %>%
@@ -54,14 +58,13 @@ n_threads <- 1
 
 out <- create_y_list(x,y,types,image_ids,nx,ny)
 y_list <- out$y_list
-coords <- out$grid %>%
-  ungroup() %>%
-  select(x,y) %>%
-  as.matrix()
+coords <- out$coords
 
 x_list <- lapply(1:length(unique(image_ids)),\(i) {
   matrix(0,nrow=nrow(coords),ncol=1)
 })
+axis_partition <- NULL
+block_size <- 25
 
 # multi_bipps(y_list,x_list,coords,verbose=10,prior=prior,n_threads=1)
 ncol(y_list[[1]])

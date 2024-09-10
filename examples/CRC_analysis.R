@@ -14,6 +14,7 @@ df_raw <- readr::read_csv("examples/data/CRC_cleaned.csv") %>%
 df_raw %>%
   distinct(Spot,groups) %>%
   filter(groups == 1) %>%
+  filter(!(Spot %in% c("67_B","57_A"))) %>% # these are really weird images
   pull(Spot) -> spots1
 
 df_raw %>%
@@ -57,6 +58,9 @@ coords1 <- out1$coords
 x_list1 <- lapply(y_list1,\(yy) {
   matrix(0,nrow = nrow(yy),ncol = 1)
 })
+
+# p <- plot_y_list(y_list1,coords1)
+# p[[49]]
 
 out2 <- create_y_list(dat2$X,dat2$Y,dat2$type,dat2$Spot,nx,ny)
 y_list2 <- out2$y_list
