@@ -68,8 +68,8 @@ x_list2 <- lapply(y_list2,\(yy) {
   matrix(0,nrow = nrow(yy),ncol = 1)
 })
 
-n_samples <- 2000
-n_burnin <- 10000
+n_samples <- 1000
+n_burnin <- 2000
 n_thin <- 1
 n_threads <- 32
 block_size <- 35
@@ -77,7 +77,7 @@ k <- 4
 starting <- list(phi = 100)
 prior <- list(phi = c(0.1, 200))
 
-chains <- 4
+chains <- 2
 
 out1 <- lapply(1:chains,\(i) multi_bipps(y_list1,
                     x_list1,
