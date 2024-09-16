@@ -69,7 +69,7 @@ x_list2 <- lapply(y_list2,\(yy) {
 })
 
 n_samples <- 1000
-n_burnin <- 2000
+n_burnin <- 3000
 n_thin <- 1
 n_threads <- 32
 block_size <- 35
