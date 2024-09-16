@@ -20,6 +20,8 @@
 class Bipps {
 public:
   arma::uvec familyid;
+
+  unsigned int image_id;
   
   // meta
   unsigned int n; // number of locations, total
@@ -162,7 +164,6 @@ public:
   void tausq_update(double);
   
   // RAMA for theta
-  void metrop_theta();
   bool theta_adapt_active;
   int theta_mcmc_counter;
   RAMAdapt theta_adapt;
@@ -196,16 +197,12 @@ public:
   void init_betareg();
   void init_gaussian();
   void update_lly(int, BippsDataLMC&, const arma::mat& LamHw, bool map=false);
-  void calc_DplusSi(int, BippsDataLMC& data, const arma::mat& Lam, const arma::vec& tsqi);
   void update_block_w_cache(int, BippsDataLMC& data);
   void refresh_w_cache(BippsDataLMC& data);
   
   // W
   int which_hmc;
   bool w_do_hmc;
-  //bool w_hmc_nuts;
-  //bool w_hmc_rm;
-  //bool w_hmc_srm;
   void deal_with_w(BippsDataLMC& data, bool sample=true);
   
   void nongaussian_w(BippsDataLMC& data, bool sample);
@@ -220,8 +217,6 @@ public:
   bool calc_ywlogdens(BippsDataLMC& data);
   
   // Beta
-  void deal_with_beta(bool sample=true);
-  void hmc_sample_beta(bool sample=true);
   //void tester_beta(bool sample=true);
   std::vector<NodeDataB> beta_node; // std::vector
   std::vector<AdaptE> beta_hmc_adapt; // std::vector
@@ -232,6 +227,9 @@ public:
   arma::uvec icept_hmc_started;
   
   void sample_hmc_icept();
+
+  void deal_with_beta(bool sample);
+  void hmc_sample_beta(bool sample);
   
   void deal_with_BetaLambdaTau(BippsDataLMC& data, bool sample, 
                                bool sample_beta, bool sample_lambda, bool sample_tau);
@@ -240,11 +238,6 @@ public:
                                 bool sample_beta, bool sample_lambda, bool sample_tau);
   
   // Lambda
-  void deal_with_Lambda(BippsDataLMC& data);
-  void sample_nc_Lambda_std(); // noncentered
-  void sample_nc_Lambda_fgrid(BippsDataLMC& data);
-  arma::vec sample_Lambda_row(int j);
-  void sample_hmc_Lambda();
   std::vector<NodeDataB> lambda_node; // std::vector
   std::vector<AdaptE> lambda_hmc_adapt; // std::vector
   arma::uvec lambda_hmc_started;
@@ -278,6 +271,7 @@ public:
     const arma::mat& X_in, 
     
     const arma::mat& coords_in, 
+    const unsigned int image_id,
     
     int k_in,
     
@@ -299,7 +293,6 @@ public:
     const arma::vec& tausq_inv_in,
     
     const arma::mat& beta_Vi_in,
-    const arma::vec& tausq_ab_in,
     
     int which_hmc_in,
     bool adapting_theta,

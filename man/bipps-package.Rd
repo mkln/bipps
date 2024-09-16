@@ -2,8 +2,8 @@
 % Please edit documentation in R/bipps-package.R
 \docType{package}
 \name{bipps-package}
+\alias{bipps}
 \alias{bipps-package}
-\alias{_PACKAGE}
 \title{bipps: Bayesian Inference of Point Patterns in Space}
 \description{
 The bipps package fits Bayesian regression models for analyzing multivariate point pattern data using latent Gaussian Processes.

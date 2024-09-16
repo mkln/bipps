@@ -9,7 +9,6 @@ test_that("Test of reproducibility across runs", {
 
   set.seed(2024)
   reference_data <- get_test_data_multi()
-  # reference_data <- readRDS("reference_data_multi.rds")
 
   expect_equal(test_data$beta_test,reference_data$beta_test)
   expect_equal(test_data$lambda_test,reference_data$lambda_test)
@@ -19,7 +18,6 @@ test_that("Test of reproducibility across runs", {
 
 test_that("Test of reproducibility betweem different numbers of threads of runs", {
 
-  # data1 <- readRDS("reference_data_multi.rds")
   set.seed(2024)
   data1 <- get_test_data_multi(n_jobs = 1)
 
@@ -38,4 +36,8 @@ test_that("Test of reproducibility betweem different numbers of threads of runs"
   expect_equal(data2$lambda_test,data3$lambda_test)
   expect_equal(data2$theta_test,data3$theta_test)
   expect_equal(data2$w_test,data3$w_test)
+})
+
+test_that("Test multi_bipps works with one sample", {
+  expect_no_error(get_test_data_multi(n_jobs = 1,num_images=1))
 })

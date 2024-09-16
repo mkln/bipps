@@ -9,6 +9,7 @@ Bipps::Bipps(
   const arma::mat& X_in, 
   
   const arma::mat& coords_in, 
+  const unsigned int image_id_in,
   
   int k_in,
   
@@ -29,7 +30,6 @@ Bipps::Bipps(
   const arma::vec& tausq_inv_in,
   
   const arma::mat& beta_Vi_in,
-  const arma::vec& tausq_ab_in,
   
   int which_hmc_in,
   bool adapting_theta,
@@ -58,6 +58,8 @@ Bipps::Bipps(
   y = y_in;
   
   familyid = familyid_in;
+
+  image_id = image_id_in;
   
   offsets = arma::zeros(arma::size(y));
   Z = arma::ones(y.n_rows);
@@ -123,9 +125,7 @@ Bipps::Bipps(
    Vi    = beta_Vi_in;
    bprim = arma::zeros(p);
    Vim   = Vi * bprim;
-  
-  tausq_ab = tausq_ab_in;
-  
+    
   // init
   u_is_which_col_f    = arma::field<arma::field<arma::field<arma::uvec> > > (n_blocks);
   
@@ -867,7 +867,7 @@ bool Bipps::calc_ywlogdens(BippsDataLMC& data){
   // and Sigma for adjusting the error terms
 
   if(verbose & debug){
-    Rcpp::Rcout << "[calc_ywlogdens] start.\n";
+    Rcpp::Rcout << "[calc_ywlogdens, image_id: " << image_id << "] start.\n";
   }
   
 #ifdef _OPENMP

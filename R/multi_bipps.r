@@ -35,7 +35,7 @@ multi_bipps <- function(
   n_threads = 4,
   verbose = 0,
   settings = list(adapting=TRUE,
-                    ps=TRUE, saving=TRUE, low_mem=FALSE, hmc=0),
+                    ps=TRUE, saving=TRUE, low_mem=TRUE),
   prior = list(beta=NULL, tausq=NULL, sigmasq = NULL,
               phi=NULL, a=NULL, nu = NULL,
               toplim = NULL, btmlim = NULL, set_unif_bounds=NULL),
@@ -77,27 +77,27 @@ multi_bipps <- function(
   mcmc_burn <- n_burnin
   mcmc_thin <- n_thin
 
-  which_hmc    <- settings$hmc %>% set_default(0)
-  if(!(which_hmc %in% c(0,1,2,3,4,6,7))){
-    warning("Invalid sampling algorithm choice. Choose settings$hmc in {0,1,2,3,4,6,7}")
-    which_hmc <- 0
-  }
+  which_hmc <- 0
 
   mcmc_adaptive    <- settings$adapting %>% set_default(TRUE)
   mcmc_verbose     <- debug$verbose %>% set_default(FALSE)
   mcmc_debug       <- debug$debug %>% set_default(FALSE)
   saving <- settings$saving %>% set_default(TRUE)
-  low_mem <- settings$low_mem %>% set_default(FALSE)
+  low_mem <- settings$low_mem %>% set_default(TRUE)
 
   debugdag <- debug$dag %>% set_default(1)
-
-
 
   coords %<>% as.matrix()
 
 
+  # check dimensions of coords and y_list/x_list
+  stopifnot("nrow(coords) != nrow(x)"=all(unlist(lapply(x_list,\(x) nrow(x) == nrow(coords)))))
+  stopifnot("nrow(coords) != nrow(y)"=all(unlist(lapply(y_list,\(y) nrow(y) == nrow(coords)))))
+  stopifnot("ncol(y) not all equal"=all(unlist(lapply(y_list,\(y) ncol(y) == ncol(y_list[[1]])))))
+
+
   dd             <- ncol(coords)
-  p              <- ncol(x_list[[1]]) # check this
+  p              <- ncol(x_list[[1]])
 
   # data management part 0 - reshape/rename
   num_images <- length(y_list)
@@ -151,7 +151,7 @@ multi_bipps <- function(
     colnames(coords)     <- paste0('Var', 1:dd)
   }
 
-  q              <- ncol(y_list[[1]]) # check this
+  q              <- ncol(y_list[[1]])
   k              <- ifelse(is.null(k), q, k)
 
   # family id
@@ -163,10 +163,8 @@ multi_bipps <- function(
   suppressMessages(family_id <- family_in %>%
                       left_join(available_families, by=c("family"="family")) %>% pull(id))
 
-  # for spatial data: matern or expon, for spacetime: gneiting 2002
-  #n_par_each_process <- ifelse(dd==2, 1, 3)
 
-  nr             <- nrow(x_list[[1]])
+  nr             <- nrow(coords)
 
   ## check this
   if(length(axis_partition) == 1){
@@ -186,88 +184,54 @@ multi_bipps <- function(
 
   # data management pt 2
 
-  # what to do with different NAs in different images?
-  na_which <- lapply(y_list, \(y) apply(y, 1, \(i) ifelse(sum(is.na(i))==q,NA,1)))
-  simdata_list <- lapply(1:num_images,\(i) {
-    data.frame(ix=1:nrow(coords)) %>%
-      cbind(coords, y_list[[i]], na_which[[i]], x_list[[i]]) %>%
-      as.data.frame() %>% 
-      arrange(!!!rlang::syms(paste0("Var", 1:dd)))
-  })
-
-  coords <- simdata_list[[1]] %>%
-    dplyr::select(dplyr::contains("Var")) %>%
-    as.matrix()
-  sort_ix     <- simdata_list[[1]]$ix
+  all_na_which <- lapply(y_list, \(y) apply(y, 1, \(i) ifelse(sum(is.na(i))==q,NA,1)))
 
   fixed_thresholds <- 1:dd %>% lapply(function(i) kthresholdscp(coords[,i], axis_partition[i]))
 
-  # guaranteed to produce blocks using Mv
-  system.time(fake_coords_blocking <- coords %>%
-                as.matrix() %>%
-                gen_fake_coords(fixed_thresholds, 1) )
-
   # Domain partitioning and gibbs groups
 
-  system.time(coords_blocking_list <- lapply(simdata_list,\(simdata) {
+  system.time(coords_blocking_list <- lapply(all_na_which,\(na_which_i) {
     coords_blocking <- coords %>%
                   as.matrix() %>%
                   tessellation_axis_parallel_fix(fixed_thresholds, 1) %>%
-                  dplyr::mutate(na_which = simdata$na_which, ix=sort_ix)
-
-    # check if some blocks come up totally empty
-    blocks_prop <- coords_blocking[,paste0("L", 1:dd)] %>% unique()
-    blocks_fake <- fake_coords_blocking[,paste0("L", 1:dd)] %>% unique()
-    if(nrow(blocks_fake) != nrow(blocks_prop)){
-      #cat("Adding fake coords to avoid empty blocks ~ don't like? Use lower [axis_partition]\n")
-      # with current Mv, some blocks are completely empty
-      # this messes with indexing. so we add completely unobserved coords
-      suppressMessages(adding_blocks <- blocks_fake %>% dplyr::setdiff(blocks_prop) %>%
-                         dplyr::left_join(fake_coords_blocking))
-      coords_blocking <- dplyr::bind_rows(coords_blocking, adding_blocks)
-
-    }
+                  dplyr::mutate(na_which = na_which_i)
     coords_blocking
   }))
 
+  # this depends on there being no all NA blocks, otherwise the coords_blocking_list
+  # will not be the same across images. Change this?
   # DAG
-  system.time(parents_children_list <- lapply(coords_blocking_list,\(coords_blocking) {
+  no_errors <- TRUE
+  system.time(pc_list <- lapply(1:length(coords_blocking_list),\(i) {
     if(dd < 4){
-      parents_children <- mesh_graph_build(coords_blocking %>% dplyr::select(-ix), axis_partition, FALSE, n_threads, debugdag)
+      tryCatch({
+        pc <- mesh_graph_build(coords_blocking_list[[i]], axis_partition, FALSE, n_threads, debugdag)
+      },error=\(e) {
+        no_errors <<- FALSE
+        print(e)
+        cat("The offending image was: ",i,"\n")
+      })
     } else {
       stop("Input dimension is too high?!")
     }
   }))
+  stopifnot("Errors from NA blocks"=no_errors)
 
+  parents                      <- pc_list[[1]][["parents"]]
+  children                     <- pc_list[[1]][["children"]]
+  block_names                  <- pc_list[[1]][["names"]]
+  block_groups                 <- pc_list[[1]][["groups"]]
 
+  if(indpart){
+    parents %<>% lapply(function(x) lapply(x,\(x_i) numeric(0)))
+    children %<>% lapply(function(x) numeric(0))
+    block_groups %<>% rep(0, length(block_groups))
+  }
 
-  parents                      <- lapply(parents_children_list,\(pc) pc[["parents"]])
-  children                     <- lapply(parents_children_list,\(pc) pc[["children"]])
-  block_names                  <- lapply(parents_children_list,\(pc) pc[["names"]])
-  block_groups                 <- lapply(parents_children_list,\(pc) pc[["groups"]])
-
-  # check back on this
-  # if(indpart){
-  #   parents %<>% lapply(function(x) lapply(x,\(x_i) numeric(0)))
-  #   children %<>% lapply(function(x) numeric(0))
-  #   block_groups %<>% rep(0, length(block_groups))
-  # }
-
-  suppressMessages(simdata_in_list <- lapply(1:length(simdata_list),\(i) {
-    simdata_in <- coords_blocking_list[[i]] %>%
-      dplyr::select(-na_which) %>%
-      dplyr::left_join(simdata_list[[i]])
-  }))
-
-  #simdata[is.na(simdata$ix), "ix"] <- seq(nr_start+1, nr_full)
-
-
-  indexing_list <- lapply(simdata_in_list,\(simdata_in) {
-    blocking <- simdata_in$block %>%
+  blocking <- coords_blocking_list[[1]]$block %>%
       factor() %>% as.integer()
-    indexing <- (1:nrow(simdata_in)-1) %>%
+  indexing <- (1:nrow(coords)-1) %>%
       split(blocking)
-  })
 
   if(1){
     # prior and starting values for mcmc
@@ -498,7 +462,7 @@ multi_bipps <- function(
     }
 
     if(is.null(starting$v)){
-      start_v <- lapply(1:num_images,\(i) matrix(0, nrow = nrow(simdata_in_list[[1]]), ncol = k))
+      start_v <- lapply(1:num_images,\(i) matrix(0, nrow = nrow(coords), ncol = k))
     } else {
       # this is used to restart MCMC
       # assumes the ordering and the sizing is correct,
@@ -507,37 +471,11 @@ multi_bipps <- function(
     }
   }
 
-  # finally prepare data
-  y_list <- lapply(1:length(y_list), \(i) {
-    y <- simdata_in_list[[i]] %>%
-      dplyr::select(dplyr::contains("Y_")) %>%
-      as.matrix()
-    colnames(y) <- orig_y_colnames
-    y
-  })
-
-
-  x_list <- lapply(simdata_in_list,\(simdata_in) {
-    x <- simdata_in %>%
-      dplyr::select(dplyr::contains("X_")) %>%
-      as.matrix()
-    colnames(x) <- orig_X_colnames
-    x[is.na(x)] <- 0 # NAs if added coords due to empty blocks
-    x
-  })
-
-
-  coords <- simdata_in_list[[1]] %>%
-    dplyr::select(dplyr::contains("Var")) %>%
-    as.matrix()
 
 
   coords_renamer <- colnames(coords)
   names(coords_renamer) <- orig_coords_colnames
 
-  coordsdata <- simdata_in_list[[1]] %>%
-    dplyr::select(all_of(1:dd), ix) %>%
-    dplyr::rename(!!!coords_renamer)
 
   if(verbose > 0){
     cat("Sending to MCMC.\n")
@@ -557,14 +495,14 @@ multi_bipps <- function(
           children,
           block_names,
           block_groups,
-          indexing_list,
+          indexing,
 
           set_unif_bounds,
           beta_Vi,
 
 
-          sigmasq_ab,
-          tausq_ab,
+          # sigmasq_ab,
+          # tausq_ab,
 
           matern_fix_twonu,
 
@@ -609,9 +547,9 @@ multi_bipps <- function(
       anonList
     }
 
-    saved <- listN(y, x, coords_blocking, k,
+    saved <- listN(y_list, x_list, coords_blocking_list, k,
 
-                   family,
+                   family_id,
       parents, children,
       block_names, block_groups,
 
@@ -656,7 +594,7 @@ multi_bipps <- function(
     saved <- "Model data not saved."
   }
 
-  returning <- list(coordsdata = coordsdata,
+  returning <- list(coords = coords,
                     savedata = saved)
 
 
@@ -674,5 +612,4 @@ multi_bipps <- function(
   return(returning)
 
 }
-
 
