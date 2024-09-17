@@ -117,7 +117,7 @@ out1 <- lapply(1:chains,\(i) multi_bipps(y_list1,
                     debug = list(
                       sample_beta = T, sample_tausq = F,
                       sample_theta = T, sample_w = T, sample_lambda = T,
-                      verbose = T, debug = T
+                      verbose = T, debug = F
                     ),
                     just_preprocess = F))
 saveRDS(out1,"out1_chains_CRC_analysis.rds")
@@ -137,7 +137,7 @@ out2 <- lapply(1:chains,\(i) multi_bipps(y_list2,
                     debug = list(
                       sample_beta = T, sample_tausq = F,
                       sample_theta = T, sample_w = T, sample_lambda = T,
-                      verbose = T, debug = T
+                      verbose = T, debug = F
                     ),
                     just_preprocess = F))
 saveRDS(out2,"out2_chains_CRC_analysis.rds")
