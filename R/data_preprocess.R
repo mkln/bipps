@@ -15,15 +15,33 @@ create_y_list <- function(x,y,types,image_ids,nx,ny) {
     dplyr::group_by(image_id) %>%
     dplyr::mutate(X = X - min(X),
            Y = Y - min(Y)) %>%
-    dplyr::ungroup() %>%
-    dplyr::mutate(X = X/max(X),
-           Y = Y/max(Y))
+    dplyr::ungroup()
 
-  total_grid <- expand.grid(gridded_x=1:nx,gridded_y=1:ny)
+  max_dim <- c(max(df$X),max(df$Y))
+  pixel_width <- max_dim[1]/nx
+  pixel_height <- max_dim[2]/ny
+    # {
+    #   if(is.null(scaling)) {
+    #     dplyr::mutate(.,
+    #                   X_max = max(X),
+    #                   Y_max = max(Y),
+    #                   X = X/max(X_max,Y_max),
+    #                   Y = Y/max(X_max,Y_max))
+    #   } else {
+    #     dplyr::mutate(.,
+    #                   X = X/scaling_factor,
+    #                   Y = Y/scaling_factor)
+    #   }
+    # }
+
+  total_grid <- expand.grid(gridded_x=1:nx,
+                            gridded_y=1:ny) %>%
+                bind_cols(expand.grid(x=seq(pixel_width / 2, max_dim[1] - pixel_width / 2, length.out = nx),
+                            y=seq(pixel_height / 2,max_dim[2] - pixel_height / 2, length.out = ny)))
 
   counts <- df %>%
-    dplyr::mutate(gridded_x = floor((nx-1)*X) + 1,
-           gridded_y = floor((ny-1)*Y) + 1) %>%
+    dplyr::mutate(gridded_x = floor((nx-1)*X/max_dim[1]) + 1,
+           gridded_y = floor((ny-1)*Y/max_dim[2]) + 1) %>%
     dplyr::count(gridded_x,gridded_y,type,image_id) %>%
     tidyr::pivot_wider(names_from = type, values_from = n) %>%
     replace(is.na(.),0) %>%
@@ -36,9 +54,7 @@ create_y_list <- function(x,y,types,image_ids,nx,ny) {
     dplyr::arrange(image_id,gridded_x,gridded_y)
 
   coords <- counts %>%
-    dplyr::distinct(gridded_x,gridded_y) %>%
-    dplyr::mutate(x = gridded_x / max(gridded_x),
-                  y = gridded_y / max(gridded_y)) %>%
+    dplyr::distinct(x,y) %>%
     dplyr::select(x,y)
 
   in_hull <- lapply(unique(image_ids),\(id) {
@@ -49,14 +65,14 @@ create_y_list <- function(x,y,types,image_ids,nx,ny) {
 
   counts <- counts %>%
     dplyr::bind_cols(in_hull) %>%
-    dplyr::mutate(dplyr::across(-c(image_id,gridded_x,gridded_y,in_hull),~ifelse(is.na(.x) & in_hull,0,.x))) %>%
+    dplyr::mutate(dplyr::across(-c(image_id,gridded_x,gridded_y,in_hull,x,y),~ifelse(is.na(.x) & in_hull,0,.x))) %>%
     dplyr::select(-in_hull)
 
   y_list <- counts %>%
     dplyr::group_by(image_id) %>%
     dplyr::group_map(~{
       .x %>%
-        dplyr::select(-c(gridded_x,gridded_y)) %>%
+        dplyr::select(-c(gridded_x,gridded_y,x,y)) %>%
         as.matrix()
     })
 

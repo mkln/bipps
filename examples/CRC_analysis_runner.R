@@ -11,6 +11,13 @@ df_raw <- readr::read_csv("examples/data/CRC_cleaned.csv") %>%
 # mutate(Spot = factor(Spot))
 
 df_raw %>%
+  filter(Spot == "42_A") %>%
+  ggplot(aes(X,Y,color=type)) +
+  geom_point() +
+  scale_color_manual(values=as.vector(pals::glasbey())) +
+  theme_bw()
+
+df_raw %>%
   distinct(Spot,groups) %>%
   filter(groups == 1) %>%
   filter(!(Spot %in% c("67_B","57_A"))) %>% # these are really weird images
@@ -50,7 +57,23 @@ dat1 <- dat1 %>%
 dat2 <- dat2 %>%
   filter(type %in% types_intersect)
 
-nx <- ny <- 20
+bind_rows(dat1,dat2) %>%
+  dplyr::group_by(Spot) %>%
+  dplyr::mutate(X = X - min(X),
+                Y = Y - min(Y)) %>%
+  dplyr::ungroup() %>%
+  select(X,Y) %>%
+  apply(.,2,max) -> max_dim
+
+# x <- dat1$X
+# y <- dat1$Y
+# types <- dat1$type
+# image_ids <- dat1$Spot
+
+pix_dim <- 70
+nx <- ceiling(max_dim[1]/pix_dim)
+ny <- ceiling(max_dim[2]/pix_dim)
+
 out1 <- create_y_list(dat1$X,dat1$Y,dat1$type,dat1$Spot,nx,ny)
 y_list1 <- out1$y_list
 coords1 <- out1$coords
@@ -59,7 +82,7 @@ x_list1 <- lapply(y_list1,\(yy) {
 })
 
 # p <- plot_y_list(y_list1,coords1)
-# p[[49]]
+# p[[47]]
 
 out2 <- create_y_list(dat2$X,dat2$Y,dat2$type,dat2$Spot,nx,ny)
 y_list2 <- out2$y_list
@@ -72,7 +95,7 @@ n_samples <- 1000
 n_burnin <- 3000
 n_thin <- 1
 n_threads <- 32
-block_size <- 35
+block_size <- 50
 k <- 4
 starting <- list(phi = 100)
 prior <- list(phi = c(0.1, 200))
@@ -94,7 +117,7 @@ out1 <- lapply(1:chains,\(i) multi_bipps(y_list1,
                     debug = list(
                       sample_beta = T, sample_tausq = F,
                       sample_theta = T, sample_w = T, sample_lambda = T,
-                      verbose = T, debug = F
+                      verbose = T, debug = T
                     ),
                     just_preprocess = F))
 saveRDS(out1,"out1_chains_CRC_analysis.rds")
@@ -114,7 +137,7 @@ out2 <- lapply(1:chains,\(i) multi_bipps(y_list2,
                     debug = list(
                       sample_beta = T, sample_tausq = F,
                       sample_theta = T, sample_w = T, sample_lambda = T,
-                      verbose = T, debug = F
+                      verbose = T, debug = T
                     ),
                     just_preprocess = F))
 saveRDS(out2,"out2_chains_CRC_analysis.rds")
