@@ -92,15 +92,15 @@ x_list2 <- lapply(y_list2,\(yy) {
 })
 
 n_samples <- 1000
-n_burnin <- 3000
-n_thin <- 1
-n_threads <- 32
+n_burnin <- 10000
+n_thin <- 40
+n_threads <- 16
 block_size <- 50
 k <- 4
 starting <- list(phi = 100)
 prior <- list(phi = c(0.1, 200))
 
-chains <- 2
+chains <- 1
 
 out1 <- lapply(1:chains,\(i) multi_bipps(y_list1,
                     x_list1,
@@ -122,22 +122,22 @@ out1 <- lapply(1:chains,\(i) multi_bipps(y_list1,
                     just_preprocess = F))
 saveRDS(out1,"out1_chains_CRC_analysis.rds")
 
-out2 <- lapply(1:chains,\(i) multi_bipps(y_list2,
-                    x_list2,
-                    coords2,
-                    k = k,
-                    family = "poisson",
-                    block_size = block_size,
-                    n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
-                    n_threads = n_threads,
-                    starting = starting,
-                    prior = prior,
-                    settings = list(adapting = T, saving = T, ps = T),
-                    verbose = 10,
-                    debug = list(
-                      sample_beta = T, sample_tausq = F,
-                      sample_theta = T, sample_w = T, sample_lambda = T,
-                      verbose = T, debug = F
-                    ),
-                    just_preprocess = F))
-saveRDS(out2,"out2_chains_CRC_analysis.rds")
+# out2 <- lapply(1:chains,\(i) multi_bipps(y_list2,
+#                     x_list2,
+#                     coords2,
+#                     k = k,
+#                     family = "poisson",
+#                     block_size = block_size,
+#                     n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
+#                     n_threads = n_threads,
+#                     starting = starting,
+#                     prior = prior,
+#                     settings = list(adapting = T, saving = T, ps = T),
+#                     verbose = 10,
+#                     debug = list(
+#                       sample_beta = T, sample_tausq = F,
+#                       sample_theta = T, sample_w = T, sample_lambda = T,
+#                       verbose = T, debug = F
+#                     ),
+#                     just_preprocess = F))
+# saveRDS(out2,"out2_chains_CRC_analysis.rds")
