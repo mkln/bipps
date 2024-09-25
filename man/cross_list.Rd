@@ -4,12 +4,12 @@
 \alias{cross_list}
 \title{List of cross-cor/covar matrices at multiple length scales}
 \usage{
-cross_list(out, hs, method = "cor")
+cross_list(out, hs, method = "cor", ...)
 }
 \arguments{
-\item{out}{output from multi_bipps}
+\item{out}{list of outputs from multi_bipps (one entry per chain)}
 
-\item{hs}{vector of length scales (in [0,1])}
+\item{hs}{vector of length scales (in \link{0,1})}
 
 \item{method}{either "cor" or "covar"}
 }

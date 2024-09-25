@@ -3,7 +3,6 @@
 S3method(predict,bipps)
 export("%>%")
 export(create_y_list)
-export(cross_cor)
 export(cross_covar)
 export(cross_list)
 export(get_rvars)

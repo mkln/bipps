@@ -4,10 +4,10 @@
 \alias{get_rvars}
 \title{Get posterior::rvar object from output of multi_bipps}
 \usage{
-get_rvars(out, variable)
+get_rvars(out_list, variable, thin = 1)
 }
 \arguments{
-\item{out}{multi_bipps output}
+\item{out_list}{list of outputs from multi_bipps (one entry per chain)}
 
 \item{variable}{string of variable to extract}
 }
