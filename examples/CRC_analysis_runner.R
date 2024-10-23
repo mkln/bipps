@@ -100,7 +100,7 @@ k <- 4
 starting <- list(phi = 100)
 D <- sqrt(max_dim[1]^2 + max_dim[2]^2)
 a <- -log(0.05) * 3 / D
-prior <- list(phi = c(a, 200))
+prior <- list(phi = c(a, 2))
 
 chains <- 1
 
