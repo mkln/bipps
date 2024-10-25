@@ -93,16 +93,16 @@ x_list1 <- lapply(y_list1,\(yy) {
 #   matrix(0,nrow = nrow(yy),ncol = 1)
 # })
 
-n_samples <- 1000
+n_samples <- 10000
 n_burnin <- 1000
-n_thin <- 1
+n_thin <- 40
 n_threads <- 16
 block_size <- 50
 k <- 4
 starting <- list(phi = 5)
 # D <- sqrt(max_dim[1]^2 + max_dim[2]^2)
 # a <- -log(0.05) * 3 / D
-prior <- list(phi = c(0.1,200))
+prior <- list(phi = c(0.1,10))
 
 chains <- 1
 
