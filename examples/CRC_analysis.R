@@ -49,7 +49,9 @@ df_raw %>%
 pix_dim <- 70
 nx <- ceiling(max_dim[1]/pix_dim)
 ny <- ceiling(max_dim[2]/pix_dim)
-out <- create_y_list(df$X,df$Y,df$Type,df$Spot,nx,ny)
+# out <- create_y_list(df$X,df$Y,df$Type,df$Spot,nx,ny)
+out <- pixellate_grid(df$X,df$Y,df$Type,df$Spot,nx,ny)
+
 y_list <- out$y_list
 coords <- out$coords
 
@@ -109,7 +111,7 @@ dat1 <- dat1 %>%
 dat2 <- dat2 %>%
   filter(type %in% types_intersect)
 
-out1 <- readRDS("out1_chains_CRC_analysis_v2.rds")
+out1 <- readRDS("out1_chains_CRC_analysis.rds")
 out2 <- readRDS("out2_chains_CRC_analysis.rds")
 
 lambda <- get_rvars(out1,"lambda",thin=40)

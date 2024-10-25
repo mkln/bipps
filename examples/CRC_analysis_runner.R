@@ -10,12 +10,12 @@ df_raw <- readr::read_csv("examples/data/CRC_cleaned.csv") %>%
   dplyr::rename(Spot = spots)
 # mutate(Spot = factor(Spot))
 
-df_raw %>%
-  filter(Spot == "42_A") %>%
-  ggplot(aes(X,Y,color=type)) +
-  geom_point() +
-  scale_color_manual(values=as.vector(pals::glasbey())) +
-  theme_bw()
+# df_raw %>%
+#   filter(Spot == "42_A") %>%
+#   ggplot(aes(X,Y,color=type)) +
+#   geom_point() +
+#   scale_color_manual(values=as.vector(pals::glasbey())) +
+#   theme_bw()
 
 df_raw %>%
   distinct(Spot,groups) %>%
@@ -73,8 +73,10 @@ bind_rows(dat1,dat2) %>%
 pix_dim <- 70
 nx <- ceiling(max_dim[1]/pix_dim)
 ny <- ceiling(max_dim[2]/pix_dim)
+# nx <- 20
+# ny <- 20
 
-out1 <- create_y_list(dat1$X,dat1$Y,dat1$type,dat1$Spot,nx,ny)
+out1 <- pixellate_grid(dat1$X,dat1$Y,dat1$type,dat1$Spot,nx,ny)
 y_list1 <- out1$y_list
 coords1 <- out1$coords
 x_list1 <- lapply(y_list1,\(yy) {
@@ -84,23 +86,23 @@ x_list1 <- lapply(y_list1,\(yy) {
 # p <- plot_y_list(y_list1,coords1)
 # p[[47]]
 
-out2 <- create_y_list(dat2$X,dat2$Y,dat2$type,dat2$Spot,nx,ny)
-y_list2 <- out2$y_list
-coords2 <- out2$coords
-x_list2 <- lapply(y_list2,\(yy) {
-  matrix(0,nrow = nrow(yy),ncol = 1)
-})
+# out2 <- pixellate_grid(dat2$X,dat2$Y,dat2$type,dat2$Spot,nx,ny)
+# y_list2 <- out2$y_list
+# coords2 <- out2$coords
+# x_list2 <- lapply(y_list2,\(yy) {
+#   matrix(0,nrow = nrow(yy),ncol = 1)
+# })
 
 n_samples <- 1000
-n_burnin <- 10000
-n_thin <- 40
+n_burnin <- 1000
+n_thin <- 1
 n_threads <- 16
 block_size <- 50
 k <- 4
-starting <- list(phi = 100)
-D <- sqrt(max_dim[1]^2 + max_dim[2]^2)
-a <- -log(0.05) * 3 / D
-prior <- list(phi = c(a, 2))
+starting <- list(phi = 5)
+# D <- sqrt(max_dim[1]^2 + max_dim[2]^2)
+# a <- -log(0.05) * 3 / D
+prior <- list(phi = c(0.1,200))
 
 chains <- 1
 
@@ -122,7 +124,7 @@ out1 <- lapply(1:chains,\(i) multi_bipps(y_list1,
                       verbose = T, debug = F
                     ),
                     just_preprocess = F))
-saveRDS(out1,"out1_chains_CRC_analysis.rds")
+saveRDS(out1,"out1_chains_CRC_analysis_v3.rds")
 
 # out2 <- lapply(1:chains,\(i) multi_bipps(y_list2,
 #                     x_list2,
