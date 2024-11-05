@@ -1,7 +1,8 @@
 #' Pixellate a grid with spatial data and count points of each type
 #'
 #' This function takes spatial coordinates of points, scales them to fit within a
-#' grid defined by the dimensions `[0, 1] x [0, 1]`, and pixellates the grid. It
+#' grid defined by the dimensions `[0, R1] x [0, R2]`, (with R1 or R2 == 1 and
+#' the other < 1) and pixellates the grid. It
 #' counts the number of points of each type in each pixel, considering separate images
 #' when image IDs are provided.
 #'
@@ -21,14 +22,14 @@ pixellate_grid <- function(x, y, types, image_ids, nx, ny) {
   # Determine the max range in either x or y for uniform scaling
   max_range <- max(max(x) - min(x), max(y) - min(y))
 
-  # Scaling x and y to fit in [0,1] x [0,1]
+  # Scaling x and y to fit in [0,R1] x [0,R2]
   x_scaled <- (x - min(x)) / max_range
   y_scaled <- (y - min(y)) / max_range
 
   # Create a tibble for the scaled points
   points_df <- tibble::tibble(x = x_scaled, y = y_scaled, image_id = image_ids)
 
-  # Creating the grid boundaries
+  # Creating the pixel boundaries
   x_bins <- seq(0, max(x_scaled), length.out = nx + 1)
   y_bins <- seq(0, max(y_scaled), length.out = ny + 1)
 
@@ -61,7 +62,7 @@ pixellate_grid <- function(x, y, types, image_ids, nx, ny) {
   # Adjust: Rows with all zeros should be turned to NA for type counts
   type_columns <- setdiff(names(final_df), c("image_id", "x_pixel", "y_pixel"))
   final_df <- final_df %>%
-    dplyr::mutate(across(all_of(type_columns), ~ifelse(rowSums(!is.na(select(final_df, all_of(type_columns)))) == 0, NA, .)))
+    dplyr::mutate(dplyr::across(all_of(type_columns), ~ifelse(rowSums(!is.na(select(final_df, dplyr::all_of(type_columns)))) == 0, NA, .)))
 
   # Adding pixel coordinates to the dataframe
   final_df <- final_df %>%
@@ -69,21 +70,24 @@ pixellate_grid <- function(x, y, types, image_ids, nx, ny) {
       x = (x_bins[x_pixel] + x_bins[x_pixel + 1]) / 2,
       y = (y_bins[y_pixel] + y_bins[y_pixel + 1]) / 2
     ) %>%
-    dplyr::select(image_id, x, y, everything(), -x_pixel, -y_pixel)
+    dplyr::select(image_id, x, y, dplyr::everything(), -x_pixel, -y_pixel)
 
-  # Handling in_hull logic (if needed)
+  # Identify convex hull so pixels inside are reset to zero instead of NA
   coords <- final_df %>%
     dplyr::distinct(x, y)
 
-  in_hull <- lapply(unique(image_ids), \(id) {
-    hull <- spatstat.geom::convexhull.xy(points_df %>% dplyr::filter(image_id == id) %>% dplyr::select(x, y))
-    data.frame(in_hull = spatstat.geom::inside.owin(coords$x, coords$y, hull))
-  }) %>%
-    dplyr::bind_rows()
+  final_df <- final_df %>%
+    dplyr::group_by(image_id) %>%
+    dplyr::group_modify(~{
+      id <- .y$image_id
+      hull <- spatstat.geom::convexhull.xy(points_df %>% dplyr::filter(image_id == id) %>% dplyr::select(x, y))
+      .x %>%
+        dplyr::mutate(in_hull = spatstat.geom::inside.owin(.x$x, .x$y, hull))
+    }) %>%
+    dplyr::ungroup()
 
-  # Final adjustment to counts
+  # Final adjustment to counts from inside hull
   counts <- final_df %>%
-    dplyr::bind_cols(in_hull) %>%
     dplyr::mutate(dplyr::across(-c(image_id, x, y, in_hull), ~ifelse(is.na(.x) & in_hull, 0, .x))) %>%
     dplyr::select(-in_hull)
 

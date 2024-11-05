@@ -65,10 +65,10 @@ bind_rows(dat1,dat2) %>%
   select(X,Y) %>%
   apply(.,2,max) -> max_dim
 
-# x <- dat1$X
-# y <- dat1$Y
-# types <- dat1$type
-# image_ids <- dat1$Spot
+x <- dat1$X
+y <- dat1$Y
+types <- dat1$type
+image_ids <- dat1$Spot
 
 pix_dim <- 70
 nx <- ceiling(max_dim[1]/pix_dim)
@@ -95,7 +95,7 @@ x_list2 <- lapply(y_list2,\(yy) {
 
 n_samples <- 1000
 n_burnin <- 10000
-n_thin <- 1
+n_thin <- 40
 n_threads <- 16
 block_size <- 50
 k <- 4
@@ -124,7 +124,7 @@ out1 <- lapply(1:chains,\(i) multi_bipps(y_list1,
                       verbose = T, debug = F
                     ),
                     just_preprocess = F))
-saveRDS(out1,"out1_chains_CRC_analysis.rds")
+saveRDS(out1,"out1_chains_CRC_analysis_40k.rds")
 
 out2 <- lapply(1:chains,\(i) multi_bipps(y_list2,
                     x_list2,
@@ -144,4 +144,4 @@ out2 <- lapply(1:chains,\(i) multi_bipps(y_list2,
                       verbose = T, debug = F
                     ),
                     just_preprocess = F))
-saveRDS(out2,"out2_chains_CRC_analysis.rds")
+saveRDS(out2,"out2_chains_CRC_analysis_40k.rds")

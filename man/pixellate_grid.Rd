@@ -27,7 +27,8 @@ with rows representing pixels and columns representing counts of each point type
 }
 \description{
 This function takes spatial coordinates of points, scales them to fit within a
-grid defined by the dimensions \verb{[0, 1] x [0, 1]}, and pixellates the grid. It
+grid defined by the dimensions \verb{[0, R1] x [0, R2]}, (with R1 or R2 == 1 and
+the other < 1) and pixellates the grid. It
 counts the number of points of each type in each pixel, considering separate images
 when image IDs are provided.
 }
