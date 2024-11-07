@@ -22,6 +22,7 @@ pixellate_grid <- function(x, y, types, image_ids, nx, ny) {
   # Determine the max range in either x or y for uniform scaling
   max_range <- max(max(x) - min(x), max(y) - min(y))
 
+
   # Scaling x and y to fit in [0,R1] x [0,R2]
   x_scaled <- (x - min(x)) / max_range
   y_scaled <- (y - min(y)) / max_range
@@ -91,19 +92,18 @@ pixellate_grid <- function(x, y, types, image_ids, nx, ny) {
     dplyr::mutate(dplyr::across(-c(image_id, x, y, in_hull), ~ifelse(is.na(.x) & in_hull, 0, .x))) %>%
     dplyr::select(-in_hull)
 
-  # Grouping the data by image and converting to a list of matrices
-  y_list <- counts %>%
-    dplyr::group_by(image_id) %>%
-    dplyr::group_map(~{
-      .x %>%
-        dplyr::select(-c(x, y)) %>%
-        as.matrix()
-    })
+  ids <- unique(image_ids)
+  y_list <- lapply(ids,\(id) {
+    counts %>%
+      dplyr::filter(image_id == id) %>%
+      dplyr::select(-c(x, y,image_id)) %>%
+      as.matrix()
+  })
 
   # Naming the list by unique image IDs
-  names(y_list) <- unique(image_ids)
+  names(y_list) <- ids
 
   # Return the result as a list
-  list(y_list = y_list, coords = coords)
+  out <- list(y_list = y_list, coords = coords)
 }
 
