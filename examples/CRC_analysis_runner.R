@@ -108,7 +108,7 @@ starting <- list(phi = 5)
 # a <- -log(0.05) * 3 / D
 prior <- list(phi = c(0.1,10))
 
-chains <- 4
+chains <- 1
 
 # out1 <- lapply(1:chains,\(i) multi_bipps(y_list1,
 #                     x_list1,
@@ -148,8 +148,8 @@ out2 <- lapply(1:chains,\(i) multi_bipps(y_list2,
                       verbose = F, debug = F
                     ),
                     just_preprocess = F))
-saveRDS(out2,"out2_chains_CRC_analysis_40k_k2.rds")
+# saveRDS(out2,"out2_chains1_CRC_analysis_40k_k2.rds")
 
 out2_lt <- lapply(out2,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc))
 
-saveRDS(out2_lt,"out2_chains_CRC_analysis_40k_k2_lt.rds")
+saveRDS(out2_lt,"out2_chains1_CRC_analysis_40k_k2_lt.rds")
