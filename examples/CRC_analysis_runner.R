@@ -102,7 +102,7 @@ n_burnin <- 10000
 n_thin <- 40
 n_threads <- 16
 block_size <- 50
-k <- 4
+k <- 2
 starting <- list(phi = 5)
 # D <- sqrt(max_dim[1]^2 + max_dim[2]^2)
 # a <- -log(0.05) * 3 / D
@@ -148,4 +148,8 @@ out2 <- lapply(1:chains,\(i) multi_bipps(y_list2,
                       verbose = F, debug = F
                     ),
                     just_preprocess = F))
-saveRDS(out2,"out2_chains_CRC_analysis_40k.rds")
+saveRDS(out2,"out2_chains_CRC_analysis_40k_k2.rds")
+
+out2_lt <- lapply(out2,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc))
+
+saveRDS(out2_lt,"out2_chains_CRC_analysis_40k_k2_lt.rds")
