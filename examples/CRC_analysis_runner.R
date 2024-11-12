@@ -98,7 +98,7 @@ x_list2 <- lapply(y_list2,\(yy) {
 # p[[52]]
 
 n_samples <- 1000
-n_burnin <- 10000
+n_burnin <- 20000
 n_thin <- 40
 n_threads <- 16
 block_size <- 50
