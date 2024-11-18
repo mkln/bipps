@@ -87,12 +87,12 @@ x_list1 <- lapply(y_list1,\(yy) {
 # p1 <- plot_y_list(y_list1,coords1)
 # p1
 
-# out2 <- pixellate_grid(dat2$X,dat2$Y,dat2$type,dat2$Spot,nx,ny)
-# y_list2 <- out2$y_list
-# coords2 <- out2$coords
-# x_list2 <- lapply(y_list2,\(yy) {
-#   matrix(0,nrow = nrow(yy),ncol = 1)
-# })
+out2 <- pixellate_grid(dat2$X,dat2$Y,dat2$type,dat2$Spot,nx,ny)
+y_list2 <- out2$y_list
+coords2 <- out2$coords
+x_list2 <- lapply(y_list2,\(yy) {
+  matrix(0,nrow = nrow(yy),ncol = 1)
+})
 
 # p <- plot_y_list(y_list2,coords1)
 # p[[52]]
@@ -108,7 +108,7 @@ starting <- list(phi = 5)
 # a <- -log(0.05) * 3 / D
 prior <- list(phi = c(0.1,10))
 
-chains <- 1
+chains <- 4
 
 out1 <- lapply(1:chains,\(i) multi_bipps(y_list1,
                     x_list1,
@@ -128,28 +128,32 @@ out1 <- lapply(1:chains,\(i) multi_bipps(y_list1,
                       verbose = F, debug = F
                     ),
                     just_preprocess = F))
-# saveRDS(out1,"out1_chains_CRC_analysis_40k.rds")
-
-# out2 <- lapply(1:chains,\(i) multi_bipps(y_list2,
-#                     x_list2,
-#                     coords2,
-#                     k = k,
-#                     family = "poisson",
-#                     block_size = block_size,
-#                     n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
-#                     n_threads = n_threads,
-#                     starting = starting,
-#                     prior = prior,
-#                     settings = list(adapting = T, saving = T, ps = T),
-#                     verbose = 10,
-#                     debug = list(
-#                       sample_beta = T, sample_tausq = F,
-#                       sample_theta = T, sample_w = T, sample_lambda = T,
-#                       verbose = F, debug = F
-#                     ),
-#                     just_preprocess = F))
-# saveRDS(out2,"out2_chains1_CRC_analysis_40k_k2.rds")
+saveRDS(out1,"out1_chains4_CRC_analysis_40k_k2_2e4burn.rds")
 
 out1_lt <- lapply(out1,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc))
 
-saveRDS(out1_lt,"out1_chains1_CRC_analysis_40k_k2_lt.rds")
+saveRDS(out1_lt,"out1_chains4_CRC_analysis_40k_k2_2e4burn_lt.rds")
+
+out2 <- lapply(1:chains,\(i) multi_bipps(y_list2,
+                    x_list2,
+                    coords2,
+                    k = k,
+                    family = "poisson",
+                    block_size = block_size,
+                    n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
+                    n_threads = n_threads,
+                    starting = starting,
+                    prior = prior,
+                    settings = list(adapting = T, saving = T, ps = T),
+                    verbose = 10,
+                    debug = list(
+                      sample_beta = T, sample_tausq = F,
+                      sample_theta = T, sample_w = T, sample_lambda = T,
+                      verbose = F, debug = F
+                    ),
+                    just_preprocess = F))
+saveRDS(out2,"out2_chains4_CRC_analysis_40k_k2_2e4burn.rds")
+
+out2_lt <- lapply(out2,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc))
+
+saveRDS(out2_lt,"out2_chains4_CRC_analysis_40k_k2_2e4burn_lt.rds")
