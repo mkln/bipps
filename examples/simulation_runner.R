@@ -14,14 +14,15 @@ set.seed(2020)
 
 # mcmc settings
 n_samples <- 1000
-n_burnin <- 10000
-n_thin <- 20
+n_burnin <- 20000
+n_thin <- 40
 n_threads <- 16
 block_size <- 50
 starting <- list(phi = 5)
 prior <- list(phi = c(0.1,10))
 chains <- 2
-save_file <- "out_sim1.rds"
+save_file <- "out_sim2.rds"
+save_file_lt <- "out_sim2_lt.rds"
 
 # simulation settings
 nx <- 1000
@@ -36,7 +37,7 @@ sigmasq <- 1
 scaling <- 20
 mu <- -9
 k <- 3
-q <- 10
+q <- 5
 p <- 1
 
 # make V
@@ -171,3 +172,7 @@ out <- lapply(1:chains,\(i) multi_bipps(y_list,
                                          ),
                                          just_preprocess = F))
 saveRDS(out,save_file)
+
+out_lt <- lapply(out,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc))
+
+saveRDS(out_lt,save_file_lt)
