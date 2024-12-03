@@ -203,9 +203,11 @@ out1 <- lapply(1:chains,\(i) multi_bipps(y_list,
                                          ),
                                          just_preprocess = F))
 
-lambda <- get_rvars(out1,"lambda",thin=n_thin)
+out <- readRDS("out_sim1.rds")
+
+lambda <- get_rvars(out,"lambda",thin=n_thin)
 lambda
-theta <- get_rvars(out1,"theta",thin=n_thin)
+theta <- get_rvars(out,"theta",thin=n_thin)
 theta
 mcmc_trace(as_draws_df(theta[1,]))
 

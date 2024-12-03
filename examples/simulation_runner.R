@@ -13,8 +13,8 @@ library(fields)
 set.seed(2020)
 
 # mcmc settings
-n_samples <- 200
-n_burnin <- 1000
+n_samples <- 1000
+n_burnin <- 5000
 n_thin <- 1
 n_threads <- 16
 block_size <- 50
