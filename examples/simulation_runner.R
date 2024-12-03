@@ -13,9 +13,9 @@ library(fields)
 set.seed(2020)
 
 # mcmc settings
-n_samples <- 2000
+n_samples <- 1000
 n_burnin <- 10000
-n_thin <- 1
+n_thin <- 20
 n_threads <- 16
 block_size <- 50
 starting <- list(phi = 5)
@@ -26,7 +26,7 @@ save_file <- "out_sim1.rds"
 # simulation settings
 nx <- 1000
 ny <- 1000
-num_images <- 3
+num_images <- 20
 x_max <- 1919
 y_max <- 1439
 # theta
