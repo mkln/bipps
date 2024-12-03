@@ -20,8 +20,8 @@ n_threads <- 16
 block_size <- 50
 starting <- list(phi = 5)
 prior <- list(phi = c(0.1,10))
-
 chains <- 1
+save_file <- "out_sim1.rds"
 
 # simulation settings
 nx <- 1000
@@ -152,7 +152,7 @@ x_list <- lapply(y_list,\(yy) {
 # p1
 
 # run bipps
-out1 <- lapply(1:chains,\(i) multi_bipps(y_list,
+out <- lapply(1:chains,\(i) multi_bipps(y_list,
                                          x_list,
                                          coords,
                                          k = k,
@@ -162,7 +162,7 @@ out1 <- lapply(1:chains,\(i) multi_bipps(y_list,
                                          n_threads = n_threads,
                                          starting = starting,
                                          prior = prior,
-                                         settings = list(adapting = T, saving = T, ps = T,low_mem=F),
+                                         settings = list(adapting = T, saving = T, ps = T,low_mem=T),
                                          verbose = 10,
                                          debug = list(
                                            sample_beta = T, sample_tausq = F,
@@ -170,3 +170,4 @@ out1 <- lapply(1:chains,\(i) multi_bipps(y_list,
                                            verbose = F, debug = F
                                          ),
                                          just_preprocess = F))
+saveRDS(out,save_file)
