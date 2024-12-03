@@ -13,14 +13,14 @@ library(fields)
 set.seed(2020)
 
 # mcmc settings
-n_samples <- 1000
-n_burnin <- 5000
+n_samples <- 2000
+n_burnin <- 10000
 n_thin <- 1
 n_threads <- 16
 block_size <- 50
 starting <- list(phi = 5)
 prior <- list(phi = c(0.1,10))
-chains <- 1
+chains <- 2
 save_file <- "out_sim1.rds"
 
 # simulation settings
