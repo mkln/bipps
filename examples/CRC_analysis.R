@@ -1,12 +1,25 @@
-rm(list = ls())
 devtools::load_all()
 library(spatstat)
 library(tidyverse)
 library(posterior)
 library(tidybayes)
 library(bayesplot)
+library(patchwork)
+# library(extrafont)
+# font_import()
+# loadfonts(device = "win")
 
 set.seed(2020)
+
+theme_bipps <- \() {
+  list(
+    theme_minimal(),
+    theme(
+      # text = element_text(family = "Calibri", size = 32, face = "bold"),
+      plot.margin = unit(0.5*c(1,1,1,1), "cm")
+    )
+  )
+}
 
 df_raw <- readr::read_csv("examples/data/CRC_cleaned.csv") %>%
   # dplyr::mutate(type = as.factor(type)) %>%
@@ -28,9 +41,8 @@ df %>%
   scale_color_manual(values=as.vector(pals::glasbey())) +
   scale_fill_manual(values=as.vector(pals::glasbey())) +
   scale_shape_manual(values=rep(21:25,times=2,length.out=10)) +
-  theme_bw() +
-  theme(text=element_text(size=32)) +
-  theme(plot.margin = unit(0.5*c(1,1,1,1), "cm"))
+  theme_bipps() +
+  labs(x="X (\u03BCm)",y="Y (\u03BCm)")
 
 # binned counts plot
 df_raw %>%
@@ -41,6 +53,12 @@ df_raw %>%
   select(X,Y) %>%
   apply(.,2,max) -> max_dim
 
+# dat1 <- df_raw %>%
+#   filter(groups == 2) %>%
+#   # filter(Spot == "46_B") %>%
+#   filter(type %in% types_intersect)
+
+# max_range <- 1919
 # x <- dat1$X
 # y <- dat1$Y
 # types <- dat1$type
@@ -49,24 +67,30 @@ df_raw %>%
 pix_dim <- 70
 nx <- ceiling(max_dim[1]/pix_dim)
 ny <- ceiling(max_dim[2]/pix_dim)
-# out <- create_y_list(df$X,df$Y,df$Type,df$Spot,nx,ny)
+
 out <- pixellate_grid(df$X,df$Y,df$Type,df$Spot,nx,ny)
 
 y_list <- out$y_list
 coords <- out$coords
 
+p1 <- plot_y_list(y_list,coords)
+p1
+# 54_B
+# 53_B
+
+max_range <- max(max_dim)
 dplyr::bind_cols(y_list[[1]],coords) %>%
   tidyr::pivot_longer(-c(x,y),names_to = "type",values_to = "Count") %>%
+  mutate(x=x*max_range,
+         y=y*max_range) %>%
   ggplot2::ggplot(ggplot2::aes(x,y,fill=Count)) +
   ggplot2::geom_tile() +
   ggplot2::facet_wrap(~type) +
-  scico::scale_fill_scico() +
-  theme_minimal() +
-  theme(panel.grid.minor = element_blank(),panel.grid.major=element_blank(),
-        axis.text = element_blank()) +
-  labs(x="",y="") +
-  theme(text=element_text(size=22)) +
-  theme(plot.margin = unit(0.5*c(1,1,1,1), "cm"))
+  scale_fill_viridis_c(option = "inferno",direction=-1,na.value = "transparent") +
+  theme_bipps() +
+  theme(text = element_text(size=22),
+        axis.text.x=element_text(angle=45,hjust=1,vjust=1)) +
+  labs(x="X (\u03BCm)",y="Y (\u03BCm)")
 
 # model fitting
 # group 1 is CLR
@@ -80,6 +104,7 @@ df_raw %>%
 df_raw %>%
   distinct(Spot,groups) %>%
   filter(groups == 2) %>%
+  filter(!(Spot %in% c("53_B","54_B"))) %>% # these are also really weird images
   pull(Spot) -> spots2
 
 dat1 <- df_raw %>%
@@ -111,17 +136,17 @@ dat1 <- dat1 %>%
 dat2 <- dat2 %>%
   filter(type %in% types_intersect)
 
-out1 <- readRDS("out1_chains_CRC_analysis.rds")
-out2 <- readRDS("out2_chains_CRC_analysis.rds")
+out1 <- readRDS("out1_chains4_CRC_analysis_40k_k2_2e4burn_lt.rds")
+out2 <- readRDS("out2_chains4_CRC_analysis_40k_k2_2e4burn_lt.rds")
 
-lambda <- get_rvars(out1,"lambda",thin=40)
-theta <- get_rvars(out1,"theta",thin=40)
+lambda <- get_rvars(out2,"lambda")
+theta <- get_rvars(out2,"theta")
 
 lambda
-hs <- seq(0,100,10)
+hs <- seq(0,1,0.1)
 
 xl1 <- cross_list(out1,hs,thin=40)
-xl2 <- cross_list(out2,hs)
+xl2 <- cross_list(out2,hs,thin=40)
 
 xl1 <- lapply(xl1,\(xl) {
   rownames(xl) <- colnames(xl) <- types_intersect
@@ -134,19 +159,15 @@ xl2 <- lapply(xl2,\(xl) {
 })
 
 n_types <- length(types_intersect)
-n_samples <- ndraws(xl1[[1]])
-
-summarise_draws(lambda)
-
-summarise_draws(xl1[[2]])
+n_samples <- ndraws(xl2[[1]])
 
 mcmc_trace(as_draws_df(theta[1,]))
 
-mcmc_trace(as_draws_df(lambda[7:8,]))
+mcmc_trace(as_draws_df(lambda[7:10,]))
 
 
 # rhat
-xl1[[1]] %>%
+xl2[[1]] %>%
   summarise_draws() %>%
   separate(variable,into = c("type1","type2"),sep=",") %>%
   mutate(type1 = sub("^\\.\\[","",type1),
@@ -156,7 +177,7 @@ xl1[[1]] %>%
   scico::scale_fill_scico(palette="bam",midpoint=1.1)
 
 # ess_ratio
-xl1[[1]] %>%
+xl2[[1]] %>%
   summarise_draws(ess=ess_basic) %>%
   separate(variable,into = c("type1","type2"),sep=",") %>%
   mutate(type1 = sub("^\\.\\[","",type1),
@@ -171,8 +192,8 @@ xl1[[1]] %>%
 # p
 
 # trace plots
-h_ix <- 3
-trace_df <- as_draws_df(xl1[[h_ix]]) %>%
+h_ix <- 5
+trace_df <- as_draws_df(xl2[[h_ix]]) %>%
   pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
   separate(variable,into = c("type1","type2"),sep=",") %>%
   mutate(type1 = sub("^x\\[","",type1),
@@ -184,6 +205,7 @@ trace_df %>%
   mutate(.chain = factor(.chain)) %>%
   ggplot(aes(.iteration,value,color=.chain,group=.chain)) +
   geom_line() +
+  geom_hline(yintercept=0,color="black",linetype="dashed",linewidth=0.5) +
   facet_grid(type1~type2,
              labeller = label_wrap_gen(width=8)) +
   theme_bw() +
@@ -221,9 +243,9 @@ bind_rows(ex1,ex2) %>%
   theme(panel.grid.minor = element_blank(),panel.grid.major=element_blank()) +
   labs(x="Type 1",y="Type 2",fill="Correlation") +
   scico::scale_fill_scico(palette = "bam",midpoint = 0) +
+  theme_bipps() +
   theme(text=element_text(size=22),
-        axis.text.x = element_text(angle=45,hjust=1,vjust=1)) +
-  theme(plot.margin = unit(0.5*c(1,1,1,1), "cm"))
+        axis.text.x = element_text(angle=45,hjust=1,vjust=1))
 
 limits <- 2*c(-1,1)
 bind_rows(ex1,ex2) %>%
@@ -236,7 +258,7 @@ bind_rows(ex1,ex2) %>%
   ungroup() %>%
   ggplot(aes(type1,type2,fill=E(diff))) +
   geom_tile() +
-  theme_minimal() +
+  theme_bipps() +
   theme(panel.grid.minor = element_blank(),panel.grid.major=element_blank()) +
   labs(x="Type 1",y="Type 2",fill="Correlation\ndifference") +
   scico::scale_fill_scico(palette = "bam",midpoint = 0,
@@ -299,26 +321,97 @@ unique_combinations_with_self(types_intersect) %>%
   }) %>%
   ungroup() -> xl1_e
 
+# spatial cross-correlation over distance plots
+unique_combinations_with_self(types_intersect) %>%
+  # expand_grid(type1 = types_intersect,type2 = types_intersect) %>%
+  as.data.frame() %>%
+  as_tibble() %>%
+  magrittr::set_colnames(c("t1","t2")) %>%
+  group_by(t1,t2) %>%
+  group_modify(~{
+    ix1 <- which(types_intersect == .y$t1)
+    ix2 <- which(types_intersect == .y$t2)
 
-xl1_e %>%
-  # filter(auc %in% sort(unique(auc),decreasing = TRUE)[1:10]) %>%
+    mu <- unlist(lapply(xl2,\(x) {
+      E(x[ix1,ix2])
+    }))
+
+    int_val <- integrate(approxfun(hs,abs(mu)),hs[1],hs[length(hs)])$value
+
+    sigma <- unlist(lapply(xl2,\(x) {
+      sd(x[ix1,ix2])
+    }))
+
+    lb <- unlist(lapply(xl2,\(x) {
+      quantile(x[ix1,ix2],probs = 0.025)
+    }))
+
+    ub <- unlist(lapply(xl2,\(x) {
+      quantile(x[ix1,ix2],probs = 0.975)
+    }))
+    tibble(mu=mu,lb=lb,ub=ub,hs=hs,auc=int_val)
+  }) %>%
+  ungroup() -> xl2_e
+
+filter_out <- tibble(combo=c("CD163+ macros <--> granulocytes",
+                             "CD8+ T cells <--> tumor cells",
+                             "B cells <--> granulocytes",
+                             "B cells <--> tumor cells",
+                             "memory CD4+ T <--> plasma cells",
+                             "CD163+ macros <--> tumor cells"))
+
+p1 <- xl1_e %>%
+  mutate(combo = paste0(t1," <--> ",t2)) %>%
   # mutate(ub = mu+sigma,
   #        lb = mu-sigma) %>%
-  mutate(across(c(t1,t2),~ifelse(.x == "granulocytes","gran.",.x))) %>%
-  mutate(across(c(t1,t2),~ifelse(.x == "vasculature","vasc.",.x))) %>%
+  right_join(filter_out) %>%
+  mutate(hs = hs * max_range1) %>%
+  # mutate(across(c(t1,t2),~ifelse(.x == "granulocytes","gran.",.x))) %>%
+  # mutate(across(c(t1,t2),~ifelse(.x == "vasculature","vasc.",.x))) %>%
   ggplot(aes(hs,mu)) +
   geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
   geom_line() +
-  geom_hline(yintercept = 0,color="red") +
+  geom_hline(yintercept = 0,color="red",linetype="dotted") +
   theme_bw() +
-  facet_grid(t1~t2,
-             labeller = label_wrap_gen(width=8)) +
+  facet_wrap(~combo) +
+  # facet_grid(t1~t2,
+  #            labeller = label_wrap_gen(width=8)) +
+  theme_bipps() +
   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
   theme(axis.title = element_text(size=20),
-        axis.text = element_text(size=12),
-        strip.text = element_text(size=10)) +
-  labs(x="Distance (\u03bcm)",y="Cross-correlation")
+        axis.text = element_text(size=14),
+        strip.text = element_text(size=16),
+        title = element_text(size=20),
+        plot.margin = unit(0.1*c(1,1,1,1), "cm")) +
+  labs(x="",y="Cross-correlation")
   # theme(strip.text = element_text(size=6))
+
+p2 <- xl2_e %>%
+  mutate(combo = paste0(t1," <--> ",t2)) %>%
+  # mutate(ub = mu+sigma,
+  #        lb = mu-sigma) %>%
+  right_join(filter_out) %>%
+  mutate(hs = hs * max_range2) %>%
+  # mutate(across(c(t1,t2),~ifelse(.x == "granulocytes","gran.",.x))) %>%
+  # mutate(across(c(t1,t2),~ifelse(.x == "vasculature","vasc.",.x))) %>%
+  ggplot(aes(hs,mu)) +
+  geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
+  geom_line() +
+  geom_hline(yintercept = 0,color="red",linetype="dotted") +
+  theme_bw() +
+  facet_wrap(~combo) +
+  # facet_grid(t1~t2,
+  #            labeller = label_wrap_gen(width=8)) +
+  theme_bipps() +
+  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+  theme(axis.title = element_text(size=20),
+        axis.text = element_text(size=14),
+        strip.text = element_text(size=16),
+        title = element_text(size=20),
+        plot.margin = unit(0.5*c(1,1,1,1), "cm")) +
+  labs(x="Distance (\u03bcm)",y="Cross-correlation")
+
+p1 / p2 + plot_annotation(tag_levels = 'a')
 
 # spatial cross-correlation difference over distance plots
 xl_diff <- lapply(1:length(hs),\(i) {
@@ -362,17 +455,22 @@ xldiff_e %>%
   # filter(auc %in% sort(unique(auc),decreasing = TRUE)[1:10]) %>%
   # mutate(ub = mu+sigma,
   #        lb = mu-sigma) %>%
-  mutate(across(c(t1,t2),~ifelse(.x == "granulocytes","gran.",.x))) %>%
-  mutate(across(c(t1,t2),~ifelse(.x == "vasculature","vasc.",.x))) %>%
+  mutate(combo = paste0(t1," <--> ",t2)) %>%
+  right_join(filter_out) %>%
+  mutate(hs = hs * max_range1) %>%
+  # mutate(across(c(t1,t2),~ifelse(.x == "granulocytes","gran.",.x))) %>%
+  # mutate(across(c(t1,t2),~ifelse(.x == "vasculature","vasc.",.x))) %>%
   ggplot(aes(hs,mu)) +
   geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
   geom_line() +
-  geom_hline(yintercept = 0,color="red") +
-  theme_bw() +
-  facet_grid(t1~t2,
-             labeller = label_wrap_gen(width=8)) +
+  geom_hline(yintercept = 0,color="red",linetype="dotted") +
+  theme_bipps() +
+  # facet_grid(t1~t2,
+  #            labeller = label_wrap_gen(width=8)) +
+  facet_wrap(~combo) +
   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
   theme(axis.title = element_text(size=20),
-        axis.text = element_text(size=12),
-        strip.text = element_text(size=10)) +
+        axis.text = element_text(size=14),
+        strip.text = element_text(size=16),
+        title = element_text(size=20)) +
   labs(x="Distance (\u03bcm)",y="Difference in cross-correlation")
