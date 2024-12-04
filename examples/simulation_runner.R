@@ -27,7 +27,7 @@ save_file_lt <- "out_sim2_lt.rds"
 # simulation settings
 nx <- 30
 ny <- 30
-num_images <- 3
+num_images <- 20
 # theta
 x_max <- 1919
 y_max <- 1439
