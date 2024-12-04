@@ -13,9 +13,9 @@ library(fields)
 set.seed(2020)
 
 # mcmc settings
-n_samples <- 1000
-n_burnin <- 20000
-n_thin <- 40
+n_samples <- 500
+n_burnin <- 5000
+n_thin <- 10
 n_threads <- 16
 block_size <- 50
 starting <- list(phi = 5)
@@ -25,23 +25,23 @@ save_file <- "out_sim2.rds"
 save_file_lt <- "out_sim2_lt.rds"
 
 # simulation settings
-nx <- 1000
-ny <- 1000
-num_images <- 20
+nx <- 30
+ny <- 30
+num_images <- 3
+# theta
 x_max <- 1919
 y_max <- 1439
-# theta
-theta <- 0.7 # scaled version
-inv_theta <- 1 / theta * max(x_max,y_max)
+Theta <- 0.7 # scaled version
+inv_theta <- 1 / Theta * max(x_max,y_max)
 sigmasq <- 1
+
 scaling <- 20
 mu <- -9
 k <- 3
 q <- 5
 p <- 1
 
-# make V
-grid<- list( x= seq( 0,x_max*scaling,,nx), y= seq(0,y_max*scaling,,ny))
+grid<- list( x= seq( 0,x_max*scaling,,nx*scaling), y= seq(0,y_max*scaling,,ny*scaling))
 obj<- circulantEmbeddingSetup( grid, Covariance="Exponential", theta=inv_theta)
 
 # subset V
@@ -88,51 +88,57 @@ Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -1, 1)
 
 WW <- lapply(1:num_images,\(i) VV[[i]] %*% t(Lambda))
 
-sz_x <- length(gridx)
-sz_y <- length(gridy)
-W <- lapply(1:num_images,\(i) {
-  lapply(1:q,\(j) {
-    mat <- matrix(WW[[i]][,j],nrow=sz_y,ncol=sz_x)
-    print(range(mat))
-    mat
-  })
+# sz_x <- length(gridx)
+# sz_y <- length(gridy)
+# W <- lapply(1:num_images,\(i) {
+#   lapply(1:q,\(j) {
+#     mat <- matrix(WW[[i]][,j],nrow=sz_y,ncol=sz_x)
+#     print(range(mat))
+#     mat
+#   })
+# })
+#
+# # make linear predictor
+# lin_pred <- lapply(1:num_images,\(i) {
+#   lapply(1:q,\(j) {
+#     mat <- W[[i]][[j]] + mu #+ matrix(XX[[i]][,j] %*% Beta,nrow=sz_y,ncol=sz_x)
+#     print(range(mat))
+#     mat
+#   })
+# })
+
+y_list <- lapply(WW,\(ww) {
+  matrix(rpois(nrow(ww)*ncol(ww),exp(ww)),nrow=nrow(ww),ncol=ncol(ww))
 })
 
-# make linear predictor
-lin_pred <- lapply(1:num_images,\(i) {
-  lapply(1:q,\(j) {
-    mat <- W[[i]][[j]] + mu #+ matrix(XX[[i]][,j] %*% Beta,nrow=sz_y,ncol=sz_x)
-    print(range(mat))
-    mat
-  })
-})
+coords <- expand.grid(x=gridx,y=gridy)
 
 
 # make point patterns
-window <- owin(c(0,gridx[length(gridx)]),c(0,gridy[length(gridy)]))
-
-imgs <- lapply(1:num_images,\(i) {
-  lapply(1:q,\(j) {
-    img <- as.im(t(exp(lin_pred[[i]][[j]])),W=window)
-    print(mean(img)*x_max*y_max)
-    img
-  })
-})
+# window <- owin(c(0,gridx[length(gridx)]),c(0,gridy[length(gridy)]))
+#
+# imgs <- lapply(1:num_images,\(i) {
+#   lapply(1:q,\(j) {
+#     img <- as.im(t(exp(lin_pred[[i]][[j]])),W=window)
+#     print(mean(img)*x_max*y_max)
+#     img
+#   })
+# })
 
 # img <- imgs[[1]][[1]]
 # mean(img)*x_max*y_max
 #
-pats <- lapply(1:num_images,\(i) {
-  pp <- rmpoispp(imgs[[i]])
-})
-
-pp_df <- lapply(1:num_images,\(i) {
-  pats[[i]] %>%
-    as.data.frame() %>%
-    rename(type = marks) %>%
-    mutate(spot = paste0("spot_",i))
-}) %>%
-  bind_rows()
+# pats <- lapply(1:num_images,\(i) {
+#   pp <- rmpoispp(imgs[[i]])
+# })
+#
+# pp_df <- lapply(1:num_images,\(i) {
+#   pats[[i]] %>%
+#     as.data.frame() %>%
+#     rename(type = marks) %>%
+#     mutate(spot = paste0("spot_",i))
+# }) %>%
+#   bind_rows()
 
 # pp_df %>%
 #   ggplot(aes(x,y,color=type)) +
@@ -141,10 +147,10 @@ pp_df <- lapply(1:num_images,\(i) {
 #   facet_wrap(~spot,ncol=1)
 
 # pixellate the point patterns
-out <- pixellate_grid(pp_df$x,pp_df$y,pp_df$type,pp_df$spot,28,21)
-
-y_list <- out$y_list
-coords <- out$coords
+# out <- pixellate_grid(pp_df$x,pp_df$y,pp_df$type,pp_df$spot,28,21)
+#
+# y_list <- out$y_list
+# coords <- out$coords
 x_list <- lapply(y_list,\(yy) {
   matrix(0,nrow = nrow(yy),ncol = 1)
 })
