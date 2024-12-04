@@ -21,13 +21,14 @@ block_size <- 50
 starting <- list(phi = 5)
 prior <- list(phi = c(0.1,10))
 chains <- 2
+do_plots <- FALSE
 save_file <- "out_sim2.rds"
 save_file_lt <- "out_sim2_lt.rds"
 
 # simulation settings
 nx <- 30
 ny <- 30
-num_images <- 20
+num_images <- 30
 # theta
 x_max <- 1919
 y_max <- 1439
@@ -36,7 +37,7 @@ inv_theta <- 1 / Theta * max(x_max,y_max)
 sigmasq <- 1
 
 scaling <- 20
-mu <- -9
+mu <- -1
 k <- 3
 q <- 5
 p <- 1
@@ -70,9 +71,10 @@ VV <- lapply(1:num_images,\(i) {
 
 
 # factor loadings
+set.seed(2025)
 Lambda <- matrix(0, q, k)
-diag(Lambda) <- runif(k, 0.5, 2)
-Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -1, 1)
+diag(Lambda) <- runif(k, 0.5, 1)
+Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -0.7, 0.7)
 
 # nuggets
 # tau.sq <- rep(.01, q)
@@ -86,8 +88,11 @@ Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -1, 1)
 # })
 # Beta <- matrix(rnorm(p*q), ncol=q) * 0
 
-WW <- lapply(1:num_images,\(i) VV[[i]] %*% t(Lambda))
-
+WW <- lapply(1:num_images,\(i) {
+  mat <- VV[[i]] %*% t(Lambda) + mu
+  print(range(exp(mat)))
+  mat
+})
 # sz_x <- length(gridx)
 # sz_y <- length(gridy)
 # W <- lapply(1:num_images,\(i) {
@@ -112,6 +117,8 @@ y_list <- lapply(WW,\(ww) {
 })
 
 coords <- expand.grid(x=gridx,y=gridy)
+
+coords_scaled <- coords / max(x_max,y_max)
 
 
 # make point patterns
@@ -155,8 +162,10 @@ x_list <- lapply(y_list,\(yy) {
   matrix(0,nrow = nrow(yy),ncol = 1)
 })
 
-# p1 <- plot_y_list(y_list,coords)
-# p1
+if(do_plots) {
+  p1 <- plot_y_list(y_list,coords_scaled)
+  p1
+}
 
 # run bipps
 out <- lapply(1:chains,\(i) multi_bipps(y_list,
