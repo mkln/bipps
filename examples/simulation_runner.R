@@ -38,8 +38,8 @@ sigmasq <- 1
 
 scaling <- 20
 mu <- -1
-k <- 3
-q <- 5
+k <- 2
+q <- 2
 p <- 1
 
 grid<- list( x= seq( 0,x_max*scaling,,nx*scaling), y= seq(0,y_max*scaling,,ny*scaling))
@@ -211,7 +211,7 @@ if(do_plots) {
     o
   }))
 
-  h_ix <- 5
+  h_ix <- 0
   trace_df <- as_draws_df(xl[[h_ix]]) %>%
     pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
     separate(variable,into = c("type1","type2"),sep=",") %>%
