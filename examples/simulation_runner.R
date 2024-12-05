@@ -20,7 +20,7 @@ n_threads <- 16
 block_size <- 50
 starting <- list(phi = 5)
 prior <- list(phi = c(0.1,10))
-chains <- 2
+chains <- 1
 do_plots <- FALSE
 save_file <- "out_sim2.rds"
 save_file_lt <- "out_sim2_lt.rds"
@@ -118,7 +118,7 @@ y_list <- lapply(WW,\(ww) {
 
 coords <- expand.grid(x=gridx,y=gridy)
 
-coords_scaled <- coords / max(x_max,y_max)
+coords <- coords / max(x_max,y_max)
 
 
 # make point patterns
@@ -163,7 +163,7 @@ x_list <- lapply(y_list,\(yy) {
 })
 
 if(do_plots) {
-  p1 <- plot_y_list(y_list,coords_scaled)
+  p1 <- plot_y_list(y_list,coords)
   p1
 }
 
@@ -191,3 +191,113 @@ saveRDS(out,save_file)
 out_lt <- lapply(out,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc))
 
 saveRDS(out_lt,save_file_lt)
+
+if(do_plots) {
+  out <- readRDS("out_sim2_lt.rds")
+
+  lambda <- get_rvars(out,"lambda",thin=n_thin)
+  lambda
+  mcmc_trace(as_draws_df(lambda[,2]))
+  theta <- get_rvars(out,"theta",thin=n_thin)
+  theta
+  mcmc_trace(as_draws_df(theta[1,]))
+
+  hs <- seq(0,1,0.1)
+  xl <- cross_list(out,hs,thin=n_thin)
+  out_actual <- list(theta_mcmc=matrix(c(rep(Theta,k),rep(0,k)),nrow = 2,ncol=k,byrow=TRUE),
+                     lambda_mcmc=Lambda)
+  out_actual <- list(lapply(out_actual,\(o) {
+    dim(o) <- c(dim(o),1)
+    o
+  }))
+
+  h_ix <- 5
+  trace_df <- as_draws_df(xl[[h_ix]]) %>%
+    pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
+    separate(variable,into = c("type1","type2"),sep=",") %>%
+    mutate(type1 = sub("^x\\[","",type1),
+           type2 = sub("\\]","",type2))
+
+  trace_df %>%
+    mutate(.chain = factor(.chain)) %>%
+    ggplot(aes(.iteration,value,color=.chain,group=.chain)) +
+    geom_line() +
+    facet_grid(type1~type2,
+               labeller = label_wrap_gen(width=8)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+    theme(axis.title = element_text(size=20),
+          axis.text = element_text(size=12),
+          strip.text = element_text(size=10)) +
+    labs(x="Draw",y=paste0("Cross-correlation at h=",hs[h_ix]))
+
+  xl_actual <- cross_list(out_actual,hs,thin=n_thin)
+  xl_actual <- lapply(xl_actual,\(x) E(x))
+
+  unique_combinations_with_self <- function(data) {
+    # Generate all pairs including self-pairings
+    all_pairs <- expand.grid(data, data)
+
+    # Sort the pairs and remove duplicates
+    all_pairs <- t(apply(all_pairs, 1, sort))
+    unique_pairs <- unique(all_pairs)
+
+    return(unique_pairs)
+  }
+
+  types <- 1:q
+  # spatial cross-correlation over distance plots
+  unique_combinations_with_self(types) %>%
+    # expand_grid(type1 = types_intersect,type2 = types_intersect) %>%
+    as.data.frame() %>%
+    as_tibble() %>%
+    magrittr::set_colnames(c("t1","t2")) %>%
+    group_by(t1,t2) %>%
+    group_modify(~{
+      ix1 <- which(types == .y$t1)
+      ix2 <- which(types == .y$t2)
+
+      mu <- unlist(lapply(xl,\(x) {
+        E(x[ix1,ix2])
+      }))
+
+      mu_actual <- unlist(lapply(xl_actual,\(x) {
+        x[ix1,ix2]
+      }))
+
+      int_val <- integrate(approxfun(hs,abs(mu)),hs[1],hs[length(hs)])$value
+
+      sigma <- unlist(lapply(xl,\(x) {
+        sd(x[ix1,ix2])
+      }))
+
+      lb <- unlist(lapply(xl,\(x) {
+        quantile(x[ix1,ix2],probs = 0.025)
+      }))
+
+      ub <- unlist(lapply(xl,\(x) {
+        quantile(x[ix1,ix2],probs = 0.975)
+      }))
+      tibble(mu=mu,mu_actual,lb=lb,ub=ub,hs=hs,auc=int_val)
+    }) %>%
+    ungroup() -> xl_e
+
+
+  xl_e %>%
+    mutate(hs = hs*x_max) %>%
+    pivot_longer(c(mu,mu_actual)) %>%
+    # filter(auc %in% sort(unique(auc),decreasing = TRUE)[1:10]) %>%
+    # mutate(ub = mu+sigma,
+    #        lb = mu-sigma) %>%
+    ggplot() +
+    geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
+    geom_line(aes(hs,value,color=name)) +
+    geom_hline(yintercept = 0,color="red",alpha=0.5,linetype="dotted") +
+    theme_minimal() +
+    facet_grid(t1~t2) +
+    theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+    theme(axis.title = element_text(size=20),
+          axis.text = element_text(size=12),
+          strip.text = element_text(size=10)) +
+    labs(x="Distance (\u03bcm)",y="Cross-correlation")
+}
