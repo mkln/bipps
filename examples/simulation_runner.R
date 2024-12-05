@@ -14,13 +14,13 @@ set.seed(2020)
 
 # mcmc settings
 n_samples <- 500
-n_burnin <- 5000
+n_burnin <- 10000
 n_thin <- 10
 n_threads <- 16
 block_size <- 50
 starting <- list(phi = 5)
 prior <- list(phi = c(0.1,10))
-chains <- 1
+chains <- 2
 do_plots <- FALSE
 save_file <- "out_sim2.rds"
 save_file_lt <- "out_sim2_lt.rds"
