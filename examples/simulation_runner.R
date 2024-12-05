@@ -14,7 +14,7 @@ set.seed(2020)
 
 # mcmc settings
 n_samples <- 500
-n_burnin <- 20000
+n_burnin <- 10000
 n_thin <- 20
 n_threads <- 4
 block_size <- 50
@@ -37,7 +37,7 @@ inv_theta <- 1 / Theta * max(x_max,y_max)
 sigmasq <- 1
 
 scaling <- 20
-mu <- 0
+mu <- 1
 k <- 2
 q <- 2
 p <- 1
@@ -63,7 +63,7 @@ V <- lapply(1:num_images,\(i) {
   })
 })
 
-image.plot(gridx,gridy,V[[1]][[1]])
+image.plot(gridx,gridy,V[[1]][[2]])
 
 
 VV <- lapply(1:num_images,\(i) {
@@ -110,7 +110,7 @@ W <- lapply(1:num_images,\(i) {
   })
 })
 
-image.plot(gridx,gridy,W[[1]][[2]])
+image.plot(gridx,gridy,W[[1]][[1]])
 #
 # # make linear predictor
 # lin_pred <- lapply(1:num_images,\(i) {
@@ -206,7 +206,7 @@ if(do_plots) {
 
   lambda <- get_rvars(out,"lambda",thin=n_thin)
   lambda
-  mcmc_trace(as_draws_df(lambda[,2]))
+  mcmc_trace(as_draws_df(lambda))
   theta <- get_rvars(out,"theta",thin=n_thin)
   theta
   mcmc_trace(as_draws_df(theta[1,]))
