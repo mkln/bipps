@@ -14,7 +14,7 @@ set.seed(2020)
 
 # mcmc settings
 n_samples <- 500
-n_burnin <- 10000
+n_burnin <- 20000
 n_thin <- 10
 n_threads <- 16
 block_size <- 50
@@ -28,7 +28,7 @@ save_file_lt <- "out_sim2_lt.rds"
 # simulation settings
 nx <- 30
 ny <- 30
-num_images <- 30
+num_images <- 70
 # theta
 x_max <- 1919
 y_max <- 1439
