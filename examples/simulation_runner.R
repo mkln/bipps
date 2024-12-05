@@ -14,8 +14,8 @@ set.seed(2020)
 
 # mcmc settings
 n_samples <- 500
-n_burnin <- 10000
-n_thin <- 10
+n_burnin <- 20000
+n_thin <- 20
 n_threads <- 4
 block_size <- 50
 Theta <- 0.7 # scaled version
@@ -173,7 +173,7 @@ x_list <- lapply(y_list,\(yy) {
 
 if(do_plots) {
   p1 <- plot_y_list(y_list,coords)
-  p1[[1]]
+  p1
 }
 
 # run bipps
@@ -202,7 +202,7 @@ out_lt <- lapply(out,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc
 saveRDS(out_lt,save_file_lt)
 
 if(do_plots) {
-  out <- readRDS("out_sim2_lt.rds")
+  out <- readRDS("out_sim3_lt.rds")
 
   lambda <- get_rvars(out,"lambda",thin=n_thin)
   lambda
