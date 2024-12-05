@@ -20,7 +20,7 @@ n_threads <- 16
 block_size <- 50
 starting <- list(phi = 5)
 prior <- list(phi = c(0.1,10))
-chains <- 2
+chains <- 1
 do_plots <- FALSE
 save_file <- "out_sim2.rds"
 save_file_lt <- "out_sim2_lt.rds"
@@ -28,7 +28,7 @@ save_file_lt <- "out_sim2_lt.rds"
 # simulation settings
 nx <- 30
 ny <- 30
-num_images <- 70
+num_images <- 200
 # theta
 x_max <- 1919
 y_max <- 1439
