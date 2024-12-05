@@ -14,30 +14,30 @@ set.seed(2020)
 
 # mcmc settings
 n_samples <- 500
-n_burnin <- 20000
+n_burnin <- 10000
 n_thin <- 10
-n_threads <- 16
+n_threads <- 4
 block_size <- 50
-starting <- list(phi = 5)
+Theta <- 0.7 # scaled version
+starting <- list(phi = Theta)
 prior <- list(phi = c(0.1,10))
 chains <- 1
 do_plots <- FALSE
-save_file <- "out_sim2.rds"
-save_file_lt <- "out_sim2_lt.rds"
+save_file <- "out_sim3.rds"
+save_file_lt <- "out_sim3_lt.rds"
 
 # simulation settings
 nx <- 30
 ny <- 30
-num_images <- 200
+num_images <- 20
 # theta
 x_max <- 1919
 y_max <- 1439
-Theta <- 0.7 # scaled version
 inv_theta <- 1 / Theta * max(x_max,y_max)
 sigmasq <- 1
 
 scaling <- 20
-mu <- -1
+mu <- 0
 k <- 2
 q <- 2
 p <- 1
@@ -62,6 +62,8 @@ V <- lapply(1:num_images,\(i) {
     subW
   })
 })
+
+image.plot(gridx,gridy,V[[1]][[1]])
 
 
 VV <- lapply(1:num_images,\(i) {
@@ -93,15 +95,22 @@ WW <- lapply(1:num_images,\(i) {
   print(range(exp(mat)))
   mat
 })
-# sz_x <- length(gridx)
-# sz_y <- length(gridy)
-# W <- lapply(1:num_images,\(i) {
-#   lapply(1:q,\(j) {
-#     mat <- matrix(WW[[i]][,j],nrow=sz_y,ncol=sz_x)
-#     print(range(mat))
-#     mat
-#   })
-# })
+
+# expand.grid(x=gridx,y=gridy) %>%
+#   mutate(value=WW[[1]][,1]) %>%
+#   ggplot(aes(x,y,fill=value)) +
+#   geom_tile()
+sz_x <- length(gridx)
+sz_y <- length(gridy)
+W <- lapply(1:num_images,\(i) {
+  lapply(1:q,\(j) {
+    mat <- matrix(WW[[i]][,j],nrow=sz_y,ncol=sz_x)
+    print(range(exp(mat)))
+    mat
+  })
+})
+
+image.plot(gridx,gridy,W[[1]][[2]])
 #
 # # make linear predictor
 # lin_pred <- lapply(1:num_images,\(i) {
@@ -164,7 +173,7 @@ x_list <- lapply(y_list,\(yy) {
 
 if(do_plots) {
   p1 <- plot_y_list(y_list,coords)
-  p1
+  p1[[1]]
 }
 
 # run bipps
@@ -211,7 +220,7 @@ if(do_plots) {
     o
   }))
 
-  h_ix <- 0
+  h_ix <- 1
   trace_df <- as_draws_df(xl[[h_ix]]) %>%
     pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
     separate(variable,into = c("type1","type2"),sep=",") %>%
