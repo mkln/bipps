@@ -14,8 +14,8 @@ set.seed(2020)
 
 # mcmc settings
 n_samples <- 500
-n_burnin <- 20000
-n_thin <- 20
+n_burnin <- 10000
+n_thin <- 10
 n_threads <- 16
 block_size <- 50
 Theta <- 0.7 # scaled version
@@ -77,6 +77,7 @@ VV <- lapply(1:num_images,\(i) {
 set.seed(2025)
 Lambda <- matrix(0, q, k)
 diag(Lambda) <- runif(k, 0.5, 1)
+Lambda[2,1] <- 0.5
 Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -0.7, 0.7)
 
 # nuggets
@@ -203,7 +204,7 @@ out_lt <- lapply(out,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc
 saveRDS(out_lt,save_file_lt)
 
 if(do_plots) {
-  out <- readRDS("out_sim3_lt.rds")
+  out <- readRDS("out_sim2_lt.rds")
 
   lambda <- get_rvars(out,"lambda",thin=n_thin)
   lambda
@@ -221,7 +222,7 @@ if(do_plots) {
     o
   }))
 
-  h_ix <- 1
+  h_ix <- 5
   trace_df <- as_draws_df(xl[[h_ix]]) %>%
     pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
     separate(variable,into = c("type1","type2"),sep=",") %>%
