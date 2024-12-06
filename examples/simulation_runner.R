@@ -77,8 +77,8 @@ VV <- lapply(1:num_images,\(i) {
 set.seed(2025)
 Lambda <- matrix(0, q, k)
 diag(Lambda) <- runif(k, 0.5, 1)
-Lambda[2,1] <- 0.5
-# Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -0.7, 0.7)
+# Lambda[2,1] <- 0.5
+Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -0.7, 0.7)
 
 # nuggets
 # tau.sq <- rep(.01, q)
