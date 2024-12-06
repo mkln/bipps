@@ -14,22 +14,26 @@ set.seed(2020)
 
 # mcmc settings
 n_samples <- 500
-n_burnin <- 10000
+n_burnin <- 20000
 n_thin <- 20
-n_threads <- 4
+n_threads <- 16
 block_size <- 50
 Theta <- 0.7 # scaled version
 starting <- list(phi = Theta)
 prior <- list(phi = c(0.1,10))
 chains <- 1
 do_plots <- FALSE
-save_file <- "out_sim3.rds"
-save_file_lt <- "out_sim3_lt.rds"
+save_file <- "out_sim2.rds"
+save_file_lt <- "out_sim2_lt.rds"
+sample_theta <- FALSE
+num_images <- 70
+mu <- -1
+k <- 2
+q <- 2
 
 # simulation settings
 nx <- 30
 ny <- 30
-num_images <- 20
 # theta
 x_max <- 1919
 y_max <- 1439
@@ -37,9 +41,6 @@ inv_theta <- 1 / Theta * max(x_max,y_max)
 sigmasq <- 1
 
 scaling <- 20
-mu <- 1
-k <- 2
-q <- 2
 p <- 1
 
 grid<- list( x= seq( 0,x_max*scaling,,nx*scaling), y= seq(0,y_max*scaling,,ny*scaling))
@@ -191,7 +192,7 @@ out <- lapply(1:chains,\(i) multi_bipps(y_list,
                                          verbose = 10,
                                          debug = list(
                                            sample_beta = T, sample_tausq = F,
-                                           sample_theta = T, sample_w = T, sample_lambda = T,
+                                           sample_theta = sample_theta, sample_w = T, sample_lambda = T,
                                            verbose = F, debug = F
                                          ),
                                          just_preprocess = F))
