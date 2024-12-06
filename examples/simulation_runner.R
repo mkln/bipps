@@ -14,8 +14,8 @@ set.seed(2020)
 
 # mcmc settings
 n_samples <- 500
-n_burnin <- 10000
-n_thin <- 10
+n_burnin <- 20000
+n_thin <- 40
 n_threads <- 16
 block_size <- 50
 Theta <- 0.7 # scaled version
@@ -23,13 +23,13 @@ starting <- list(phi = Theta)
 prior <- list(phi = c(0.1,10))
 chains <- 1
 do_plots <- FALSE
-save_file <- "out_sim2.rds"
+save_file <- "out_simchol.rds"
 save_file_lt <- "out_simchol_lt.rds"
 sample_theta <- FALSE
-num_images <- 50
+num_images <- 70
 mu <- -1
 k <- 2
-q <- 6
+q <- 10
 
 # simulation settings
 nx <- 30
@@ -227,7 +227,7 @@ out_lt <- lapply(out,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc
 saveRDS(out_lt,save_file_lt)
 
 if(do_plots) {
-  out <- readRDS("out_sim2_lt.rds")
+  out <- readRDS("out_simchol_lt.rds")
 
   lambda <- get_rvars(out,"lambda",thin=n_thin)
   lambda
