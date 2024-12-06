@@ -24,7 +24,7 @@ prior <- list(phi = c(0.1,10))
 chains <- 1
 do_plots <- FALSE
 save_file <- "out_sim2.rds"
-save_file_lt <- "out_sim2_lt.rds"
+save_file_lt <- "out_simchol_lt.rds"
 sample_theta <- FALSE
 num_images <- 50
 mu <- -1
@@ -34,6 +34,7 @@ q <- 6
 # simulation settings
 nx <- 30
 ny <- 30
+n <- nx*ny
 # theta
 x_max <- 1919
 y_max <- 1439
@@ -43,34 +44,56 @@ sigmasq <- 1
 scaling <- 20
 p <- 1
 
-grid<- list( x= seq( 0,x_max*scaling,,nx*scaling), y= seq(0,y_max*scaling,,ny*scaling))
-obj<- circulantEmbeddingSetup( grid, Covariance="Exponential", theta=inv_theta)
+coords <- expand.grid(x=seq(0,x_max,length.out=nx),y=seq(0,y_max,length.out=ny))
+
+coords <- coords / max(x_max,y_max)
+c_mat <- as.matrix(coords)
+d_coords <- as.matrix(dist(c_mat))
+philist <- rep(Theta,k)
+
+LClist <- 1:k %>% lapply(function(i) t(chol(
+  exp(- philist[i] * d_coords)
+)))
+
+# grid<- list( x= seq( 0,x_max*scaling,,nx*scaling), y= seq(0,y_max*scaling,,ny*scaling))
+# obj<- circulantEmbeddingSetup( grid, Covariance="Exponential", theta=inv_theta)
 
 # subset V
-idx_x <- which(grid[[1]] < x_max)
-idx_y <- which(grid[[2]] < y_max)
+# idx_x <- which(grid[[1]] < x_max)
+# idx_y <- which(grid[[2]] < y_max)
+#
+# gridx <- grid[[1]][idx_x]
+# gridy <- grid[[2]][idx_y]
 
-gridx <- grid[[1]][idx_x]
-gridy <- grid[[2]][idx_y]
+# set.seed(2025)
+# V <- lapply(1:num_images,\(i) {
+#   lapply(1:k,\(i) {
+#     sim<-  sqrt(sigmasq)*circulantEmbedding( obj)
+#     subW <- sim[idx_y,idx_x]
+#
+#     print(range(subW))
+#     subW
+#   })
+# })
 
+
+
+# image.plot(gridx,gridy,V[[1]][[2]])
+#
+#
+# VV <- lapply(1:num_images,\(i) {
+#   lapply(V[[i]],\(w) c(w)) %>%
+#     do.call(cbind,.)
+# })
 set.seed(2025)
-V <- lapply(1:num_images,\(i) {
-  lapply(1:k,\(i) {
-    sim<-  sqrt(sigmasq)*circulantEmbedding( obj)
-    subW <- sim[idx_y,idx_x]
+VV <- lapply(1:num_images,\(j) {
+  wlist <- lapply(1:k,\(i) LClist[[i]] %*% rnorm(n))
 
-    print(range(subW))
-    subW
-  })
+  # factor matrix
+  do.call(cbind, wlist)
 })
 
-image.plot(gridx,gridy,V[[1]][[2]])
-
-
-VV <- lapply(1:num_images,\(i) {
-  lapply(V[[i]],\(w) c(w)) %>%
-    do.call(cbind,.)
-})
+# image.plot(seq(0,x_max,length.out=nx),seq(0,y_max,length.out=ny),matrix(VV[[1]][,2],nrow = ny,ncol = nx))
 
 
 # factor loadings
@@ -102,17 +125,17 @@ WW <- lapply(1:num_images,\(i) {
 #   mutate(value=WW[[1]][,1]) %>%
 #   ggplot(aes(x,y,fill=value)) +
 #   geom_tile()
-sz_x <- length(gridx)
-sz_y <- length(gridy)
-W <- lapply(1:num_images,\(i) {
-  lapply(1:q,\(j) {
-    mat <- matrix(WW[[i]][,j],nrow=sz_y,ncol=sz_x)
-    print(range(exp(mat)))
-    mat
-  })
-})
-
-image.plot(gridx,gridy,W[[1]][[1]])
+# sz_x <- length(gridx)
+# sz_y <- length(gridy)
+# W <- lapply(1:num_images,\(i) {
+#   lapply(1:q,\(j) {
+#     mat <- matrix(WW[[i]][,j],nrow=sz_y,ncol=sz_x)
+#     print(range(exp(mat)))
+#     mat
+#   })
+# })
+#
+# image.plot(gridx,gridy,W[[1]][[1]])
 #
 # # make linear predictor
 # lin_pred <- lapply(1:num_images,\(i) {
@@ -127,9 +150,9 @@ y_list <- lapply(WW,\(ww) {
   matrix(rpois(nrow(ww)*ncol(ww),exp(ww)),nrow=nrow(ww),ncol=ncol(ww))
 })
 
-coords <- expand.grid(x=gridx,y=gridy)
-
-coords <- coords / max(x_max,y_max)
+# coords <- expand.grid(x=gridx,y=gridy)
+#
+# coords <- coords / max(x_max,y_max)
 
 
 # make point patterns
@@ -175,7 +198,7 @@ x_list <- lapply(y_list,\(yy) {
 
 if(do_plots) {
   p1 <- plot_y_list(y_list,coords)
-  p1
+  p1[[22]]
 }
 
 # run bipps
