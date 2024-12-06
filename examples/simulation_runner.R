@@ -1,18 +1,14 @@
-# spatially stationary W
-# (also try with nonstationary)
-# vary -> number of outcomes, spatial factors and images. lambda and theta.
-
 devtools::load_all()
 library(magrittr)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
-library(spatstat)
-library(fields)
+# library(spatstat)
+# library(fields)
 
 set.seed(2020)
 
-# mcmc settings
+# mcmc and model settings
 n_samples <- 500
 n_burnin <- 20000
 n_thin <- 40
@@ -38,10 +34,10 @@ n <- nx*ny
 # theta
 x_max <- 1919
 y_max <- 1439
-inv_theta <- 1 / Theta * max(x_max,y_max)
+# inv_theta <- 1 / Theta * max(x_max,y_max)
 sigmasq <- 1
 
-scaling <- 20
+# scaling <- 20
 p <- 1
 
 coords <- expand.grid(x=seq(0,x_max,length.out=nx),y=seq(0,y_max,length.out=ny))
