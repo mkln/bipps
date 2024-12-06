@@ -26,7 +26,7 @@ do_plots <- FALSE
 save_file <- "out_sim2.rds"
 save_file_lt <- "out_sim2_lt.rds"
 sample_theta <- FALSE
-num_images <- 70
+num_images <- 30
 mu <- -1
 k <- 2
 q <- 2
