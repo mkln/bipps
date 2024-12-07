@@ -10,8 +10,8 @@ set.seed(2020)
 
 # mcmc and model settings
 n_samples <- 500
-n_burnin <- 20000
-n_thin <- 40
+n_burnin <- 500
+n_thin <- 1
 n_threads <- 16
 block_size <- 50
 Theta <- 0.7 # scaled version
@@ -22,10 +22,10 @@ do_plots <- FALSE
 save_file <- "out_simchol.rds"
 save_file_lt <- "out_simchol_lt.rds"
 sample_theta <- FALSE
-num_images <- 70
+num_images <- 10
 mu <- -1
 k <- 2
-q <- 10
+q <- 2
 
 # simulation settings
 nx <- 30
@@ -111,8 +111,14 @@ Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -0.7, 0.7)
 # })
 # Beta <- matrix(rnorm(p*q), ncol=q) * 0
 
+Beta <- matrix(rep(mu,p*q),ncol=q)
+
+x_list <- lapply(1:num_images,\(i) {
+  matrix(1,nrow = n,ncol = p)
+})
+
 WW <- lapply(1:num_images,\(i) {
-  mat <- VV[[i]] %*% t(Lambda) + mu
+  mat <- VV[[i]] %*% t(Lambda) + x_list[[i]] %*% Beta
   print(range(exp(mat)))
   mat
 })
@@ -130,7 +136,7 @@ WW <- lapply(1:num_images,\(i) {
 #     mat
 #   })
 # })
-#
+
 # image.plot(gridx,gridy,W[[1]][[1]])
 #
 # # make linear predictor
@@ -188,13 +194,10 @@ y_list <- lapply(WW,\(ww) {
 #
 # y_list <- out$y_list
 # coords <- out$coords
-x_list <- lapply(y_list,\(yy) {
-  matrix(0,nrow = nrow(yy),ncol = 1)
-})
 
 if(do_plots) {
   p1 <- plot_y_list(y_list,coords)
-  p1[[22]]
+  p1[[3]]
 }
 
 # run bipps
