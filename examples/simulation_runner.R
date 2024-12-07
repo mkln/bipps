@@ -3,14 +3,16 @@ library(magrittr)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(posterior)
+library(bayesplot)
 # library(spatstat)
 # library(fields)
 
 set.seed(2020)
 
 # mcmc and model settings
-n_samples <- 500
-n_burnin <- 500
+n_samples <- 1000
+n_burnin <- 1000
 n_thin <- 1
 n_threads <- 16
 block_size <- 50
