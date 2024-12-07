@@ -17,14 +17,14 @@ n_thin <- 1
 n_threads <- 16
 block_size <- 50
 Theta <- 0.7 # scaled version
-starting <- list(phi = Theta)
+starting <- list(phi = 1)
 prior <- list(phi = c(0.1,10))
 chains <- 1
 do_plots <- FALSE
 save_file <- "out_simchol.rds"
 save_file_lt <- "out_simchol_lt.rds"
-sample_theta <- FALSE
-num_images <- 30
+sample_theta <- TRUE
+num_images <- 70
 mu <- -1
 k <- 3
 q <- 5
