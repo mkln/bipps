@@ -24,10 +24,10 @@ do_plots <- FALSE
 save_file <- "out_simchol.rds"
 save_file_lt <- "out_simchol_lt.rds"
 sample_theta <- FALSE
-num_images <- 10
+num_images <- 30
 mu <- -1
-k <- 2
-q <- 2
+k <- 3
+q <- 5
 
 # simulation settings
 nx <- 30
