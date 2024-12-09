@@ -12,11 +12,11 @@ set.seed(2020)
 
 # mcmc and model settings
 n_samples <- 1000
-n_burnin <- 1000
+n_burnin <- 5000
 n_thin <- 1
 n_threads <- 16
 block_size <- 50
-Theta <- 0.7 # scaled version
+Theta <- 1.85 # scaled version
 starting <- list(phi = 1)
 prior <- list(phi = c(0.1,10))
 chains <- 1
@@ -24,7 +24,7 @@ do_plots <- FALSE
 save_file <- "out_simchol.rds"
 save_file_lt <- "out_simchol_lt.rds"
 sample_theta <- TRUE
-num_images <- 70
+num_images <- 40
 mu <- -1
 k <- 3
 q <- 5
@@ -91,7 +91,7 @@ VV <- lapply(1:num_images,\(j) {
   do.call(cbind, wlist)
 })
 
-# image.plot(seq(0,x_max,length.out=nx),seq(0,y_max,length.out=ny),matrix(VV[[1]][,2],nrow = ny,ncol = nx))
+# fields::image.plot(seq(0,x_max,length.out=nx),seq(0,y_max,length.out=ny),matrix(VV[[1]][,2],nrow = ny,ncol = nx))
 
 
 # factor loadings
@@ -199,7 +199,7 @@ y_list <- lapply(WW,\(ww) {
 
 if(do_plots) {
   p1 <- plot_y_list(y_list,coords)
-  p1[[3]]
+  p1
 }
 
 # run bipps
