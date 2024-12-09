@@ -25,7 +25,7 @@ save_file <- "out_simchol.rds"
 save_file_lt <- "out_simchol_lt.rds"
 sample_theta <- TRUE
 num_images <- 40
-mu <- -1
+mu <- -2
 k <- 5
 q <- 10
 
