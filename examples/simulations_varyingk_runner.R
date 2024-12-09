@@ -11,7 +11,7 @@ library(bayesplot)
 
 actual_ks <- 3
 trial_ks <- c(2,3,6)
-grid <- expand.grid(actual_k=actual_ks,trial_k=trial_ks,seed=1:10)
+grid <- expand.grid(actual_k=actual_ks,trial_k=trial_ks,sim=1:10)
 
 
 # mcmc and model settings
@@ -46,7 +46,7 @@ c_mat <- as.matrix(coords)
 d_coords <- as.matrix(dist(c_mat))
 
 lapply(1:nrow(grid),\(sim_idx) {
-  seed <- 2024 + grid$seed[sim_idx]
+  seed <- 2024 + sim_idx
   actual_k <- grid$actual_k[sim_idx]
   trial_k <- grid$trial_k[sim_idx]
   set.seed(seed)
