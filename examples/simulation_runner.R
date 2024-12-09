@@ -12,9 +12,9 @@ set.seed(2020)
 
 # mcmc and model settings
 n_samples <- 1000
-n_burnin <- 5000
+n_burnin <- 9000
 n_thin <- 1
-n_threads <- 16
+n_threads <- 4
 block_size <- 50
 Theta <- 1.85 # scaled version
 starting <- list(phi = 1)
@@ -26,8 +26,8 @@ save_file_lt <- "out_simchol_lt.rds"
 sample_theta <- TRUE
 num_images <- 40
 mu <- -1
-k <- 3
-q <- 5
+k <- 5
+q <- 10
 
 # simulation settings
 nx <- 30
