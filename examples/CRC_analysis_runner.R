@@ -17,7 +17,7 @@ prior <- list(phi = c(0.1,10))
 save_file <- "CRC_intercept.rds"
 save_file_lt <- "CRC_intercept_lt.rds"
 
-chains <- 2
+chains <- 1
 
 df_raw <- readr::read_csv("examples/data/CRC_cleaned.csv") %>%
   # dplyr::mutate(type = as.factor(type)) %>%
@@ -140,30 +140,30 @@ saveRDS(out1,paste0("group1_",save_file_lt))
 
 # saveRDS(out1_lt,"out1_chains4_CRC_analysis_40k_k2_2e4burn_lt.rds")
 #
-out2 <- lapply(1:chains,\(i) multi_bipps(y_list2,
-                    x_list2,
-                    coords2,
-                    k = k,
-                    family = "poisson",
-                    block_size = block_size,
-                    n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
-                    n_threads = n_threads,
-                    starting = starting,
-                    prior = prior,
-                    settings = list(adapting = T, saving = T, ps = T),
-                    verbose = 10,
-                    debug = list(
-                      sample_beta = T, sample_tausq = F,
-                      sample_theta = T, sample_w = T, sample_lambda = T,
-                      verbose = F, debug = F
-                    ),
-                    just_preprocess = F))
-# saveRDS(out2,"out2_chains4_CRC_analysis_40k_k2_2e4burn.rds")
-saveRDS(out2,paste0("group2_",save_file))
-
-
-out2_lt <- lapply(out2,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc))
-
-# saveRDS(out2_lt,"out2_chains4_CRC_analysis_40k_k2_2e4burn_lt.rds")
-saveRDS(out2_lt,paste0("group2_",save_file_lt))
+# out2 <- lapply(1:chains,\(i) multi_bipps(y_list2,
+#                     x_list2,
+#                     coords2,
+#                     k = k,
+#                     family = "poisson",
+#                     block_size = block_size,
+#                     n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
+#                     n_threads = n_threads,
+#                     starting = starting,
+#                     prior = prior,
+#                     settings = list(adapting = T, saving = T, ps = T),
+#                     verbose = 10,
+#                     debug = list(
+#                       sample_beta = T, sample_tausq = F,
+#                       sample_theta = T, sample_w = T, sample_lambda = T,
+#                       verbose = F, debug = F
+#                     ),
+#                     just_preprocess = F))
+# # saveRDS(out2,"out2_chains4_CRC_analysis_40k_k2_2e4burn.rds")
+# saveRDS(out2,paste0("group2_",save_file))
+#
+#
+# out2_lt <- lapply(out2,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc))
+#
+# # saveRDS(out2_lt,"out2_chains4_CRC_analysis_40k_k2_2e4burn_lt.rds")
+# saveRDS(out2_lt,paste0("group2_",save_file_lt))
 
