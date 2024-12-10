@@ -9,10 +9,10 @@ library(bayesplot)
 # args <- commandArgs(trailingOnly = TRUE)
 # sim_idx <- as.integer(args[1])
 
-actual_ks <- 3
-trial_ks <- c(2,3,6)
+actual_ks <- 5
+trial_ks <- c(3,5,7)
 grid <- expand.grid(actual_k=actual_ks,trial_k=trial_ks,sim=1:10)
-start_idx <- 3
+start_idx <- 1
 
 # mcmc and model settings
 n_samples <- 1000
@@ -47,13 +47,13 @@ d_coords <- as.matrix(dist(c_mat))
 
 lapply(start_idx:nrow(grid),\(sim_idx) {
   print(sim_idx)
-  seed <- 2024 + sim_idx
+  seed <- 24 + sim_idx
   actual_k <- grid$actual_k[sim_idx]
   trial_k <- grid$trial_k[sim_idx]
   set.seed(seed)
 
-  save_file <- paste0("out_simset1_",sim_idx,".rds")
-  save_file_lt <- paste0("out_simset1_",sim_idx,"_lt.rds")
+  save_file <- paste0("out_simset2_",sim_idx,".rds")
+  save_file_lt <- paste0("out_simset2_",sim_idx,"_lt.rds")
 
   Phi <- runif(1,prior$phi[1],prior$phi[2])
   philist <- rep(Phi,actual_k)
