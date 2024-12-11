@@ -7,6 +7,6 @@
 #SBATCH --mail-user=joelne@umich.edu
 #SBATCH --mail-type=END,FAIL
 
-module load Rgeospatial
+module load Rgeospatial/4.3.2-mkl-2024-01-15
 
 Rscript examples/simulation_runner.R
