@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name simulation_trial
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=4
 #SBATCH --time=8:00:00
 #SBATCH --mem=8G
 #SBATCH --mail-user=joelne@umich.edu

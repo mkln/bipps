@@ -14,7 +14,7 @@ set.seed(2020)
 n_samples <- 1000
 n_burnin <- 5000
 n_thin <- 5
-n_threads <- 1
+n_threads <- 4
 block_size <- 50
 Theta <- 1.85 # scaled version
 starting <- list(phi = 1)
