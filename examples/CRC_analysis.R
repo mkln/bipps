@@ -7,6 +7,7 @@ library(tidybayes)
 library(bayesplot)
 
 set.seed(2020)
+n_thin <- 1
 
 df_raw <- readr::read_csv("examples/data/CRC_cleaned.csv") %>%
   # dplyr::mutate(type = as.factor(type)) %>%
@@ -80,6 +81,7 @@ df_raw %>%
 df_raw %>%
   distinct(Spot,groups) %>%
   filter(groups == 2) %>%
+  filter(!(Spot %in% c("53_B","54_B"))) %>% # these are also really weird images
   pull(Spot) -> spots2
 
 dat1 <- df_raw %>%
@@ -111,17 +113,17 @@ dat1 <- dat1 %>%
 dat2 <- dat2 %>%
   filter(type %in% types_intersect)
 
-out1 <- readRDS("out1_chains_CRC_analysis.rds")
+out1 <- readRDS("group1_CRC_intercept_lt.rds")
 out2 <- readRDS("out2_chains_CRC_analysis.rds")
 
-lambda <- get_rvars(out1,"lambda",thin=40)
-theta <- get_rvars(out1,"theta",thin=40)
+lambda <- get_rvars(out1,"lambda",thin=n_thin)
+theta <- get_rvars(out1,"theta",thin=n_thin)
 
 lambda
-hs <- seq(0,100,10)
+hs <- seq(0,1,by=0.1)
 
-xl1 <- cross_list(out1,hs,thin=40)
-xl2 <- cross_list(out2,hs)
+xl1 <- cross_list(out1,hs,thin=n_thin)
+xl2 <- cross_list(out2,hs,thin=n_thin)
 
 xl1 <- lapply(xl1,\(xl) {
   rownames(xl) <- colnames(xl) <- types_intersect
@@ -171,7 +173,7 @@ xl1[[1]] %>%
 # p
 
 # trace plots
-h_ix <- 3
+h_ix <- 1
 trace_df <- as_draws_df(xl1[[h_ix]]) %>%
   pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
   separate(variable,into = c("type1","type2"),sep=",") %>%
@@ -282,7 +284,13 @@ unique_combinations_with_self(types_intersect) %>%
       E(x[ix1,ix2])
     }))
 
-    int_val <- integrate(approxfun(hs,abs(mu)),hs[1],hs[length(hs)])$value
+    tryCatch({
+      int_val <- integrate(approxfun(hs,abs(mu)),hs[1],hs[length(hs)])$value
+    },error=\(e) {
+      print(.y$t1)
+      print(.y$t2)
+      stop(e)
+    })
 
     sigma <- unlist(lapply(xl1,\(x) {
       sd(x[ix1,ix2])

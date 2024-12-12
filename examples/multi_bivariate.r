@@ -10,12 +10,13 @@ set.seed(2020)
 
 num_images <- 5
 
-SS <- 16 # coord values for jth dimension
+SS <- 30 # coord values for jth dimension
 dd <- 2 # spatial dimension
 n <- SS^2 # number of locations
 q <- 4 # number of outcomes
 k <- 2 # number of spatial factors used to make the outcomes
 p <- 1 # number of covariates
+theta <- 0.7
 
 xlocs <- seq(0, 1, length.out=SS)
 coords <- expand.grid(list(xlocs, xlocs)) %>%
@@ -25,12 +26,13 @@ clist <- 1:q %>% lapply(function(i) coords %>%
                           mutate(mv_id=i) %>%
                           as.matrix())
 
-philist <- rep(15,k) # spatial decay for each factor
+philist <- rep(theta,k) # spatial decay for each factor
 
 # cholesky decomp of covariance matrix
 LClist <- 1:k %>% lapply(function(i) t(chol(
-  #exp(- philist[i] * as.matrix(dist(clist[[i]])))))) #^2 + diag(nrow(clist[[i]]))*1e-5))))
-  bipps:::Cov_matern(clist[[i]], clist[[i]], 1, philist[i], 1.5, 0, T, 10))))
+  exp(- philist[i] * as.matrix(dist(clist[[i]])))
+  ))) #^2 + diag(nrow(clist[[i]]))*1e-5))))
+  # bipps:::Cov_matern(clist[[i]], clist[[i]], 1, philist[i], 1.5, 0, T, 10))))
 
 # generating the factors
 WW <- lapply(1:num_images,\(j) {
