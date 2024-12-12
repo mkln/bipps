@@ -10,6 +10,8 @@ get_rvars(out_list, variable, thin = 1)
 \item{out_list}{list of outputs from multi_bipps (one entry per chain)}
 
 \item{variable}{string of variable to extract}
+
+\item{thin}{integer, thinning interval}
 }
 \value{
 posterio::rvar of variable

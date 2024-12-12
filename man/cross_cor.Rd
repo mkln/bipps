@@ -12,6 +12,8 @@ cross_cor(out, h, cov0, ...)
 \item{h}{length scale (in [0,1])}
 
 \item{cov0}{the cross covariance calculated at h=0}
+
+\item{...}{additional variables to be passed to cross_covar}
 }
 \value{
 cross-correlation rvar object

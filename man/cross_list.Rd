@@ -9,9 +9,11 @@ cross_list(out, hs, method = "cor", ...)
 \arguments{
 \item{out}{list of outputs from multi_bipps (one entry per chain)}
 
-\item{hs}{vector of length scales (in \link{0,1})}
+\item{hs}{vector of length scales (in [0,1])}
 
 \item{method}{either "cor" or "covar"}
+
+\item{...}{additional variables to be passed to cross_covar and cross_cor}
 }
 \value{
 list of cross matrices, one per value in hs
