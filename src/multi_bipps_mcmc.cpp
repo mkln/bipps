@@ -374,7 +374,6 @@ Rcpp::List multi_bipps_mcmc(
         
 
         if(mx % mcmc_thin == 0){
-          if(!low_mem){
             std::string iname = std::to_string(mcmc_saved);
 
             //arma::mat v_mcmc_joined; // replaced by v_temp
@@ -390,7 +389,7 @@ Rcpp::List multi_bipps_mcmc(
             v_mcmc[iname] = Rcpp::wrap(v_temp);
             yhat_mcmc[iname] = Rcpp::wrap(yhat_mcmc_joined);
 
-
+          if(!low_mem){
             arma::mat w_mcmc_joined;
             arma::mat lp_mcmc_joined;
             for(Bipps &bipps: msp.multi_bipps) {
