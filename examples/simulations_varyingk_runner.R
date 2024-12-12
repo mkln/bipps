@@ -11,19 +11,22 @@ library(bayesplot)
 
 # actual_ks <- 5
 # trial_ks <- c(3,5,7)
-actual_k <- 3
+actual_ks <- 3
 trial_ks <- c(2,3,6)
 grid <- expand.grid(actual_k=actual_ks,trial_k=trial_ks,sim=1:10)
 start_idx <- 1
+file_prefix <- "out_simset3"
+seed_start <- 24
 
 # mcmc and model settings
 n_samples <- 1000
-n_burnin <- 4000
-n_thin <- 1
-n_threads <- 16
+n_burnin <- 5000
+n_thin <- 5
+n_threads <- 4
 block_size <- 50
 starting <- list(phi = 1)
 prior <- list(phi = c(0.1,10))
+phi_range <- c(1,3)
 chains <- 1
 do_plots <- FALSE
 sample_theta <- TRUE
@@ -49,16 +52,15 @@ d_coords <- as.matrix(dist(c_mat))
 
 lapply(start_idx:nrow(grid),\(sim_idx) {
   print(sim_idx)
-  seed <- 24 + sim_idx
+  seed <- seed_start + sim_idx
   actual_k <- grid$actual_k[sim_idx]
   trial_k <- grid$trial_k[sim_idx]
   set.seed(seed)
 
-  save_file <- paste0("out_simset2_",sim_idx,".rds")
-  save_file_lt <- paste0("out_simset2_",sim_idx,"_lt.rds")
+  save_file <- paste0(file_prefix,"_",sim_idx,".rds")
+  save_file_lt <- paste0(file_prefix,"_",sim_idx,"_lt.rds")
 
-  Phi <- runif(1,prior$phi[1],prior$phi[2])
-  philist <- rep(Phi,actual_k)
+  philist <- runif(actual_k,phi_range[1],phi_range[2])
 
   LClist <- 1:actual_k %>% lapply(\(i) t(chol(
     exp(- philist[i] * d_coords)
@@ -91,6 +93,7 @@ lapply(start_idx:nrow(grid),\(sim_idx) {
     mat
   })
 
+  fields::image.plot(seq(0,x_max,length.out=nx),seq(0,y_max,length.out=ny),matrix(WW[[10]][,2],nrow = ny,ncol = nx))
 
   y_list <- lapply(WW,\(ww) {
     matrix(rpois(nrow(ww)*ncol(ww),exp(ww)),nrow=nrow(ww),ncol=ncol(ww))
@@ -98,7 +101,7 @@ lapply(start_idx:nrow(grid),\(sim_idx) {
 
   if(do_plots) {
     p1 <- plot_y_list(y_list,coords)
-    p1
+    p1[[34]]
   }
 
   # run bipps
@@ -140,7 +143,7 @@ if(do_plots) {
 
   hs <- seq(0,1,0.1)
   xl <- cross_list(out,hs,thin=n_thin)
-  out_actual <- list(theta_mcmc=matrix(c(rep(Phi,k),rep(0,k)),nrow = 2,ncol=k,byrow=TRUE),
+  out_actual <- list(theta_mcmc=matrix(c(philist,rep(0,k)),nrow = 2,ncol=k,byrow=TRUE),
                      lambda_mcmc=Lambda)
   out_actual <- list(lapply(out_actual,\(o) {
     dim(o) <- c(dim(o),1)
