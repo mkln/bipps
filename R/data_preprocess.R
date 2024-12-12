@@ -63,7 +63,7 @@ pixellate_grid <- function(x, y, types, image_ids, nx, ny) {
   # Adjust: Rows with all zeros should be turned to NA for type counts
   type_columns <- setdiff(names(final_df), c("image_id", "x_pixel", "y_pixel"))
   final_df <- final_df %>%
-    dplyr::mutate(dplyr::across(all_of(type_columns), ~ifelse(rowSums(!is.na(select(final_df, dplyr::all_of(type_columns)))) == 0, NA, .)))
+    dplyr::mutate(dplyr::across(dplyr::all_of(type_columns), ~ifelse(rowSums(!is.na(dplyr::select(final_df, dplyr::all_of(type_columns)))) == 0, NA, .)))
 
   # Adding pixel coordinates to the dataframe
   final_df <- final_df %>%
