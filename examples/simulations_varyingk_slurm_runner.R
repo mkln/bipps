@@ -6,8 +6,8 @@ library(ggplot2)
 library(posterior)
 library(bayesplot)
 
-# args <- commandArgs(trailingOnly = TRUE)
-# sim_idx <- as.integer(args[1])
+args <- commandArgs(trailingOnly = TRUE)
+sim_idx <- as.integer(args[1])
 
 # simset1
 actual_ks <- 3
@@ -20,7 +20,7 @@ trial_ks <- c(2,3,6)
 # mcmc and model settings
 grid <- expand.grid(actual_k=actual_ks,trial_k=trial_ks,sim=1:10)
 start_idx <- 1
-file_prefix <- "out_simset1_group_diff"
+file_prefix <- "/nfs/turbo/umms-ukarvind/joelne/bipps_simulations/out_simset1_group_diff"
 seed_start <- 24
 
 n_samples <- 1000
@@ -54,84 +54,82 @@ coords <- coords / max(x_max,y_max)
 c_mat <- as.matrix(coords)
 d_coords <- as.matrix(dist(c_mat))
 
-lapply(start_idx:nrow(grid),\(sim_idx) {
-  print(sim_idx)
-  seed <- seed_start + sim_idx
-  actual_k <- grid$actual_k[sim_idx]
-  trial_k <- grid$trial_k[sim_idx]
-  set.seed(seed)
+print(sim_idx)
+seed <- seed_start + sim_idx
+actual_k <- grid$actual_k[sim_idx]
+trial_k <- grid$trial_k[sim_idx]
 
-  save_file <- paste0(file_prefix,"_",sim_idx,".rds")
-  save_file_lt <- paste0(file_prefix,"_",sim_idx,"_lt.rds")
+set.seed(seed)
 
-  philist <- runif(actual_k,phi_range[1],phi_range[2])
+save_file <- paste0(file_prefix,"_",sim_idx,".rds")
+save_file_ltb <- paste0(file_prefix,"_",sim_idx,"_ltb.rds")
 
-  LClist <- 1:actual_k %>% lapply(\(i) t(chol(
-    exp(- philist[i] * d_coords)
-  )))
+philist <- runif(actual_k,phi_range[1],phi_range[2])
 
-  VV <- lapply(1:num_images,\(j) {
-    wlist <- lapply(1:actual_k,\(i) LClist[[i]] %*% rnorm(n))
+LClist <- 1:actual_k %>% lapply(\(i) t(chol(
+  exp(- philist[i] * d_coords)
+)))
 
-    # factor matrix
-    do.call(cbind, wlist)
-  })
+VV <- lapply(1:num_images,\(j) {
+  wlist <- lapply(1:actual_k,\(i) LClist[[i]] %*% rnorm(n))
 
-
-  # factor loadings
-  Lambda <- matrix(0, q, actual_k)
-  diag(Lambda) <- runif(actual_k, 0.5, 1)
-  Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -0.7, 0.7)
-
-  Beta <- matrix(rep(mu,p*q),ncol=q)
-
-  x_list <- lapply(1:num_images,\(i) {
-    matrix(1,nrow = n,ncol = p)
-  })
-
-  WW <- lapply(1:num_images,\(i) {
-    mat <- VV[[i]] %*% t(Lambda) + x_list[[i]] %*% Beta
-    # print(range(exp(mat)))
-    mat
-  })
-
-  y_list <- lapply(WW,\(ww) {
-    matrix(rpois(nrow(ww)*ncol(ww),exp(ww)),nrow=nrow(ww),ncol=ncol(ww))
-  })
-
-  if(do_plots) {
-    fields::image.plot(seq(0,x_max,length.out=nx),seq(0,y_max,length.out=ny),matrix(VV[[10]][,2],nrow = ny,ncol = nx))
-    fields::image.plot(seq(0,x_max,length.out=nx),seq(0,y_max,length.out=ny),matrix(WW[[10]][,2],nrow = ny,ncol = nx))
-    p1 <- plot_y_list(y_list,coords)
-    p1[[34]]
-  }
-
-  # run bipps
-  out <- lapply(1:chains,\(i) multi_bipps(y_list,
-                                          x_list,
-                                          coords,
-                                          k = trial_k,
-                                          family = "poisson",
-                                          block_size = block_size,
-                                          n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
-                                          n_threads = n_threads,
-                                          starting = starting,
-                                          prior = prior,
-                                          settings = list(adapting = T, saving = T, ps = T,low_mem=T),
-                                          verbose = 10,
-                                          debug = list(
-                                            sample_beta = T, sample_tausq = F,
-                                            sample_theta = sample_theta, sample_w = T, sample_lambda = T,
-                                            verbose = F, debug = F
-                                          ),
-                                          just_preprocess = F))
-  saveRDS(out,save_file)
-
-  out_lt <- lapply(out,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc))
-
-  saveRDS(out_lt,save_file_lt)
-
+  # factor matrix
+  do.call(cbind, wlist)
 })
+
+
+# factor loadings
+Lambda <- matrix(0, q, actual_k)
+diag(Lambda) <- runif(actual_k, 0.5, 1)
+Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -0.7, 0.7)
+
+Beta <- matrix(rep(mu,p*q),ncol=q)
+
+x_list <- lapply(1:num_images,\(i) {
+  matrix(1,nrow = n,ncol = p)
+})
+
+WW <- lapply(1:num_images,\(i) {
+  mat <- VV[[i]] %*% t(Lambda) + x_list[[i]] %*% Beta
+  # print(range(exp(mat)))
+  mat
+})
+
+y_list <- lapply(WW,\(ww) {
+  matrix(rpois(nrow(ww)*ncol(ww),exp(ww)),nrow=nrow(ww),ncol=ncol(ww))
+})
+
+if(do_plots) {
+  fields::image.plot(seq(0,x_max,length.out=nx),seq(0,y_max,length.out=ny),matrix(VV[[10]][,2],nrow = ny,ncol = nx))
+  fields::image.plot(seq(0,x_max,length.out=nx),seq(0,y_max,length.out=ny),matrix(WW[[10]][,2],nrow = ny,ncol = nx))
+  p1 <- plot_y_list(y_list,coords)
+  p1[[34]]
+}
+
+# run bipps
+out <- lapply(1:chains,\(i) multi_bipps(y_list,
+                                        x_list,
+                                        coords,
+                                        k = trial_k,
+                                        family = "poisson",
+                                        block_size = block_size,
+                                        n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
+                                        n_threads = n_threads,
+                                        starting = starting,
+                                        prior = prior,
+                                        settings = list(adapting = T, saving = T, ps = T,low_mem=T),
+                                        verbose = 10,
+                                        debug = list(
+                                          sample_beta = T, sample_tausq = F,
+                                          sample_theta = sample_theta, sample_w = T, sample_lambda = T,
+                                          verbose = F, debug = F
+                                        ),
+                                        just_preprocess = F))
+saveRDS(out,save_file)
+
+out_ltb <- lapply(out,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc,beta_mcmc=o$beta_mcmc))
+
+saveRDS(out_ltb,save_file_ltb)
 
 if(do_plots) {
   out <- readRDS("out_simchol_lt.rds")
