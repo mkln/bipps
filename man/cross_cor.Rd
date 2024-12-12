@@ -2,29 +2,22 @@
 % Please edit documentation in R/postprocessing.R
 \name{cross_cor}
 \alias{cross_cor}
-\title{#' Get coherence matrix rvar at length-scale h
-#'
-#' Calculates the coherence, e.g.,
-#' \deqn{\rho_{ij}(h) = \frac{C_{ij}(h)}{\sqrt{C_{ii}(h)C_{jj}(h)}}}
-#' with \eqn{C_{ij}(h)} the cross-covariance as calculated in \link{cross_covar}.}
+\title{Get cross-correlation matrix rvar at length-scale h}
 \usage{
 cross_cor(out, h, cov0, ...)
 }
 \arguments{
-\item{out}{list of outputs from multi_bipps (one entry per chain)
-#' @param h length scale (in \link{0,1})
-#'
-#' @return cross-correlation rvar object
-#' @export
-coherence <- function(out,h) {
-covs <- cross_covar(out,h)
-cov2cor_rfun(covs)
-}}
+\item{out}{list of outputs from multi_bipps (one entry per chain)}
+
+\item{h}{length scale (in [0,1])}
+
+\item{cov0}{the cross covariance calculated at h=0}
+}
+\value{
+cross-correlation rvar object
 }
 \description{
-#' Get coherence matrix rvar at length-scale h
-#'
-#' Calculates the coherence, e.g.,
-#' \deqn{\rho_{ij}(h) = \frac{C_{ij}(h)}{\sqrt{C_{ii}(h)C_{jj}(h)}}}
-#' with \eqn{C_{ij}(h)} the cross-covariance as calculated in \link{cross_covar}.
+Calculates the cross-correlation matrix, e.g.,
+\deqn{\rho_{ij}(h) = \frac{C_{ij}(h)}{\sqrt{C_{ii}(0)C_{jj}(0)}}}
+with \eqn{C_{ij}(h)} the cross-covariance as calculated in \link{cross_covar}.
 }
