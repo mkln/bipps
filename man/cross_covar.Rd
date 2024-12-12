@@ -9,7 +9,9 @@ cross_covar(out, h, ...)
 \arguments{
 \item{out}{list of outputs from multi_bipps (one entry per chain)}
 
-\item{h}{length scale (in \link{0,1})}
+\item{h}{length scale (in [0,1])}
+
+\item{...}{additional variables to be passed to get_rvars}
 }
 \value{
 cross-covariance rvar object

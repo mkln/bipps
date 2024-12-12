@@ -2,6 +2,7 @@
 #'
 #' @param out_list list of outputs from multi_bipps (one entry per chain)
 #' @param variable string of variable to extract
+#' @param thin integer, thinning interval
 #'
 #' @return posterio::rvar of variable
 #' @export
@@ -30,7 +31,8 @@ get_rvars <- function(out_list,variable,thin=1) {
 #' with \eqn{\Lambda} estimated from MCMC and \eqn{W} the diagonal matrix with elements
 #' \eqn{\exp{(-\phi_jh})} for \eqn{j=1,\ldots,k} on the diagonal.
 #' @param out list of outputs from multi_bipps (one entry per chain)
-#' @param h length scale (in [0,1])
+#' @param h length scale (in \[0,1\])
+#' @param ... additional variables to be passed to get_rvars
 #'
 #' @return cross-covariance rvar object
 #' @export
@@ -50,6 +52,7 @@ cross_covar <- function(out,h,...) {
 #' @param out list of outputs from multi_bipps (one entry per chain)
 #' @param h length scale (in \[0,1\])
 #' @param cov0 the cross covariance calculated at h=0
+#' @param ... additional variables to be passed to cross_covar
 #'
 #' @return cross-correlation rvar object
 #' @export
@@ -62,8 +65,9 @@ cross_cor <- function(out,h,cov0,...) {
 #' List of cross-cor/covar matrices at multiple length scales
 #'
 #' @param out list of outputs from multi_bipps (one entry per chain)
-#' @param hs vector of length scales (in [0,1])
+#' @param hs vector of length scales (in \[0,1\])
 #' @param method either "cor" or "covar"
+#' @param ... additional variables to be passed to cross_covar and cross_cor
 #'
 #' @return list of cross matrices, one per value in hs
 #' @export
