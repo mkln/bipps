@@ -16,7 +16,8 @@ Imports:
     FNN,
     posterior,
     spatstat.geom,
-    vctrs
+    vctrs,
+    tibble
 Suggests: 
     ggplot2,
     abind,

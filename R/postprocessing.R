@@ -42,21 +42,17 @@ cross_covar <- function(out,h,...) {
   covs <- lambda %*% W %*% t(lambda)
 }
 
-#' #' Get coherence matrix rvar at length-scale h
-#' #'
-#' #' Calculates the coherence, e.g.,
-#' #' \deqn{\rho_{ij}(h) = \frac{C_{ij}(h)}{\sqrt{C_{ii}(h)C_{jj}(h)}}}
-#' #' with \eqn{C_{ij}(h)} the cross-covariance as calculated in [bipps::cross_covar].
+#' Get cross-correlation matrix rvar at length-scale h
+#'
+#' Calculates the cross-correlation matrix, e.g.,
+#' \deqn{\rho_{ij}(h) = \frac{C_{ij}(h)}{\sqrt{C_{ii}(0)C_{jj}(0)}}}
+#' with \eqn{C_{ij}(h)} the cross-covariance as calculated in [bipps::cross_covar].
 #' @param out list of outputs from multi_bipps (one entry per chain)
-#' #' @param h length scale (in [0,1])
-#' #'
-#' #' @return cross-correlation rvar object
-#' #' @export
-#' coherence <- function(out,h) {
-#'   covs <- cross_covar(out,h)
-#'   cov2cor_rfun(covs)
-#' }
-
+#' @param h length scale (in \[0,1\])
+#' @param cov0 the cross covariance calculated at h=0
+#'
+#' @return cross-correlation rvar object
+#' @export
 cross_cor <- function(out,h,cov0,...) {
   covs <- cross_covar(out,h,...)
   std_devs <- sqrt(diag(cov0))
