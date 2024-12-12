@@ -9,8 +9,10 @@ library(bayesplot)
 # args <- commandArgs(trailingOnly = TRUE)
 # sim_idx <- as.integer(args[1])
 
-actual_ks <- 5
-trial_ks <- c(3,5,7)
+# actual_ks <- 5
+# trial_ks <- c(3,5,7)
+actual_k <- 3
+trial_ks <- c(2,3,6)
 grid <- expand.grid(actual_k=actual_ks,trial_k=trial_ks,sim=1:10)
 start_idx <- 1
 
