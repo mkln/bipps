@@ -1,12 +1,12 @@
 #!/bin/bash
 
 #SBATCH --job-name simulation_varyingk
-#SBATCH --array=1-30
+#SBATCH --array=1-10
 #SBATCH --output=logs/job_%A_%a.out   # Standard output log (%A=job ID, %a=array index)
 #SBATCH --error=logs/job_%A_%a.err    # Standard error log (%A=job ID, %a=array index)
 #SBATCH --cpus-per-task=4
 #SBATCH --time=4:00:00
-#SBATCH --mem=8G
+#SBATCH --mem=16G
 #SBATCH --mail-user=joelne@umich.edu
 #SBATCH --mail-type=END,FAIL
 

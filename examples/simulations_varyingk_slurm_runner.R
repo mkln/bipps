@@ -9,6 +9,8 @@ library(bayesplot)
 args <- commandArgs(trailingOnly = TRUE)
 sim_idx <- as.integer(args[1])
 
+sim_idx <- seq(3,30,by=3)[sim_idx] # REMOVE THIS LATER!
+
 # simset1
 actual_ks <- 3
 trial_ks <- c(2,3,6)
