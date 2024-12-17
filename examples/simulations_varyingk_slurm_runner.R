@@ -3,13 +3,9 @@ library(magrittr)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
-library(posterior)
-library(bayesplot)
 
 args <- commandArgs(trailingOnly = TRUE)
 sim_idx <- as.integer(args[1])
-
-sim_idx <- seq(3,30,by=3)[sim_idx] # REMOVE THIS LATER!
 
 # simset1
 actual_ks <- 3
@@ -131,116 +127,6 @@ out <- lapply(1:chains,\(i) multi_bipps(y_list,
                                         just_preprocess = F))
 saveRDS(out,save_file)
 
-out_ltb <- lapply(out,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc,beta_mcmc=o$beta_mcmc))
+out_ltb <- lapply(out,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc,beta_mcmc=o$beta_mcmc,waic=o$waic))
 
 saveRDS(out_ltb,save_file_ltb)
-
-if(do_plots) {
-  out <- readRDS("out_simchol_lt.rds")
-
-  lambda <- get_rvars(out,"lambda",thin=n_thin)
-  lambda
-  mcmc_trace(as_draws_df(lambda))
-  theta <- get_rvars(out,"theta",thin=n_thin)
-  theta
-  mcmc_trace(as_draws_df(theta[1,]))
-
-  hs <- seq(0,1,0.1)
-  xl <- cross_list(out,hs,thin=n_thin)
-  out_actual <- list(theta_mcmc=matrix(c(philist,rep(0,k)),nrow = 2,ncol=k,byrow=TRUE),
-                     lambda_mcmc=Lambda)
-  out_actual <- list(lapply(out_actual,\(o) {
-    dim(o) <- c(dim(o),1)
-    o
-  }))
-
-  h_ix <- 5
-  trace_df <- as_draws_df(xl[[h_ix]]) %>%
-    pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
-    separate(variable,into = c("type1","type2"),sep=",") %>%
-    mutate(type1 = sub("^x\\[","",type1),
-           type2 = sub("\\]","",type2))
-
-  trace_df %>%
-    mutate(.chain = factor(.chain)) %>%
-    ggplot(aes(.iteration,value,color=.chain,group=.chain)) +
-    geom_line() +
-    facet_grid(type1~type2,
-               labeller = label_wrap_gen(width=8)) +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
-    theme(axis.title = element_text(size=20),
-          axis.text = element_text(size=12),
-          strip.text = element_text(size=10)) +
-    labs(x="Draw",y=paste0("Cross-correlation at h=",hs[h_ix]))
-
-  xl_actual <- cross_list(out_actual,hs,thin=n_thin)
-  xl_actual <- lapply(xl_actual,\(x) E(x))
-
-  unique_combinations_with_self <- function(data) {
-    # Generate all pairs including self-pairings
-    all_pairs <- expand.grid(data, data)
-
-    # Sort the pairs and remove duplicates
-    all_pairs <- t(apply(all_pairs, 1, sort))
-    unique_pairs <- unique(all_pairs)
-
-    return(unique_pairs)
-  }
-
-  types <- 1:q
-  # spatial cross-correlation over distance plots
-  unique_combinations_with_self(types) %>%
-    # expand_grid(type1 = types_intersect,type2 = types_intersect) %>%
-    as.data.frame() %>%
-    as_tibble() %>%
-    magrittr::set_colnames(c("t1","t2")) %>%
-    group_by(t1,t2) %>%
-    group_modify(~{
-      ix1 <- which(types == .y$t1)
-      ix2 <- which(types == .y$t2)
-
-      mu <- unlist(lapply(xl,\(x) {
-        E(x[ix1,ix2])
-      }))
-
-      mu_actual <- unlist(lapply(xl_actual,\(x) {
-        x[ix1,ix2]
-      }))
-
-      # int_val <- integrate(approxfun(hs,abs(mu)),hs[1],hs[length(hs)])$value
-
-      sigma <- unlist(lapply(xl,\(x) {
-        sd(x[ix1,ix2])
-      }))
-
-      lb <- unlist(lapply(xl,\(x) {
-        quantile(x[ix1,ix2],probs = 0.025)
-      }))
-
-      ub <- unlist(lapply(xl,\(x) {
-        quantile(x[ix1,ix2],probs = 0.975)
-      }))
-      tibble(mu=mu,mu_actual,lb=lb,ub=ub,hs=hs)#,auc=int_val)
-    }) %>%
-    ungroup() -> xl_e
-
-
-  xl_e %>%
-    mutate(hs = hs*x_max) %>%
-    pivot_longer(c(mu,mu_actual)) %>%
-    # filter(auc %in% sort(unique(auc),decreasing = TRUE)[1:10]) %>%
-    # mutate(ub = mu+sigma,
-    #        lb = mu-sigma) %>%
-    ggplot() +
-    geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
-    geom_line(aes(hs,value,color=name)) +
-    geom_hline(yintercept = 0,color="red",alpha=0.5,linetype="dotted") +
-    theme_minimal() +
-    facet_grid(t1~t2) +
-    theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
-    theme(axis.title = element_text(size=20),
-          axis.text = element_text(size=12),
-          strip.text = element_text(size=10)) +
-    labs(x="Distance (\u03bcm)",y="Cross-correlation")
-}
