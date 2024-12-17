@@ -206,7 +206,7 @@ if(do_plots) {
 out <- lapply(1:chains,\(i) multi_bipps(y_list,
                                          x_list,
                                          coords,
-                                         k = k,
+                                         k = 3,
                                          family = "poisson",
                                          block_size = block_size,
                                          n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
@@ -223,9 +223,9 @@ out <- lapply(1:chains,\(i) multi_bipps(y_list,
                                          just_preprocess = F))
 
 out[[1]]$waic
-# 12761.86 with k=2
-# 12949.73 with k=1
-# 12750.72 with k=3
+# 831.6633 with k=2
+# 833.8541 with k=1
+# 830.8144 with k=3
 
 saveRDS(out,save_file)
 

@@ -14,7 +14,7 @@ trial_ks <- c(2,3,6)
 grid <- expand.grid(actual_k=actual_ks,trial_k=trial_ks,sim=1:10)
 start_idx <- 1
 seed_start <- 24
-file_prefix <- "examples/data/out_simset1_group_diff"
+file_prefix <- "examples/data/new_ll/out_simset1_group_diff"
 
 
 # mcmc and model settings
@@ -66,16 +66,17 @@ lapply(start_idx:nrow(grid),\(sim_idx) {
 
   actual_k <- grid$actual_k[sim_idx]
   trial_k <- grid$trial_k[sim_idx]
-  set.seed(seed)
 
   # save_file <- paste0("out_simset1_",sim_idx,".rds")
   save_file_ltb <- paste0(file_prefix,"_",sim_idx,"_ltb.rds")
 
+  set.seed(seed)
   philist <- runif(actual_k,phi_range[1],phi_range[2])
   LClist <- 1:actual_k %>% lapply(\(i) t(chol(
     exp(- philist[i] * d_coords)
   )))
 
+  set.seed(seed)
   VV <- lapply(1:num_images,\(j) {
     wlist <- lapply(1:actual_k,\(i) LClist[[i]] %*% rnorm(n))
 
@@ -88,6 +89,7 @@ lapply(start_idx:nrow(grid),\(sim_idx) {
 
   # factor loadings
   Lambda <- matrix(0, q, actual_k)
+  set.seed(seed)
   diag(Lambda) <- runif(actual_k, 0.5, 1)
   Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -0.7, 0.7)
 
@@ -103,7 +105,7 @@ lapply(start_idx:nrow(grid),\(sim_idx) {
     mat
   })
 
-
+  set.seed(seed)
   y_list <- lapply(WW,\(ww) {
     matrix(rpois(nrow(ww)*ncol(ww),exp(ww)),nrow=nrow(ww),ncol=ncol(ww))
   })
@@ -362,16 +364,17 @@ get_sim_and_actual <- \(sim_idx) {
 
   actual_k <- grid$actual_k[sim_idx]
   trial_k <- grid$trial_k[sim_idx]
-  set.seed(seed)
 
   # save_file <- paste0("out_simset1_",sim_idx,".rds")
   save_file_ltb <- paste0(file_prefix,"_",sim_idx,"_ltb.rds")
 
+  set.seed(seed)
   philist <- runif(actual_k,phi_range[1],phi_range[2])
   LClist <- 1:actual_k %>% lapply(\(i) t(chol(
     exp(- philist[i] * d_coords)
   )))
 
+  set.seed(seed)
   VV <- lapply(1:num_images,\(j) {
     wlist <- lapply(1:actual_k,\(i) LClist[[i]] %*% rnorm(n))
 
@@ -384,6 +387,7 @@ get_sim_and_actual <- \(sim_idx) {
 
   # factor loadings
   Lambda <- matrix(0, q, actual_k)
+  set.seed(seed)
   diag(Lambda) <- runif(actual_k, 0.5, 1)
   Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -0.7, 0.7)
 
@@ -399,7 +403,7 @@ get_sim_and_actual <- \(sim_idx) {
     mat
   })
 
-
+  set.seed(seed)
   y_list <- lapply(WW,\(ww) {
     matrix(rpois(nrow(ww)*ncol(ww),exp(ww)),nrow=nrow(ww),ncol=ncol(ww))
   })
@@ -459,7 +463,7 @@ get_sim_and_actual <- \(sim_idx) {
 }
 
 
-sim_idx <- 6
+sim_idx <- 1
 res <- get_sim_and_actual(sim_idx)
 out <- res$out
 out_actual <- res$out_actual

@@ -197,6 +197,8 @@ Rcpp::List multi_bipps_mcmc(
   int total_obs = n * num_samples;
   StreamingWAIC waic_calculator(total_obs);
 
+  arma::vec ll_y = arma::zeros(total_obs);
+
 
   for(int i=0; i<mcmc_keep; i++){
     if(!low_mem){
@@ -394,11 +396,12 @@ Rcpp::List multi_bipps_mcmc(
             v_mcmc[iname] = Rcpp::wrap(v_temp);
             yhat_mcmc[iname] = Rcpp::wrap(yhat_mcmc_joined);
 
-            arma::vec loglik_mcmc_joined;
             for(Bipps &bipps: msp.multi_bipps) {
-              loglik_mcmc_joined = arma::join_vert(loglik_mcmc_joined, bipps.param_data.ll_y);
+              bipps.get_lly(ll_y);
             }
-            waic_calculator.update(loglik_mcmc_joined);
+            waic_calculator.update(ll_y);
+
+            // Rcpp::Rcout << "WAIC: " << waic_calculator.calculate_waic() << std::endl;
 
           if(!low_mem){
             arma::mat w_mcmc_joined;

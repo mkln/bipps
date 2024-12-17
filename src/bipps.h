@@ -197,6 +197,7 @@ public:
   void init_betareg();
   void init_gaussian();
   void update_lly(int, BippsDataLMC&, const arma::mat& LamHw, bool map=false);
+  void get_lly(arma::vec&);
   void update_block_w_cache(int, BippsDataLMC& data);
   void refresh_w_cache(BippsDataLMC& data);
   
