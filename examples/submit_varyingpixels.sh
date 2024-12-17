@@ -5,8 +5,8 @@
 #SBATCH --output=pixel_logs/job_%A_%a.out   # Standard output log (%A=job ID, %a=array index)
 #SBATCH --error=pixel_logs/job_%A_%a.err    # Standard error log (%A=job ID, %a=array index)
 #SBATCH --cpus-per-task=4
-#SBATCH --time=4:00:00
-#SBATCH --mem=16G
+#SBATCH --time=6:00:00
+#SBATCH --mem=32G
 #SBATCH --mail-user=joelne@umich.edu
 #SBATCH --mail-type=END,FAIL
 

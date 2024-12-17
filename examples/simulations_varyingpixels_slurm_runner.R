@@ -8,7 +8,7 @@ args <- commandArgs(trailingOnly = TRUE)
 sim_idx <- as.integer(args[1])
 
 # simset1
-szs <- c(10,30,60)
+szs <- c(15,30,45)
 
 # mcmc and model settings
 grid <- expand.grid(sz=szs,sim=1:10)
