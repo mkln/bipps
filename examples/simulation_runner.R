@@ -12,8 +12,8 @@ set.seed(2020)
 
 # mcmc and model settings
 n_samples <- 1000
-n_burnin <- 5000
-n_thin <- 5
+n_burnin <- 1200
+n_thin <- 1
 n_threads <- 4
 block_size <- 50
 Theta <- 1.85 # scaled version
@@ -24,14 +24,14 @@ do_plots <- FALSE
 save_file <- "out_simchol.rds"
 save_file_lt <- "out_simchol_lt.rds"
 sample_theta <- TRUE
-num_images <- 40
+num_images <- 20
 mu <- -2
-k <- 5
-q <- 10
+k <- 2
+q <- 3
 
 # simulation settings
-nx <- 30
-ny <- 30
+nx <- 15
+ny <- 15
 n <- nx*ny
 # theta
 x_max <- 1919
@@ -221,6 +221,12 @@ out <- lapply(1:chains,\(i) multi_bipps(y_list,
                                            verbose = F, debug = F
                                          ),
                                          just_preprocess = F))
+
+out[[1]]$waic
+# 12761.86 with k=2
+# 12949.73 with k=1
+# 12750.72 with k=3
+
 saveRDS(out,save_file)
 
 out_lt <- lapply(out,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc))

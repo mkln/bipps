@@ -957,9 +957,7 @@ void Bipps::logpost_refresh_after_gibbs(BippsDataLMC& data, bool sample){
     int u = block_names(r)-1;
     //update_block_covpars(u, data);
     update_block_wlogdens(u, data);
-    if(!sample){
-      update_lly(u, data, LambdaHw, true);
-    }
+    update_lly(u, data, LambdaHw, true);
   }
   
   data.loglik_w = arma::accu(data.logdetCi_comps) + 

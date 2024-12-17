@@ -5,6 +5,7 @@
 #include "utils_parametrize.h"
 #include "bipps.h"
 #include "multi_bipps.h"
+#include "utils_waic.h"
 
 //[[Rcpp::export]]
 Rcpp::List multi_bipps_mcmc(
@@ -193,6 +194,10 @@ Rcpp::List multi_bipps_mcmc(
   Rcpp::List lp_mcmc;
   Rcpp::List yhat_mcmc;
 
+  int total_obs = n * num_samples;
+  StreamingWAIC waic_calculator(total_obs);
+
+
   for(int i=0; i<mcmc_keep; i++){
     if(!low_mem){
       std::string iname = std::to_string(i);
@@ -232,7 +237,7 @@ Rcpp::List multi_bipps_mcmc(
 
   start_all = std::chrono::steady_clock::now();
   int m=0; int mx=0; int num_chol_fails=0;
-  int mcmc_saved = 0; int w_saved = 0;
+  int mcmc_saved = 0; int w_saved = 0; double waic = -std::numeric_limits<double>::infinity();
 
   try {
 
@@ -389,6 +394,12 @@ Rcpp::List multi_bipps_mcmc(
             v_mcmc[iname] = Rcpp::wrap(v_temp);
             yhat_mcmc[iname] = Rcpp::wrap(yhat_mcmc_joined);
 
+            arma::vec loglik_mcmc_joined;
+            for(Bipps &bipps: msp.multi_bipps) {
+              loglik_mcmc_joined = arma::join_vert(loglik_mcmc_joined, bipps.param_data.ll_y);
+            }
+            waic_calculator.update(loglik_mcmc_joined);
+
           if(!low_mem){
             arma::mat w_mcmc_joined;
             arma::mat lp_mcmc_joined;
@@ -492,6 +503,8 @@ Rcpp::List multi_bipps_mcmc(
 
     }
 
+    waic = waic_calculator.calculate_waic();
+
     end_all = std::chrono::steady_clock::now();
     double mcmc_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_all - start_all).count();
     if(print_every>0){
@@ -510,6 +523,7 @@ Rcpp::List multi_bipps_mcmc(
       Rcpp::Named("tausq_mcmc") = tausq_mcmc,
       Rcpp::Named("theta_mcmc") = theta_mcmc,
       Rcpp::Named("lambda_mcmc") = lambda_mcmc,
+      Rcpp::Named("waic") = waic,
       Rcpp::Named("paramsd") = msp.theta_adapt.paramsd,
       Rcpp::Named("mcmc") = mcmc,
       Rcpp::Named("mcmc_time") = mcmc_time/1000.0,
@@ -539,6 +553,7 @@ Rcpp::List multi_bipps_mcmc(
       Rcpp::Named("tausq_mcmc") = tausq_mcmc,
       Rcpp::Named("theta_mcmc") = theta_mcmc,
       Rcpp::Named("lambda_mcmc") = lambda_mcmc,
+      Rcpp::Named("waic") = waic,
       Rcpp::Named("paramsd") = msp.theta_adapt.paramsd,
       Rcpp::Named("mcmc") = mcmc,
       Rcpp::Named("mcmc_time") = mcmc_time/1000.0,

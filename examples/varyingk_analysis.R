@@ -13,12 +13,13 @@ actual_ks <- 3
 trial_ks <- c(2,3,6)
 grid <- expand.grid(actual_k=actual_ks,trial_k=trial_ks,sim=1:10)
 start_idx <- 1
+seed_start <- 2024
 
 # mcmc and model settings
 n_samples <- 1000
 n_burnin <- 4000
 n_thin <- 1
-n_threads <- 16
+n_threads <- 4
 block_size <- 50
 starting <- list(phi = 1)
 prior <- list(phi = c(0.1,10))
@@ -47,7 +48,7 @@ d_coords <- as.matrix(dist(c_mat))
 
 lapply(start_idx:nrow(grid),\(sim_idx) {
   print(sim_idx)
-  seed <- 2024 + sim_idx
+  seed <- seed_start + sim_idx
   # seed <- 24 + sim_idx
 
   actual_k <- grid$actual_k[sim_idx]

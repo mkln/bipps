@@ -61,17 +61,17 @@ seed <- seed_start + sim_idx
 actual_k <- grid$actual_k[sim_idx]
 trial_k <- grid$trial_k[sim_idx]
 
-set.seed(seed)
-
 save_file <- paste0(file_prefix,"_",sim_idx,".rds")
 save_file_ltb <- paste0(file_prefix,"_",sim_idx,"_ltb.rds")
 
+set.seed(seed)
 philist <- runif(actual_k,phi_range[1],phi_range[2])
 
 LClist <- 1:actual_k %>% lapply(\(i) t(chol(
   exp(- philist[i] * d_coords)
 )))
 
+set.seed(seed)
 VV <- lapply(1:num_images,\(j) {
   wlist <- lapply(1:actual_k,\(i) LClist[[i]] %*% rnorm(n))
 
@@ -82,6 +82,7 @@ VV <- lapply(1:num_images,\(j) {
 
 # factor loadings
 Lambda <- matrix(0, q, actual_k)
+set.seed(seed)
 diag(Lambda) <- runif(actual_k, 0.5, 1)
 Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -0.7, 0.7)
 
@@ -97,6 +98,7 @@ WW <- lapply(1:num_images,\(i) {
   mat
 })
 
+set.seed(seed)
 y_list <- lapply(WW,\(ww) {
   matrix(rpois(nrow(ww)*ncol(ww),exp(ww)),nrow=nrow(ww),ncol=ncol(ww))
 })
