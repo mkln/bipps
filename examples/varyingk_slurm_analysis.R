@@ -14,7 +14,7 @@ trial_ks <- c(2,3,6)
 grid <- expand.grid(actual_k=actual_ks,trial_k=trial_ks,sim=1:10)
 start_idx <- 1
 seed_start <- 24
-file_prefix <- "examples/data/new_ll/out_simset1_group_diff"
+file_prefix <- "examples/data/out_simset1_group_diff"
 
 
 # mcmc and model settings
@@ -297,9 +297,9 @@ df_diff %>%
   labs(y="MAD between observed and fitted",x="Distance",title = "Simulations with actual k = 3")
 
 
-summary(lm(abs_diff~phi*hs*trial_k,data=df_diff %>%
-             mutate(abs_diff=E(abs(diff)),
-                    trial_k=factor(trial_k))))
+# summary(lm(abs_diff~phi*hs*trial_k,data=df_diff %>%
+#              mutate(abs_diff=E(abs(diff)),
+#                     trial_k=factor(trial_k))))
 
 
 # extract log-likelihood
@@ -463,7 +463,7 @@ get_sim_and_actual <- \(sim_idx) {
 }
 
 
-sim_idx <- 1
+sim_idx <- 6
 res <- get_sim_and_actual(sim_idx)
 out <- res$out
 out_actual <- res$out_actual
@@ -480,7 +480,7 @@ theta <- get_rvars(out,"theta",thin=n_thin)
 theta
 mcmc_trace(as_draws_df(theta[1,]))
 
-h_ix <- 5
+h_ix <- 2
 trace_df <- as_draws_df(xl[[h_ix]]) %>%
   pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
   separate(variable,into = c("type1","type2"),sep=",") %>%
@@ -523,13 +523,13 @@ xl_e %>%
 # actual patterns
 
 y_list_trimmed <- lapply(y_list,\(yy) {
-  yy <- yy[,1:4]
+  yy <- yy[,7:10]
   colnames(yy) <- paste0("Cell type: ",1:ncol(yy))
   yy
 })
 
 WW_trimmed <- lapply(WW,\(ww) {
-  ww <- ww[,1:4]
+  ww <- ww[,7:10]
   colnames(ww) <- paste0("Cell type: ",1:ncol(ww))
   ww
 })
@@ -569,9 +569,11 @@ dplyr::bind_cols(lp_e[,1:4],coords * max(x_max,y_max)) %>%
   ggplot2::scale_fill_viridis_c(option="magma") +
   theme_classic() +
   labs(x = "X",y = "Y",fill="Intensity")
+
+
 # difference between groups (within same combination)
-idx1 <- 3
-idx2 <- 6
+idx1 <- 1
+idx2 <- 4
 
 res1 <- get_sim_and_actual(idx1)
 out1 <- res1$out
@@ -601,7 +603,8 @@ xl1_e %>%
   theme(axis.title = element_text(size=20),
         axis.text = element_text(size=12),
         strip.text = element_text(size=10)) +
-  labs(x="Distance (\u03bcm)",y="Cross-correlation")
+  labs(x="Distance (\u03bcm)",y="Cross-correlation") +
+  ggtitle("Group 1")
 
 xl2_e %>%
   mutate(hs = hs*x_max) %>%
@@ -616,7 +619,8 @@ xl2_e %>%
   theme(axis.title = element_text(size=20),
         axis.text = element_text(size=12),
         strip.text = element_text(size=10)) +
-  labs(x="Distance (\u03bcm)",y="Cross-correlation")
+  labs(x="Distance (\u03bcm)",y="Cross-correlation") +
+  ggtitle("Group 2")
 
 group_diff_actual <- lapply(1:length(xl1_actual) ,\(i){
   xl1_actual[[i]] - xl2_actual[[i]]
@@ -654,13 +658,13 @@ unique_combinations_with_self(types) %>%
     ub <- unlist(lapply(group_diff_est,\(x) {
       quantile(x[ix1,ix2],probs = 0.975)
     }))
-    tibble(mu=mu,mu_actual,lb=lb,ub=ub,hs=hs)
+    tibble(diff=mu,diff_actual=mu_actual,lb=lb,ub=ub,hs=hs)
   }) %>%
   ungroup() -> group_diff_e
 
 group_diff_e %>%
   mutate(hs = hs*x_max) %>%
-  pivot_longer(c(mu,mu_actual)) %>%
+  pivot_longer(c(diff,diff_actual)) %>%
   ggplot() +
   geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
   geom_line(aes(hs,value,color=name)) +
@@ -671,30 +675,11 @@ group_diff_e %>%
   theme(axis.title = element_text(size=20),
         axis.text = element_text(size=12),
         strip.text = element_text(size=10)) +
-  labs(x="Distance (\u03bcm)",y="Cross-correlation")
+  labs(x="Distance (\u03bcm)",y="Difference in cross-cor") +
+  ggtitle("Difference between group 1 and group 2")
 
 
 # can we use information criteria to pick the best k? probably
 
 # calculate log-likelihood
-out_full <- readRDS(paste0("examples/data/out_simset1_group_diff_",sim_idx,".rds"))
-vhat <- out_full[[1]]$v_mcmc
-arr <- simplify2array(vhat)
-arr <- aperm(arr,perm=c(3,1,2))
-vhat <- posterior::rvar(arr)
 
-beta <- out_full[[1]]$beta_mcmc
-arr <- beta
-arr <- arr[,,seq(1,dim(arr)[3],by=n_thin),drop=FALSE]
-arr <- aperm(arr,perm=c(3,1,2))
-beta <- posterior::rvar(arr)
-# VV[[i]] %*% t(Lambda) + x_list[[i]] %*% Beta
-lp <- vhat %*% t(lambda) + matrix(1,nrow=nx*ny*num_images,ncol=p) %*% beta
-
-y_actual <- do.call(rbind,y_list)
-
-dpois_rfun <- posterior::rfun(dpois)
-dpois_rfun(y_actual[1:2,],exp(lp[1:2,]),log=TRUE)
-
-# probably should calculate the ll on bipps. This doesn't seem like the right approach.
-ll <- dpois_rfun(y_actual,exp(lp),log=TRUE)
