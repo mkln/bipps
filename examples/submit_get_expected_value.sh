@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH --job-name simulation_get_exp
-#SBATCH --output=logs/job_%A_%a.out   # Standard output log (%A=job ID, %a=array index)
-#SBATCH --error=logs/job_%A_%a.err    # Standard error log (%A=job ID, %a=array index)
+#SBATCH --output=logs/get_exp.out   # Standard output log (%A=job ID, %a=array index)
+#SBATCH --error=logs/get_exp.err    # Standard error log (%A=job ID, %a=array index)
 #SBATCH --cpus-per-task=1
 #SBATCH --time=10:00
 #SBATCH --mem=8G

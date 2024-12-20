@@ -1,6 +1,8 @@
 library(posterior)
 
 sim_idx <- 6
+nx <- ny <- 30
+n_thin <- 5
 out_full <- readRDS(paste0("/nfs/turbo/umms-ukarvind/joelne/bipps_simulations/out_simset1_group_diff_",sim_idx,".rds"))
 vhat <- out_full[[1]]$v_mcmc
 vhat <- lapply(vhat,\(v) v[1:(nx*ny),])
