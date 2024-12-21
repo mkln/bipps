@@ -136,11 +136,11 @@ dat1 <- dat1 %>%
 dat2 <- dat2 %>%
   filter(type %in% types_intersect)
 
-out1 <- readRDS("out1_chains4_CRC_analysis_40k_k2_2e4burn_lt.rds")
+out1 <- readRDS("group1_CRC_intercept_lt.rds")
 out2 <- readRDS("out2_chains4_CRC_analysis_40k_k2_2e4burn_lt.rds")
 
-lambda <- get_rvars(out2,"lambda")
-theta <- get_rvars(out2,"theta")
+lambda <- get_rvars(out1,"lambda")
+theta <- get_rvars(out1,"theta")
 
 lambda
 hs <- seq(0,1,0.1)
@@ -167,7 +167,7 @@ mcmc_trace(as_draws_df(lambda[7:10,]))
 
 
 # rhat
-xl2[[1]] %>%
+xl1[[1]] %>%
   summarise_draws() %>%
   separate(variable,into = c("type1","type2"),sep=",") %>%
   mutate(type1 = sub("^\\.\\[","",type1),
@@ -177,7 +177,7 @@ xl2[[1]] %>%
   scico::scale_fill_scico(palette="bam",midpoint=1.1)
 
 # ess_ratio
-xl2[[1]] %>%
+xl1[[1]] %>%
   summarise_draws(ess=ess_basic) %>%
   separate(variable,into = c("type1","type2"),sep=",") %>%
   mutate(type1 = sub("^\\.\\[","",type1),
@@ -193,7 +193,7 @@ xl2[[1]] %>%
 
 # trace plots
 h_ix <- 5
-trace_df <- as_draws_df(xl2[[h_ix]]) %>%
+trace_df <- as_draws_df(xl1[[h_ix]]) %>%
   pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
   separate(variable,into = c("type1","type2"),sep=",") %>%
   mutate(type1 = sub("^x\\[","",type1),
@@ -365,7 +365,7 @@ p1 <- xl1_e %>%
   # mutate(ub = mu+sigma,
   #        lb = mu-sigma) %>%
   right_join(filter_out) %>%
-  mutate(hs = hs * max_range1) %>%
+  mutate(hs = hs * max_range) %>%
   # mutate(across(c(t1,t2),~ifelse(.x == "granulocytes","gran.",.x))) %>%
   # mutate(across(c(t1,t2),~ifelse(.x == "vasculature","vasc.",.x))) %>%
   ggplot(aes(hs,mu)) +
@@ -385,6 +385,8 @@ p1 <- xl1_e %>%
         plot.margin = unit(0.1*c(1,1,1,1), "cm")) +
   labs(x="",y="Cross-correlation")
   # theme(strip.text = element_text(size=6))
+
+p1
 
 p2 <- xl2_e %>%
   mutate(combo = paste0(t1," <--> ",t2)) %>%

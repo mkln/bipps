@@ -6,8 +6,22 @@ library(ggplot2)
 library(posterior)
 library(bayesplot)
 library(ggdist)
+library(patchwork)
 # args <- commandArgs(trailingOnly = TRUE)
 # sim_idx <- as.integer(args[1])
+
+theme_bipps <- \() {
+  list(
+    theme_minimal(),
+    theme(
+      # text = element_text(family = "Calibri", size = 32, face = "bold"),
+      text = element_text(size=28),
+      plot.margin = unit(0.5*c(1,1,1,1), "cm")
+    )
+  )
+}
+
+figures_folder <- "examples/data/figures/varyingk/"
 
 actual_ks <- 3
 trial_ks <- c(2,3,6)
@@ -267,7 +281,9 @@ lapply(start_idx:nrow(grid),\(sim_idx) {
     ungroup() %>%
     mutate(sim=sim_idx) -> xl_diff
 
+  xl_diff$waic <- out[[1]]$waic
 
+  return(xl_diff)
 }) %>%
   bind_rows() -> df_diff
 
@@ -278,6 +294,8 @@ df_diff %>%
   rename(sim_idx=sim) %>%
   left_join(grid,by="sim_idx") -> df_diff
 
+
+# paper
 df_diff %>%
   mutate(abs_diff=abs(diff)) %>%
   mutate(trial_k=factor(trial_k)) %>%
@@ -292,9 +310,23 @@ df_diff %>%
   # facet_wrap(~hs) +
   ggplot(aes(x=hs,ydist=mean_diff,color=trial_k,fill=trial_k)) +
   stat_halfeye() +
-  theme_classic() +
+  theme_bipps() +
   theme(text=element_text(size=28)) +
-  labs(y="MAD between observed and fitted",x="Distance",title = "Simulations with actual k = 3")
+  labs(y="MAD between observed and fitted",x="Distance",color="k used\nto fit",fill="k used\nto fit")
+
+ggsave(paste0(figures_folder,"mad_distance_k.png"))
+
+# supplement
+df_diff %>%
+  mutate(trial_k=factor(trial_k)) %>%
+  distinct(sim,trial_k,waic) %>%
+  ggplot(aes(x=trial_k,y = waic)) +
+  geom_boxplot() +
+  theme_bipps() +
+  theme(text=element_text(size=28)) +
+  labs(y="WAIC",x="k used to fit")
+
+ggsave(paste0(figures_folder,"waic_k.png"))
 
 
 # summary(lm(abs_diff~phi*hs*trial_k,data=df_diff %>%
@@ -309,6 +341,7 @@ df_diff %>%
 
 # let's look at convergence metrics as well
 
+# supplement
 df_diff %>%
   mutate(trial_k=factor(trial_k)) %>%
   mutate(hs = hs*max(x_max,y_max)) %>%
@@ -317,10 +350,13 @@ df_diff %>%
   summarise(mean_rhat=mean(rhat,na.rm = T)) %>%
   ggplot(aes(x=hs,y=mean_rhat,color=trial_k,fill=trial_k)) +
   stat_halfeye() +
-  theme_classic() +
+  theme_bipps() +
   theme(text=element_text(size=28)) +
-  labs(y="Average rhat",x="Distance",title = "Simulations with actual k = 3")
+  labs(y="Average rhat",x="Distance",color="k used\nto fit",fill="k used\nto fit")
+ggsave(paste0(figures_folder,"rhat_k.png"))
 
+
+# supplement
 df_diff %>%
   mutate(trial_k=factor(trial_k)) %>%
   mutate(hs = hs*max(x_max,y_max)) %>%
@@ -329,10 +365,12 @@ df_diff %>%
   summarise(mean_ess=mean(ess_bulk,na.rm = T)) %>%
   ggplot(aes(x=hs,y=mean_ess,color=trial_k,fill=trial_k)) +
   stat_halfeye() +
-  theme_classic() +
+  theme_bipps() +
   theme(text=element_text(size=28)) +
-  labs(y="Average Bulk ESS",x="Distance",title = "Simulations with actual k = 3")
+  labs(y="Average Bulk ESS",x="Distance",color="k used\nto fit",fill="k used\nto fit")
+ggsave(paste0(figures_folder,"bulk_ess_k.png"))
 
+# supplement
 df_diff %>%
   mutate(trial_k=factor(trial_k)) %>%
   mutate(hs = hs*max(x_max,y_max)) %>%
@@ -341,9 +379,10 @@ df_diff %>%
   summarise(mean_ess=mean(ess_tail,na.rm = T)) %>%
   ggplot(aes(x=hs,y=mean_ess,color=trial_k,fill=trial_k)) +
   stat_halfeye() +
-  theme_classic() +
+  theme_bipps() +
   theme(text=element_text(size=28)) +
-  labs(y="Average Tail ESS",x="Distance",title = "Simulations with actual k = 3")
+  labs(y="Average Tail ESS",x="Distance",color="k used\nto fit",fill="k used\nto fit")
+ggsave(paste0(figures_folder,"tail_ess_k.png"))
 
 # df_diff %>%
 #   mutate(trial_k=factor(trial_k)) %>%
@@ -463,7 +502,7 @@ get_sim_and_actual <- \(sim_idx) {
 }
 
 
-sim_idx <- 6
+sim_idx <- 1
 res <- get_sim_and_actual(sim_idx)
 out <- res$out
 out_actual <- res$out_actual
@@ -480,7 +519,7 @@ theta <- get_rvars(out,"theta",thin=n_thin)
 theta
 mcmc_trace(as_draws_df(theta[1,]))
 
-h_ix <- 2
+h_ix <- 5
 trace_df <- as_draws_df(xl[[h_ix]]) %>%
   pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
   separate(variable,into = c("type1","type2"),sep=",") %>%
@@ -489,86 +528,175 @@ trace_df <- as_draws_df(xl[[h_ix]]) %>%
 
 hs <- seq(0,1,0.1)
 
+# supplement?
 trace_df %>%
   mutate(.chain = factor(.chain)) %>%
-  ggplot(aes(.iteration,value,color=.chain,group=.chain)) +
+  ggplot(aes(.iteration,value)) +
   geom_line() +
   facet_grid(type1~type2,
              labeller = label_wrap_gen(width=8)) +
-  theme_bw() +
+  theme_bipps() +
   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
   theme(axis.title = element_text(size=20),
         axis.text = element_text(size=12),
         strip.text = element_text(size=10)) +
-  labs(x="Draw",y=paste0("Cross-correlation at h=",hs[h_ix]))
+  labs(x="Draw",y=paste0("Cross-correlation at h=",hs[h_ix]*max(x_max,y_max),"\u03bcm"))
+ggsave(paste0(figures_folder,"trace_df_sim1_k2.png"))
 
+sim_idx <- 1
+res <- get_sim_and_actual(sim_idx)
+xl_e <- res$xl_e
+
+# set.seed(2025)
+# filter_out <- tibble(combo=paste0(sample(1:10,6,replace=TRUE)," <--> ",paste0(sample(1:10,6,replace=TRUE))))
+# supplement
 xl_e %>%
+  # mutate(combo = paste0(t1," <--> ",t2)) %>%
+  # right_join(filter_out) %>%
   mutate(hs = hs*x_max) %>%
-  pivot_longer(c(mu,mu_actual)) %>%
+  rename(Predicted=mu,Observed=mu_actual) %>%
+  pivot_longer(c(Predicted,Observed)) %>%
   ggplot() +
   geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
   geom_line(aes(hs,value,color=name)) +
   geom_hline(yintercept = 0,color="red",alpha=0.5,linetype="dotted") +
-  theme_minimal() +
+  theme_bipps() +
   facet_grid(t1~t2) +
+  # facet_wrap(~combo)
   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
   theme(axis.title = element_text(size=20),
         axis.text = element_text(size=12),
         strip.text = element_text(size=10)) +
-  labs(x="Distance (\u03bcm)",y="Cross-correlation")
+  labs(x="Distance (\u03bcm)",y="Cross-correlation",color="Cross-correlation")
+ggsave(paste0(figures_folder,"cross_cor_sim1_k2.png"))
+
+sim_idx <- 2
+res <- get_sim_and_actual(sim_idx)
+xl_e <- res$xl_e
+
+# set.seed(2025)
+# filter_out <- tibble(combo=paste0(sample(1:10,6,replace=TRUE)," <--> ",paste0(sample(1:10,6,replace=TRUE))))
+# supplement
+xl_e %>%
+  # mutate(combo = paste0(t1," <--> ",t2)) %>%
+  # right_join(filter_out) %>%
+  mutate(hs = hs*x_max) %>%
+  rename(Predicted=mu,Observed=mu_actual) %>%
+  pivot_longer(c(Predicted,Observed)) %>%
+  ggplot() +
+  geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
+  geom_line(aes(hs,value,color=name)) +
+  geom_hline(yintercept = 0,color="red",alpha=0.5,linetype="dotted") +
+  theme_bipps() +
+  facet_grid(t1~t2) +
+  # facet_wrap(~combo)
+  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+  theme(axis.title = element_text(size=20),
+        axis.text = element_text(size=12),
+        strip.text = element_text(size=10)) +
+  labs(x="Distance (\u03bcm)",y="Cross-correlation",color="Cross-correlation")
+ggsave(paste0(figures_folder,"cross_cor_sim2_k3.png"))
+
+sim_idx <- 9
+res <- get_sim_and_actual(sim_idx)
+xl_e <- res$xl_e
+
+# set.seed(2025)
+# filter_out <- tibble(combo=paste0(sample(1:10,6,replace=TRUE)," <--> ",paste0(sample(1:10,6,replace=TRUE))))
+# supplement
+xl_e %>%
+  # mutate(combo = paste0(t1," <--> ",t2)) %>%
+  # right_join(filter_out) %>%
+  mutate(hs = hs*x_max) %>%
+  rename(Predicted=mu,Observed=mu_actual) %>%
+  pivot_longer(c(Predicted,Observed)) %>%
+  ggplot() +
+  geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
+  geom_line(aes(hs,value,color=name)) +
+  geom_hline(yintercept = 0,color="red",alpha=0.5,linetype="dotted") +
+  theme_bipps() +
+  facet_grid(t1~t2) +
+  # facet_wrap(~combo)
+  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+  theme(axis.title = element_text(size=20),
+        axis.text = element_text(size=12),
+        strip.text = element_text(size=10)) +
+  labs(x="Distance (\u03bcm)",y="Cross-correlation",color="Cross-correlation")
+ggsave(paste0(figures_folder,"cross_cor_sim9_k6.png"))
 
 # predicted vs actual patterns
 # intensity surface (W) and counts
 
-# actual patterns
+sim_idx <- 6
+res <- get_sim_and_actual(sim_idx)
+out <- res$out
+out_actual <- res$out_actual
+xl <- res$xl
+xl_actual <- res$xl_actual
+xl_e <- res$xl_e
+y_list <- res$y_list
+WW <- res$WW
+lambda <- get_rvars(out,"lambda",thin=n_thin)
 
+# actual patterns
+types_idx <- 1:2
 y_list_trimmed <- lapply(y_list,\(yy) {
-  yy <- yy[,7:10]
+  yy <- yy[,types_idx]
   colnames(yy) <- paste0("Cell type: ",1:ncol(yy))
   yy
 })
 
 WW_trimmed <- lapply(WW,\(ww) {
-  ww <- ww[,7:10]
+  ww <- ww[,types_idx]
   colnames(ww) <- paste0("Cell type: ",1:ncol(ww))
   ww
 })
 
-p1 <- plot_y_list(y_list_trimmed[1:2],coords * max(x_max,y_max))
-p2 <- plot_y_list(WW_trimmed[1:2],coords * max(x_max,y_max))
+py <- plot_y_list(y_list_trimmed[1:2],coords * max(x_max,y_max))
+pW <- plot_y_list(WW_trimmed[1:2],coords * max(x_max,y_max))
 
-p1[[1]] +
-  labs(fill = "Count")
+# paper
+p1 <- py[[1]] +
+  facet_wrap(~type,nrow = 2) +
+  theme_bipps() +
+  theme(axis.text = element_blank()) +
+  labs(fill = "Count") +
+  guides(fill="none")
 
-p2[[1]] +
-  labs(fill="Intensity")
+# paper
+p2 <- pW[[1]] +
+  facet_wrap(~type,nrow = 2) +
+  theme_bipps() +
+  theme(axis.text = element_blank(),
+        axis.title.y=element_blank()) +
+  guides(fill="none")
+  # labs(fill="Intensity")
 
 # fitted patterns
-out_full <- readRDS(paste0("examples/data/out_simset1_group_diff_",sim_idx,".rds"))
-vhat <- out_full[[1]]$v_mcmc
-vhat <- lapply(vhat,\(v) v[1:(nx*ny),])
-arr <- simplify2array(vhat)
-arr <- aperm(arr,perm=c(3,1,2))
-vhat <- posterior::rvar(arr)
+out_exp <- readRDS(paste0("examples/data/out_simset1_group_diff_",sim_idx,"_exp.rds"))
+vhat <- out_exp[[1]]$v_mcmc
 
-beta <- out_full[[1]]$beta_mcmc
-arr <- beta
-arr <- arr[,,seq(1,dim(arr)[3],by=n_thin),drop=FALSE]
-arr <- aperm(arr,perm=c(3,1,2))
-beta <- posterior::rvar(arr)
-# VV[[i]] %*% t(Lambda) + x_list[[i]] %*% Beta
-lp <- vhat %*% t(lambda) + matrix(1,nrow=nx*ny,ncol=p) %*% beta
-lp_e <- E(lp)
+
+beta <- out_exp[[1]]$beta_mcmc
+
+lp_e <- E(vhat %*% t(lambda) + matrix(1,nrow=nx*ny,ncol=p) %*% beta)
 colnames(lp_e) <- paste0("Cell type: ", 1:q)
 
-dplyr::bind_cols(lp_e[,1:4],coords * max(x_max,y_max)) %>%
+# paper
+p3 <- dplyr::bind_cols(lp_e[,types_idx],coords * max(x_max,y_max)) %>%
   tidyr::pivot_longer(-c(x,y),names_to = "type",values_to = "count") %>%
   ggplot2::ggplot(ggplot2::aes(x,y,fill=count)) +
   ggplot2::geom_tile() +
-  ggplot2::facet_wrap(~type) +
+  ggplot2::facet_wrap(~type,nrow=2) +
   ggplot2::scale_fill_viridis_c(option="magma") +
-  theme_classic() +
-  labs(x = "X",y = "Y",fill="Intensity")
+  theme_bipps() +
+  theme(axis.text = element_blank(),
+        axis.title.y=element_blank()) +
+  guides(fill="none")
+
+p1 + p2 + p3 + plot_annotation(tag_levels = 'a')
+ggsave(paste0(figures_folder,"pred_W_obs_W_k.png"))
+
 
 
 # difference between groups (within same combination)
@@ -589,7 +717,7 @@ xl2 <- res2$xl
 xl2_actual <- res2$xl_actual
 xl2_e <- res2$xl_e
 
-
+# supplement
 xl1_e %>%
   mutate(hs = hs*x_max) %>%
   pivot_longer(c(mu,mu_actual)) %>%
@@ -662,24 +790,22 @@ unique_combinations_with_self(types) %>%
   }) %>%
   ungroup() -> group_diff_e
 
+# paper
 group_diff_e %>%
   mutate(hs = hs*x_max) %>%
-  pivot_longer(c(diff,diff_actual)) %>%
+  rename(Predicted=diff,Observed=diff_actual) %>%
+  pivot_longer(c(Predicted,Observed)) %>%
   ggplot() +
   geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
   geom_line(aes(hs,value,color=name)) +
   geom_hline(yintercept = 0,color="red",alpha=0.5,linetype="dotted") +
-  theme_minimal() +
+  theme_bipps() +
   facet_grid(t1~t2) +
   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
   theme(axis.title = element_text(size=20),
         axis.text = element_text(size=12),
         strip.text = element_text(size=10)) +
-  labs(x="Distance (\u03bcm)",y="Difference in cross-cor") +
-  ggtitle("Difference between group 1 and group 2")
-
-
-# can we use information criteria to pick the best k? probably
-
-# calculate log-likelihood
+  labs(x="Distance (\u03bcm)",y="Difference in cross-cor",color="Difference")
+  # ggtitle("Difference between group 1 and group 2")
+ggsave(paste0(figures_folder,"group_diff_k.png"))
 

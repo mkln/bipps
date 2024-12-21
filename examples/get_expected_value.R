@@ -19,3 +19,6 @@ out_exp <- lapply(out_full,\(o) list(v_mcmc=E(vhat),
                                      beta_mcmc=E(beta)))
 
 saveRDS(out_exp,paste0("/nfs/turbo/umms-ukarvind/joelne/bipps_simulations/out_simset1_group_diff_",sim_idx,"_exp.rds"))
+
+# then paste the following to get the exp back
+# cpdn /nfs/turbo/umms-ukarvind/joelne/bipps_simulations/out_simset1_group_diff_6_exp.rds examples/data
