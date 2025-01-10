@@ -7,15 +7,15 @@ set.seed(2020)
 n_samples <- 1000
 n_burnin <- 20000
 n_thin <- 10
-n_threads <- 16
+n_threads <- 8
 block_size <- 50
-k <- 2
+ks <- c(2,4,6,8,10)
 starting <- list(phi = 5)
 prior <- list(phi = c(0.1,10))
-save_file <- "CRC_intercept_k2_nburn20k_nthin10_nsamp1e3_chain4.rds"
-save_file_lt <- "CRC_intercept_k2_nburn20k_nthin10_nsamp1e3_chain4_lt.rds"
+save_file <- "CRC_intercept_varyingk_nburn20k_nthin10_nsamp1e3_chain1.rds"
+save_file_lt <- "CRC_intercept_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds"
 
-chains <- 4
+chains <- 1
 
 df_raw <- readr::read_csv("examples/data/CRC_cleaned.csv") %>%
   dplyr::rename(Spot = spots)
@@ -102,7 +102,7 @@ x_list2 <- lapply(y_list2,\(yy) {
 # p <- plot_y_list(y_list2,coords1)
 # p[[52]]
 
-out1 <- lapply(1:chains,\(i) multi_bipps(y_list1,
+out1 <- lapply(ks,\(k) multi_bipps(y_list1,
                     x_list1,
                     coords1,
                     k = k,
@@ -121,31 +121,5 @@ out1 <- lapply(1:chains,\(i) multi_bipps(y_list1,
                     ),
                     just_preprocess = F))
 saveRDS(out1,paste0("group1_",save_file))
-
-
 out1_lt <- lapply(out1,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc,waic=o$waic,beta_mcmc=o$beta_mcmc))
-
 saveRDS(out1,paste0("group1_",save_file_lt))
-
-out2 <- lapply(1:chains,\(i) multi_bipps(y_list2,
-                    x_list2,
-                    coords2,
-                    k = k,
-                    family = "poisson",
-                    block_size = block_size,
-                    n_samples = n_samples, n_burn = n_burnin, n_thin = n_thin,
-                    n_threads = n_threads,
-                    starting = starting,
-                    prior = prior,
-                    settings = list(adapting = T, saving = T, ps = T),
-                    verbose = 10,
-                    debug = list(
-                      sample_beta = T, sample_tausq = F,
-                      sample_theta = T, sample_w = T, sample_lambda = T,
-                      verbose = F, debug = F
-                    ),
-                    just_preprocess = F))
-saveRDS(out2,paste0("group2_",save_file))
-out2_lt <- lapply(out2,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc,waic=o$waic,beta_mcmc=o$beta_mcmc))
-saveRDS(out2_lt,paste0("group2_",save_file_lt))
-
