@@ -28,7 +28,7 @@ chains <- 1
 do_plots <- FALSE
 sample_theta <- TRUE
 num_images <- 40
-mu <- -2
+mu <- -0.5
 k <- 4
 q <- 10
 
@@ -36,9 +36,17 @@ q <- 10
 print(sim_idx)
 seed <- seed_start + sim_idx
 nx <- ny <- grid$sz[sim_idx]
+min_nx <- min_ny <- min(grid$sz)
 n <- nx*ny
 x_max <- 1919
 y_max <- 1439
+px_x <- x_max / nx
+px_y <- y_max / ny
+px_area <- px_x * px_y
+px_minx <- x_max / min_nx
+px_miny <- y_max / min_ny
+max_px_area <- px_minx * px_miny
+size_factor <- px_area / max_px_area
 p <- 1
 
 coords <- expand.grid(x=seq(0,x_max,length.out=nx),y=seq(0,y_max,length.out=ny))
@@ -86,7 +94,7 @@ WW <- lapply(1:num_images,\(i) {
 
 set.seed(seed)
 y_list <- lapply(WW,\(ww) {
-  matrix(rpois(nrow(ww)*ncol(ww),exp(ww)),nrow=nrow(ww),ncol=ncol(ww))
+  matrix(rpois(nrow(ww)*ncol(ww),exp(ww)*size_factor),nrow=nrow(ww),ncol=ncol(ww))
 })
 
 if(do_plots) {

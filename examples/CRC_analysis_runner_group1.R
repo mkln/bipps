@@ -122,4 +122,4 @@ out1 <- lapply(ks,\(k) multi_bipps(y_list1,
                     just_preprocess = F))
 saveRDS(out1,paste0("group1_",save_file))
 out1_lt <- lapply(out1,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc,waic=o$waic,beta_mcmc=o$beta_mcmc))
-saveRDS(out1,paste0("group1_",save_file_lt))
+saveRDS(out1_lt,paste0("group1_",save_file_lt))
