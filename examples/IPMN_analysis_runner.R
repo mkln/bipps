@@ -9,7 +9,7 @@ n_burnin <- 20000
 n_thin <- 10
 n_threads <- 8
 block_size <- 50
-ks <- c(2,4,6,8,10)
+ks <- c(2,4,6)
 starting <- list(phi = 5)
 prior <- list(phi = c(0.1,10))
 save_file <- "IPMN_varyingk_nburn20k_nthin10_nsamp1e3_chain1.rds"
