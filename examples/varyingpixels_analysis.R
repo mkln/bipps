@@ -57,14 +57,13 @@ chains <- 1
 do_plots <- FALSE
 sample_theta <- TRUE
 num_images <- 40
-mu <- -2
+mu <- -0.5
 k <- 4
 q <- 10
-
-# simulation settings
 x_max <- 1919
 y_max <- 1439
 p <- 1
+
 
 unique_combinations_with_self <- function(data) {
   # Generate all pairs including self-pairings
@@ -81,7 +80,15 @@ unique_combinations_with_self <- function(data) {
 #   print(sim_idx)
 #   seed <- seed_start + sim_idx
 #   nx <- ny <- grid$sz[sim_idx]
+#   min_nx <- min_ny <- min(grid$sz)
 #   n <- nx*ny
+#   px_x <- x_max / nx
+#   px_y <- y_max / ny
+#   px_area <- px_x * px_y
+#   px_minx <- x_max / min_nx
+#   px_miny <- y_max / min_ny
+#   max_px_area <- px_minx * px_miny
+#   size_factor <- px_area / max_px_area
 #
 #   coords <- expand.grid(x=seq(0,x_max,length.out=nx),y=seq(0,y_max,length.out=ny))
 #
@@ -129,7 +136,7 @@ unique_combinations_with_self <- function(data) {
 #
 #   set.seed(seed)
 #   y_list <- lapply(WW,\(ww) {
-#     matrix(rpois(nrow(ww)*ncol(ww),exp(ww)),nrow=nrow(ww),ncol=ncol(ww))
+#     matrix(rpois(nrow(ww)*ncol(ww),exp(ww)*size_factor),nrow=nrow(ww),ncol=ncol(ww))
 #   })
 #   #
 #   # if(do_plots) {
@@ -387,10 +394,18 @@ fsave(paste0(figures_folder,"tail_ess_sz.png"))
 
 # example convergence plots
 get_sim_and_actual <- \(sim_idx) {
-  print(sim_idx)
-  seed <- seed_start + sim_idx
-  nx <- ny <- grid$sz[sim_idx]
-  n <- nx*ny
+    print(sim_idx)
+    seed <- seed_start + sim_idx
+    nx <- ny <- grid$sz[sim_idx]
+    min_nx <- min_ny <- min(grid$sz)
+    n <- nx*ny
+    px_x <- x_max / nx
+    px_y <- y_max / ny
+    px_area <- px_x * px_y
+    px_minx <- x_max / min_nx
+    px_miny <- y_max / min_ny
+    max_px_area <- px_minx * px_miny
+    size_factor <- px_area / max_px_area
 
   coords <- expand.grid(x=seq(0,x_max,length.out=nx),y=seq(0,y_max,length.out=ny))
 
@@ -438,7 +453,7 @@ get_sim_and_actual <- \(sim_idx) {
 
   set.seed(seed)
   y_list <- lapply(WW,\(ww) {
-    matrix(rpois(nrow(ww)*ncol(ww),exp(ww)),nrow=nrow(ww),ncol=ncol(ww))
+    matrix(rpois(nrow(ww)*ncol(ww),exp(ww)*size_factor),nrow=nrow(ww),ncol=ncol(ww))
   })
 
   out <- readRDS(save_file_ltb)
@@ -598,7 +613,7 @@ xl_e %>%
   # theme_bipps() +
   facet_grid(t1~t2) +
   # facet_wrap(~combo)
-  # theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
   # theme(axis.title = element_text(size=20),
         # axis.text = element_text(size=12),
         # strip.text = element_text(size=10)) +
@@ -625,7 +640,7 @@ xl_e %>%
   # theme_bipps() +
   facet_grid(t1~t2) +
   # facet_wrap(~combo)
-  # theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
   # theme(axis.title = element_text(size=20),
         # axis.text = element_text(size=12),
         # strip.text = element_text(size=10)) +
@@ -652,7 +667,7 @@ xl_e %>%
   # theme_bipps() +
   facet_grid(t1~t2) +
   # facet_wrap(~combo)
-  # theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
   # theme(axis.title = element_text(size=20),
         # axis.text = element_text(size=12),
         # strip.text = element_text(size=10)) +
@@ -838,7 +853,7 @@ group_diff_e %>%
   # theme_bipps() +
   # facet_grid(t1~t2) +
   facet_wrap(~t1 + t2,ncol=5) +
-  # theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
   # theme(axis.title = element_text(size=20),
         # axis.text = element_text(size=12),
         # strip.text = element_text(size=10)) +
