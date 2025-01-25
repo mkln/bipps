@@ -5,20 +5,16 @@ library(posterior)
 library(tidybayes)
 library(bayesplot)
 library(patchwork)
+library(kableExtra)
 
 set.seed(2020)
 
 theme_set(theme_bw(base_size=11, base_family='Times New Roman')+
             theme(panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank()))
+                  panel.grid.minor = element_blank(),
+                  axis.text.x = element_text(angle=45,hjust=1,vjust=1)))
 
-# latex_width <- 6
 fsave <- \(fname) {
-  # if(ar == "flat") {
-  #   height = latex_width * 0.66
-  # } else if(ar == "square") {
-  #   height = latex_width
-  # }
   ggsave(paste0(figures_folder,fname),dpi=300, height=5, width=8, units="in")
 }
 figures_folder <- "examples/data/figures/CRC_choosingk/"
@@ -56,8 +52,8 @@ out <- pixellate_grid(df$X,df$Y,df$Type,df$Spot,nx,ny)
 y_list <- out$y_list
 coords <- out$coords
 
-p1 <- plot_y_list(y_list,coords)
-p1
+# p1 <- plot_y_list(y_list,coords)
+# p1
 # 54_B
 # 53_B
 
@@ -203,156 +199,177 @@ df2 <- get_df(xl2,out2)
 lapply(out1,\(o) o$waic)
 lapply(out2,\(o) o$waic)
 
+waic_df <- tibble(k=ks,
+                  WAIC1=round(unlist(lapply(out1,\(o) o$waic)),0),
+                  WAIC2=round(unlist(lapply(out2,\(o) o$waic)),0))
+
+# paper
+waic_df %>%
+  rename(`WAIC in CLR group`=WAIC1,
+         `WAIC in DII group`=WAIC2) %>%
+
+  kable(format="latex")
+
 # Group 1
 
-df1 %>%
-  mutate(k=factor(k)) %>%
-  ggplot(aes(hs,ess_bulk,color=k)) +
-  geom_jitter() +
-  facet_wrap(~t1+t2) +
-  theme_minimal()
-fsave("ess_1.png")
+# df1 %>%
+#   mutate(k=factor(k)) %>%
+#   ggplot(aes(hs,ess_bulk,color=k)) +
+#   geom_jitter() +
+#   facet_wrap(~t1+t2)
+# fsave("ess_1.png")
 
+# supplement
 df1 %>%
   mutate(k=factor(k)) %>%
   ggplot(aes(hs,rhat,color=k)) +
   geom_jitter() +
-  facet_wrap(~t1+t2) +
-  theme_minimal()
+  # facet_wrap(~t1+t2) +
+  facet_grid(t1~t2) +
+  labs(x="Scaled distance")
+fsave("rhat_1.png")
 
 # trace plots
-h_ix <- 1
-trace_df <- lapply(1:length(ks),\(k_ix) {
-  as_draws_df(xl1[[k_ix]][[h_ix]]) %>%
-  pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
-  separate(variable,into = c("type1","type2"),sep=",") %>%
-  mutate(type1 = sub("^x\\[","",type1),
-         type2 = sub("\\]","",type2)) %>%
-  mutate(k=ks[k_ix])
-}) %>%
-  bind_rows()
-
-trace_df %>%
-  mutate(k = factor(k)) %>%
-  mutate(across(c(type1,type2),~ifelse(.x == "granulocytes","gran.",.x))) %>%
-  mutate(across(c(type1,type2),~ifelse(.x == "vasculature","vasc.",.x))) %>%
-  mutate(.chain = factor(.chain)) %>%
-  ggplot(aes(.iteration,value,color=k,group=k)) +
-  geom_line() +
-  geom_hline(yintercept=0,color="black",linetype="dashed",linewidth=0.5) +
-  facet_grid(type1~type2,
-             labeller = label_wrap_gen(width=8)) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
-  theme(axis.title = element_text(size=20),
-        axis.text = element_text(size=12),
-        strip.text = element_text(size=10)) +
-  labs(x="Draw",y=paste0("Cross-correlation at h=",hs[h_ix]))
-fsave("trace_h0_1.png")
+# h_ix <- 1
+# trace_df <- lapply(1:length(ks),\(k_ix) {
+#   as_draws_df(xl1[[k_ix]][[h_ix]]) %>%
+#   pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
+#   separate(variable,into = c("type1","type2"),sep=",") %>%
+#   mutate(type1 = sub("^x\\[","",type1),
+#          type2 = sub("\\]","",type2)) %>%
+#   mutate(k=ks[k_ix])
+# }) %>%
+#   bind_rows()
+#
+# trace_df %>%
+#   mutate(k = factor(k)) %>%
+#   mutate(across(c(type1,type2),~ifelse(.x == "granulocytes","gran.",.x))) %>%
+#   mutate(across(c(type1,type2),~ifelse(.x == "vasculature","vasc.",.x))) %>%
+#   mutate(.chain = factor(.chain)) %>%
+#   ggplot(aes(.iteration,value,color=k,group=k)) +
+#   geom_line() +
+#   geom_hline(yintercept=0,color="black",linetype="dashed",linewidth=0.5) +
+#   facet_grid(type1~type2,
+#              labeller = label_wrap_gen(width=8)) +
+#   # theme_bw() +
+#   # theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+#   # theme(axis.title = element_text(size=20),
+#   #       axis.text = element_text(size=12),
+#   #       strip.text = element_text(size=10)) +
+#   labs(x="Draw",y=paste0("Cross-correlation at h=",hs[h_ix]))
+# fsave("trace_h0_1.png")
 
 
 hs <- seq(0,1,0.1)
 
 # lower ones look better, from a convergence standpoint
 
+# supplement
 df1 %>%
-  filter(t1 %in% types_intersect[1:3]) %>%
+  # filter(t1 %in% types_intersect[1:3]) %>%
   mutate(k=factor(k)) %>%
   mutate(hs = hs * max_range) %>%
   ggplot(aes(hs,E(mu),color=k,fill=k)) +
-  geom_line(linewidth=1) +
+  geom_line(linewidth=0.5) +
   # geom_ribbon(aes(ymin = lb,ymax=ub)) +
   geom_hline(yintercept = 0,linetype="dotted") +
-  facet_wrap(~t1+t2) +
-  theme_minimal() +
+  # facet_wrap(~t1+t2) +
+  facet_grid(t1~t2) +
+  # theme_minimal() +
   scale_color_manual(values=as.vector(pals::glasbey())) +
-  labs(x="Distance (um)")
+  labs(x="Distance (\u03bcm)",y="Cross-correlation")
+fsave("xcor_varyingk_group1.png")
 
-df1 %>%
-  filter(t1 %in% types_intersect[4:10]) %>%
-  mutate(k=factor(k)) %>%
-  ggplot(aes(hs,E(mu),color=k,fill=k)) +
-  geom_line(linewidth=1) +
-  # geom_point() +
-  geom_hline(yintercept = 0,linetype="dotted") +
-  # geom_ribbon(aes(ymin = lb,ymax=ub),alpha=0.5) +
-  facet_wrap(~t1+t2) +
-  theme_minimal() +
-  scale_color_manual(values=as.vector(pals::glasbey()))
+# df1 %>%
+#   filter(t1 %in% types_intersect[4:10]) %>%
+#   mutate(k=factor(k)) %>%
+#   ggplot(aes(hs,E(mu),color=k,fill=k)) +
+#   geom_line(linewidth=1) +
+#   # geom_point() +
+#   geom_hline(yintercept = 0,linetype="dotted") +
+#   # geom_ribbon(aes(ymin = lb,ymax=ub),alpha=0.5) +
+#   facet_wrap(~t1+t2) +
+#   theme_minimal() +
+#   scale_color_manual(values=as.vector(pals::glasbey()))
 
 # Group 2
 
-df2 %>%
-  mutate(k=factor(k)) %>%
-  ggplot(aes(hs,ess_bulk,color=k)) +
-  geom_jitter() +
-  facet_wrap(~t1+t2) +
-  theme_minimal()
+# df2 %>%
+#   mutate(k=factor(k)) %>%
+#   ggplot(aes(hs,ess_bulk,color=k)) +
+#   geom_jitter() +
+#   facet_wrap(~t1+t2) +
+#   theme_minimal()
 
+# supplement
 df2 %>%
   mutate(k=factor(k)) %>%
   ggplot(aes(hs,rhat,color=k)) +
   geom_jitter() +
-  facet_wrap(~t1+t2) +
-  theme_minimal()
+  # facet_wrap(~t1+t2) +
+  facet_grid(t1~t2) +
+  labs(x="Scaled distance")
+fsave("rhat_2.png")
 
 # trace plots
-h_ix <- 1
-trace_df <- lapply(1:length(ks),\(k_ix) {
-  as_draws_df(xl2[[k_ix]][[h_ix]]) %>%
-    pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
-    separate(variable,into = c("type1","type2"),sep=",") %>%
-    mutate(type1 = sub("^x\\[","",type1),
-           type2 = sub("\\]","",type2)) %>%
-    mutate(k=ks[k_ix])
-}) %>%
-  bind_rows()
-
-trace_df %>%
-  mutate(k = factor(k)) %>%
-  mutate(across(c(type1,type2),~ifelse(.x == "granulocytes","gran.",.x))) %>%
-  mutate(across(c(type1,type2),~ifelse(.x == "vasculature","vasc.",.x))) %>%
-  mutate(.chain = factor(.chain)) %>%
-  ggplot(aes(.iteration,value,color=k,group=k)) +
-  geom_line() +
-  geom_hline(yintercept=0,color="black",linetype="dashed",linewidth=0.5) +
-  facet_grid(type1~type2,
-             labeller = label_wrap_gen(width=8)) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
-  theme(axis.title = element_text(size=20),
-        axis.text = element_text(size=12),
-        strip.text = element_text(size=10)) +
-  labs(x="Draw",y=paste0("Cross-correlation at h=",hs[h_ix]))
+# h_ix <- 1
+# trace_df <- lapply(1:length(ks),\(k_ix) {
+#   as_draws_df(xl2[[k_ix]][[h_ix]]) %>%
+#     pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
+#     separate(variable,into = c("type1","type2"),sep=",") %>%
+#     mutate(type1 = sub("^x\\[","",type1),
+#            type2 = sub("\\]","",type2)) %>%
+#     mutate(k=ks[k_ix])
+# }) %>%
+#   bind_rows()
+#
+# trace_df %>%
+#   mutate(k = factor(k)) %>%
+#   mutate(across(c(type1,type2),~ifelse(.x == "granulocytes","gran.",.x))) %>%
+#   mutate(across(c(type1,type2),~ifelse(.x == "vasculature","vasc.",.x))) %>%
+#   mutate(.chain = factor(.chain)) %>%
+#   ggplot(aes(.iteration,value,color=k,group=k)) +
+#   geom_line() +
+#   geom_hline(yintercept=0,color="black",linetype="dashed",linewidth=0.5) +
+#   facet_grid(type1~type2,
+#              labeller = label_wrap_gen(width=8)) +
+#   theme_bw() +
+#   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+#   theme(axis.title = element_text(size=20),
+#         axis.text = element_text(size=12),
+#         strip.text = element_text(size=10))
 
 hs <- seq(0,1,0.1)
 
 # lower ones look better, from a convergence standpoint
 
+# supplement
 df2 %>%
-  filter(t1 %in% types_intersect[1:3]) %>%
+  # filter(t1 %in% types_intersect[1:3]) %>%
   mutate(k=factor(k)) %>%
   mutate(hs = hs * max_range) %>%
   ggplot(aes(hs,E(mu),color=k,fill=k)) +
-  geom_line(linewidth=1) +
+  geom_line(linewidth=0.5) +
   # geom_ribbon(aes(ymin = lb,ymax=ub)) +
   geom_hline(yintercept = 0,linetype="dotted") +
-  facet_wrap(~t1+t2) +
-  theme_minimal() +
+  # facet_wrap(~t1+t2) +
+  facet_grid(t1~t2) +
+  # theme_minimal() +
   scale_color_manual(values=as.vector(pals::glasbey())) +
-  labs(x="Distance (um)")
+  labs(x="Distance (\u03bcm)",y="Cross-correlation")
+fsave("xcor_varyingk_group2.png")
 
-df2 %>%
-  filter(t1 %in% types_intersect[4:10]) %>%
-  mutate(k=factor(k)) %>%
-  ggplot(aes(hs,E(mu),color=k,fill=k)) +
-  geom_line(linewidth=1) +
-  # geom_point() +
-  geom_hline(yintercept = 0,linetype="dotted") +
-  # geom_ribbon(aes(ymin = lb,ymax=ub),alpha=0.5) +
-  facet_wrap(~t1+t2) +
-  theme_minimal() +
-  scale_color_manual(values=as.vector(pals::glasbey()))
+# df2 %>%
+#   filter(t1 %in% types_intersect[4:10]) %>%
+#   mutate(k=factor(k)) %>%
+#   ggplot(aes(hs,E(mu),color=k,fill=k)) +
+#   geom_line(linewidth=1) +
+#   # geom_point() +
+#   geom_hline(yintercept = 0,linetype="dotted") +
+#   # geom_ribbon(aes(ymin = lb,ymax=ub),alpha=0.5) +
+#   facet_wrap(~t1+t2) +
+#   theme_minimal() +
+#   scale_color_manual(values=as.vector(pals::glasbey()))
 
 # Difference between both groups
 group_diff_est <- lapply(1:length(xl1),\(k_ix) {
@@ -363,30 +380,18 @@ group_diff_est <- lapply(1:length(xl1),\(k_ix) {
 
 df_diff <- get_df(group_diff_est,NULL)
 
-# paper
+# supplement
 df_diff %>%
-  filter(t1 %in% types_intersect[1]) %>%
+  # filter(t1 %in% types_intersect[1]) %>%
   mutate(k=factor(k)) %>%
   mutate(hs = hs * max_range) %>%
   ggplot(aes(hs,E(mu))) +
   geom_line(aes(color=k)) +
-  geom_ribbon(aes(ymin = lb,ymax=ub,fill=k),alpha=0.5) +
+  # geom_ribbon(aes(ymin = lb,ymax=ub,fill=k),alpha=0.5) +
   geom_hline(yintercept = 0,linetype="dotted") +
-  facet_wrap(~t1+t2) +
-  theme_minimal() +
+  # facet_wrap(~t1+t2) +
+  facet_grid(t1~t2) +
   scale_color_manual(values=as.vector(pals::glasbey())) +
-  scale_fill_manual(values=as.vector(pals::glasbey())) +
-  labs(x="Distance (um)")
-
-df_diff %>%
-  filter(t1 %in% types_intersect[2]) %>%
-  mutate(k=factor(k)) %>%
-  mutate(hs = hs * max_range) %>%
-  ggplot(aes(hs,E(mu),color=k,fill=k)) +
-  geom_line(linewidth=1) +
-  # geom_ribbon(aes(ymin = lb,ymax=ub)) +
-  geom_hline(yintercept = 0,linetype="dotted") +
-  facet_wrap(~t1+t2) +
-  theme_minimal() +
-  scale_color_manual(values=as.vector(pals::glasbey())) +
-  labs(x="Distance (um)")
+  # scale_fill_manual(values=as.vector(pals::glasbey())) +
+  labs(x="Distance (\u03bcm)",y="Difference in cross-correlation")
+fsave("diff_xcor_varyingk.png")
