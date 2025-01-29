@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name simulation_varyingpixels
-#SBATCH --array=1-30
+#SBATCH --array=8
 #SBATCH --output=pixel_logs/job_%A_%a.out   # Standard output log (%A=job ID, %a=array index)
 #SBATCH --error=pixel_logs/job_%A_%a.err    # Standard error log (%A=job ID, %a=array index)
 #SBATCH --cpus-per-task=4
