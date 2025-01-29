@@ -4,8 +4,30 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
-args <- commandArgs(trailingOnly = TRUE)
-sim_idx <- as.integer(args[1])
+# environment settings
+SYSTEM_ENV <- Sys.getenv("SYSTEM_ENV")
+if(SYSTEM_ENV == "laptop") {
+  sim_idx <- 1
+  file_prefix <- "examples/data/"
+  n_threads <- 2
+  n_samples <- 500
+  n_burnin <- 500
+  n_thin <- 1
+  do_plots <- TRUE
+  num_images <- 3
+  q <- 3
+} else {
+  args <- commandArgs(trailingOnly = TRUE)
+  sim_idx <- as.integer(args[1])
+  file_prefix <- "/nfs/turbo/umms-ukarvind/joelne/bipps_simulations/out_simset_varyingk"
+  n_threads <- 4
+  n_samples <- 1000
+  n_burnin <- 5000
+  n_thin <- 5
+  do_plots <- FALSE
+  num_images <- 40
+  q <- 10
+}
 
 # simset1
 actual_ks <- 3
@@ -18,23 +40,15 @@ trial_ks <- c(2,3,6)
 # mcmc and model settings
 grid <- expand.grid(actual_k=actual_ks,trial_k=trial_ks,sim=1:10)
 start_idx <- 1
-file_prefix <- "/nfs/turbo/umms-ukarvind/joelne/bipps_simulations/out_simset1_group_diff"
 seed_start <- 24
 
-n_samples <- 1000
-n_burnin <- 5000
-n_thin <- 5
-n_threads <- 4
 block_size <- 50
 starting <- list(phi = 1)
 prior <- list(phi = c(0.1,10))
 phi_range <- c(1,3)
 chains <- 1
-do_plots <- FALSE
 sample_theta <- TRUE
-num_images <- 40
-mu <- -2
-q <- 10
+mu <- -1
 
 # simulation settings
 nx <- 30
@@ -53,7 +67,8 @@ c_mat <- as.matrix(coords)
 d_coords <- as.matrix(dist(c_mat))
 
 print(sim_idx)
-seed <- seed_start + sim_idx
+sim <- grid$sim[sim_idx]
+seed <- seed_start + sim
 actual_k <- grid$actual_k[sim_idx]
 trial_k <- grid$trial_k[sim_idx]
 
@@ -100,10 +115,10 @@ y_list <- lapply(WW,\(ww) {
 })
 
 if(do_plots) {
-  fields::image.plot(seq(0,x_max,length.out=nx),seq(0,y_max,length.out=ny),matrix(VV[[10]][,2],nrow = ny,ncol = nx))
-  fields::image.plot(seq(0,x_max,length.out=nx),seq(0,y_max,length.out=ny),matrix(WW[[10]][,2],nrow = ny,ncol = nx))
+  fields::image.plot(seq(0,x_max,length.out=nx),seq(0,y_max,length.out=ny),matrix(VV[[1]][,2],nrow = ny,ncol = nx))
+  fields::image.plot(seq(0,x_max,length.out=nx),seq(0,y_max,length.out=ny),matrix(WW[[1]][,2],nrow = ny,ncol = nx))
   p1 <- plot_y_list(y_list,coords)
-  p1[[34]]
+  p1[[1]]
 }
 
 # run bipps
