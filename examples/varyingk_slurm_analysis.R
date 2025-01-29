@@ -679,7 +679,7 @@ p2 <- pW[[1]] +
   # labs(fill="Intensity")
 
 # fitted patterns
-out_exp <- readRDS(paste0("examples/data/out_simset1_group_diff_",sim_idx,"_exp.rds"))
+out_exp <- readRDS(paste0("examples/data/out_simset_varyingk_",sim_idx,"_exp.rds"))
 vhat <- out_exp[[1]]$v_mcmc
 
 
@@ -695,7 +695,6 @@ p3 <- dplyr::bind_cols(lp_e[,types_idx],coords * max(x_max,y_max)) %>%
   ggplot2::geom_tile() +
   ggplot2::facet_wrap(~type,nrow=2) +
   ggplot2::scale_fill_viridis_c(option="magma") +
-  # theme_bipps() +
   theme(axis.text = element_blank(),
         axis.title.y=element_blank()) +
   guides(fill="none")
@@ -811,7 +810,7 @@ group_diff_e %>%
   # theme(axis.title = element_text(size=20),
   #       axis.text = element_text(size=12),
   #       strip.text = element_text(size=10)) +
-  labs(x="Distance (\u03bcm)",y="Difference in cross-cor",color="Difference")
+  labs(x="Distance (\u03bcm)",y="Difference in cross-correlation",color="Difference")
   # ggtitle("Difference between group 1 and group 2")
 fsave(paste0(figures_folder,"group_diff_k.png"))
 

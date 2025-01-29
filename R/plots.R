@@ -15,7 +15,6 @@ plot_y_list <- function(y_list,coords) {
       ggplot2::facet_wrap(~type) +
       ggplot2::scale_fill_viridis_c(option="magma") +
       ggtitle(names(y_list)[i]) +
-      theme_classic() +
       labs(x = "X",y = "Y")
   })
 }

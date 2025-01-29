@@ -121,8 +121,8 @@ lapply(start_idx:nrow(grid),\(sim_idx) {
   })
 
   set.seed(seed)
-  y_agg <- lapply(1:num_images,\(i) {
-    yy_list <- lapply(1:k,\(j) {
+  y_list <- lapply(1:num_images,\(i) {
+    yy_list <- lapply(1:q,\(j) {
       mat <- matrix(WW[[i]][,j],nrow = max_ny,ncol = max_nx)
       mat <- matrix(rpois(nrow(mat)*ncol(mat),exp(mat)),nrow=nrow(mat),ncol=ncol(mat))
       r <- raster::raster(mat)
@@ -132,9 +132,9 @@ lapply(start_idx:nrow(grid),\(sim_idx) {
     yy <- do.call(cbind,yy_list)
   })
   agg_coords <- expand.grid(x=seq(0,x_max,length.out=nx),y=seq(0,y_max,length.out=ny))
-  agg_coords <- agg_coords / max(x_max,y_max)
+  coords <- agg_coords / max(x_max,y_max)
 
-  x_agg <- lapply(1:num_images,\(i) {
+  x_list <- lapply(1:num_images,\(i) {
     matrix(1,nrow = n,ncol = p)
   })
 

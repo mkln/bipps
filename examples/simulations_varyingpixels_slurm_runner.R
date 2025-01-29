@@ -8,7 +8,7 @@ library(ggplot2)
 SYSTEM_ENV <- Sys.getenv("SYSTEM_ENV")
 if(SYSTEM_ENV == "laptop") {
   sim_idx <- 1
-  file_prefix <- "examples/data/"
+  file_prefix <- "examples/data/out_simset_varyingpx"
   n_threads <- 2
   n_samples <- 500
   n_burnin <- 500
@@ -113,7 +113,7 @@ WW <- lapply(1:num_images,\(i) {
 
 set.seed(seed)
 y_agg <- lapply(1:num_images,\(i) {
-  yy_list <- lapply(1:k,\(j) {
+  yy_list <- lapply(1:q,\(j) {
     mat <- matrix(WW[[i]][,j],nrow = max_ny,ncol = max_nx)
     mat <- matrix(rpois(nrow(mat)*ncol(mat),exp(mat)),nrow=nrow(mat),ncol=ncol(mat))
     r <- raster::raster(mat)
