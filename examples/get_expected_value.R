@@ -3,7 +3,7 @@ library(posterior)
 sim_idx <- 6
 nx <- ny <- 30
 n_thin <- 5
-out_full <- readRDS(paste0("/nfs/turbo/umms-ukarvind/joelne/bipps_simulations/out_simset1_group_diff_",sim_idx,".rds"))
+out_full <- readRDS(paste0("/nfs/turbo/umms-ukarvind/joelne/bipps_simulations/out_simset_varyingk_",sim_idx,".rds"))
 vhat <- out_full[[1]]$v_mcmc
 vhat <- lapply(vhat,\(v) v[1:(nx*ny),])
 arr <- simplify2array(vhat)
@@ -18,7 +18,7 @@ beta <- posterior::rvar(arr)
 out_exp <- lapply(out_full,\(o) list(v_mcmc=E(vhat),
                                      beta_mcmc=E(beta)))
 
-saveRDS(out_exp,paste0("/nfs/turbo/umms-ukarvind/joelne/bipps_simulations/out_simset1_group_diff_",sim_idx,"_exp.rds"))
+saveRDS(out_exp,paste0("/nfs/turbo/umms-ukarvind/joelne/bipps_simulations/out_simset_varyingk_",sim_idx,"_exp.rds"))
 
 # then paste the following to get the exp back
-# cpdn /nfs/turbo/umms-ukarvind/joelne/bipps_simulations/out_simset1_group_diff_6_exp.rds examples/data
+# cpdn /nfs/turbo/umms-ukarvind/joelne/bipps_simulations/out_simset_varyingk_6_exp.rds examples/data

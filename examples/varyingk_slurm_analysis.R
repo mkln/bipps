@@ -7,31 +7,12 @@ library(posterior)
 library(bayesplot)
 library(ggdist)
 library(patchwork)
-# args <- commandArgs(trailingOnly = TRUE)
-# sim_idx <- as.integer(args[1])
-# latex_font_size <- 10
-# theme_bipps <- \() {
-#   list(
-#     theme_minimal(base_size = latex_font_size),
-#     theme(
-#       # text = element_text(family = "Calibri", size = 32, face = "bold"),
-#       # text = element_text(size=28),
-#       plot.margin = unit(0.5*c(1,1,1,1), "cm")
-#     )
-#   )
-# }
 
 theme_set(theme_bw(base_size=11, base_family='Times New Roman')+
             theme(panel.grid.major = element_blank(),
                   panel.grid.minor = element_blank()))
 
-# latex_width <- 6
-fsave <- \(fname,ar="flat") {
-  # if(ar == "flat") {
-  #   height = latex_width * 0.66
-  # } else if(ar == "square") {
-  #   height = latex_width
-  # }
+fsave <- \(fname) {
   ggsave(fname,dpi=300, height=5, width=8, units="in")
 }
 
@@ -42,7 +23,7 @@ trial_ks <- c(2,3,6)
 grid <- expand.grid(actual_k=actual_ks,trial_k=trial_ks,sim=1:10)
 start_idx <- 1
 seed_start <- 24
-file_prefix <- "examples/data/out_simset1_group_diff"
+file_prefix <- "examples/data/out_simset_varyingk"
 
 
 # mcmc and model settings
@@ -58,7 +39,7 @@ chains <- 1
 do_plots <- FALSE
 sample_theta <- TRUE
 num_images <- 40
-mu <- -2
+mu <- -1
 q <- 10
 
 # simulation settings
@@ -88,9 +69,11 @@ unique_combinations_with_self <- function(data) {
   return(unique_pairs)
 }
 
+# uncomment this to run the first time, save, and then comment out again
 # lapply(start_idx:nrow(grid),\(sim_idx) {
 #   print(sim_idx)
-#   seed <- seed_start + sim_idx
+#   sim <- grid$sim[sim_idx]
+#   seed <- seed_start + sim
 #
 #   actual_k <- grid$actual_k[sim_idx]
 #   trial_k <- grid$trial_k[sim_idx]
@@ -330,9 +313,9 @@ df_diff %>%
   stat_halfeye() +
   # theme_bipps() +
   # theme(text=element_text(size=28)) +
-  labs(y="MAD between observed and fitted",x="Distance (\u03bcm)",color="k used\nto fit",fill="k used\nto fit")
+  labs(y="MAD between observed and fitted",x="Distance (\u03bcm)",color="k",fill="k")
 
-fsave(paste0(figures_folder,"mad_distance_k.png"),ar="flat")
+fsave(paste0(figures_folder,"mad_distance_k.png"))
 
 
 # supplement
@@ -343,7 +326,7 @@ df_diff %>%
   geom_boxplot() +
   # theme_bipps() +
   # theme(text=element_text(size=28)) +
-  labs(y="WAIC",x="k used to fit")
+  labs(y="WAIC",x="k")
 
 fsave(paste0(figures_folder,"waic_k.png"))
 
@@ -370,7 +353,7 @@ df_diff %>%
   ggplot(aes(x=hs,y=mean_rhat,color=trial_k,fill=trial_k)) +
   stat_halfeye() +
   # theme_bipps() +
-  labs(y="Average rhat",x="Distance (\u03bcm)",color="k used\nto fit",fill="k used\nto fit")
+  labs(y="Average rhat",x="Distance (\u03bcm)",color="k",fill="k")
 fsave(paste0(figures_folder,"rhat_k.png"))
 
 
@@ -385,7 +368,7 @@ df_diff %>%
   stat_halfeye() +
   # theme_bipps() +
   # theme(text=element_text(size=28)) +
-  labs(y="Average Bulk ESS",x="Distance (\u03bcm)",color="k used\nto fit",fill="k used\nto fit")
+  labs(y="Average Bulk ESS",x="Distance (\u03bcm)",color="k",fill="k")
 fsave(paste0(figures_folder,"bulk_ess_k.png"))
 
 # supplement
@@ -398,7 +381,7 @@ df_diff %>%
   ggplot(aes(x=hs,y=mean_ess,color=trial_k,fill=trial_k)) +
   stat_halfeye() +
   # theme_bipps() +
-  labs(y="Average Tail ESS",x="Distance (\u03bcm)",color="k used\nto fit",fill="k used\nto fit")
+  labs(y="Average Tail ESS",x="Distance (\u03bcm)",color="k",fill="k")
 fsave(paste0(figures_folder,"tail_ess_k.png"))
 
 # df_diff %>%
@@ -416,7 +399,8 @@ fsave(paste0(figures_folder,"tail_ess_k.png"))
 # example convergence plots
 get_sim_and_actual <- \(sim_idx) {
   print(sim_idx)
-  seed <- seed_start + sim_idx
+  sim <- grid$sim[sim_idx]
+  seed <- seed_start + sim
 
   actual_k <- grid$actual_k[sim_idx]
   trial_k <- grid$trial_k[sim_idx]
@@ -548,6 +532,11 @@ hs <- seq(0,1,0.1)
 # supplement?
 trace_df %>%
   mutate(.chain = factor(.chain)) %>%
+  mutate(type1=factor(type1,levels=1:q)) %>%
+  mutate(type2=factor(type2,levels=1:q)) %>%
+  group_by(type1,type2) %>%
+  mutate(value = value - mean(value)) %>%
+  ungroup() %>%
   ggplot(aes(.iteration,value)) +
   geom_line() +
   facet_grid(type1~type2,
@@ -557,7 +546,7 @@ trace_df %>%
   # theme(axis.title = element_text(size=20),
   #       axis.text = element_text(size=12),
   #       strip.text = element_text(size=10)) +
-  labs(x="Draw",y=paste0("Cross-correlation at h=",hs[h_ix]*max(x_max,y_max),"\u03bcm"))
+  labs(x="Draw",y=paste0("Mean-centered cross-correlation at h=",hs[h_ix]*max(x_max,y_max),"\u03bcm"))
 fsave(paste0(figures_folder,"trace_df_sim1_k2.png"))
 
 sim_idx <- 1
