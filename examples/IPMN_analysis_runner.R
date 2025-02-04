@@ -9,7 +9,7 @@ n_burnin <- 20000
 n_thin <- 10
 n_threads <- 8
 block_size <- 50
-ks <- c(2,4,6)
+ks <- c(2,3,4,5)
 starting <- list(phi = 5)
 prior <- list(phi = c(0.1,10))
 save_file <- "IPMN_varyingk_nburn20k_nthin10_nsamp1e3_chain1.rds"
@@ -21,13 +21,15 @@ dat1 <- readRDS("examples/data/PDAC_POS_DATA.rds") %>%
   rename(X=Cell.X.Position,
          Y=Cell.Y.Position,
          type=Cellname,
-         Spot=SlideID)
+         Spot=SlideID) %>%
+  filter(type != "CD4")
 
 dat2 <- readRDS("examples/data/IPMN_POS_DATA.rds") %>%
   rename(X=Cell.X.Position,
          Y=Cell.Y.Position,
          type=Cellname,
-         Spot=SlideID)
+         Spot=SlideID) %>%
+  filter(type != "CD4")
 
 # dat1 %>%
 #   filter(Spot == "PATID_538_SLIDE_1") %>%
@@ -73,6 +75,38 @@ dat1 <- dat1 %>%
 
 dat2 <- dat2 %>%
   filter(type %in% types_intersect)
+
+# check if CD4 are subsets of helper T, and vice versa
+# cd4_1 <- dat1 %>%
+#   filter(type == "CD4") %>%
+#   select(-type)
+#
+# ht_1 <- dat1 %>%
+#   filter(type == "HelperT") %>%
+#   select(-type)
+# is_subset <- nrow(anti_join(ht_1, cd4_1)) == 0
+# print(is_subset)
+#
+# is_subset <- nrow(anti_join(cd4_1, ht_1)) == 0
+# print(is_subset)
+#
+# # so CD4 is a subset of Helper T, but not vice versa
+#
+# # check in IPMN dataset too
+# cd4_2 <- dat2 %>%
+#   filter(type == "CD4") %>%
+#   select(-type)
+#
+# ht_2 <- dat2 %>%
+#   filter(type == "HelperT") %>%
+#   select(-type)
+# is_subset <- nrow(anti_join(ht_2, cd4_2)) == 0
+# print(is_subset)
+#
+# is_subset <- nrow(anti_join(cd4_2, ht_2)) == 0
+# print(is_subset)
+
+# same in IPMN dataset. so let's just remove the CD4 type, this is probably causing some issues.
 
 bind_rows(dat1,dat2) %>%
   dplyr::group_by(Spot) %>%

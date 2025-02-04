@@ -205,21 +205,20 @@ compare_postpred <- function(y_list1,y_list2,coords) {
     y2 <- y_list2[[i]]
     y1 <- dplyr::bind_cols(y1,coords)
     y2 <- dplyr::bind_cols(y2,coords)
-    y1$group <- 1
-    y2$group <- 2
+    y1$group <- paste0("group ","CLR")
+    y2$group <- paste0("group ","DII")
     dplyr::bind_rows(y1,y2) %>%
       tidyr::pivot_longer(-c(x,y,group),names_to = "type",values_to = "count") %>%
       dplyr::mutate(x=x*max_range,
                     y=y*max_range) %>%
       ggplot2::ggplot(ggplot2::aes(x,y,fill=count)) +
       ggplot2::geom_tile() +
-      ggplot2::facet_wrap(~type+group,nrow = 5) +
+      ggplot2::facet_wrap(~type+group,nrow = 5,labeller = label_wrap_gen(multi_line = FALSE)) +
       ggplot2::scale_fill_viridis_c(option="magma") +
       ggtitle(names(y_list1)[i]) +
-      theme_classic() +
       labs(x = "X (\u03bcm)",y = "Y (\u03bcm)") +
-      labs(fill="log-intensity") +
-      guides(fill="none")
+      labs(fill="log-intensity")
+      # guides(fill="none")
   })
 }
 

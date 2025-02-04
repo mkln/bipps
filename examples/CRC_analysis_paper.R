@@ -243,50 +243,31 @@ unique_combinations_with_self(types_intersect) %>%
   ungroup() -> xl2_e
 
 
-filter_out <- tibble(combo=c("CD163+ macros <--> granulocytes",
+filter_out <- tibble(combo=c("CD163+ macros <--> stroma",
                              "CD8+ T cells <--> tumor cells",
                              "B cells <--> granulocytes",
                              "B cells <--> tumor cells",
                              "memory CD4+ T <--> plasma cells",
-                             "CD163+ macros <--> tumor cells"))
+                             "CD8+ T cells <--> smooth muscle"))
 
-p1 <- xl1_e %>%
+dd1 <- xl1_e %>%
   mutate(combo = paste0(t1," <--> ",t2)) %>%
-  # mutate(ub = mu+sigma,
-  #        lb = mu-sigma) %>%
   right_join(filter_out) %>%
   mutate(hs = hs * max_range) %>%
-  # mutate(across(c(t1,t2),~ifelse(.x == "granulocytes","gran.",.x))) %>%
-  # mutate(across(c(t1,t2),~ifelse(.x == "vasculature","vasc.",.x))) %>%
-  ggplot(aes(hs,mu)) +
-  geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
-  geom_line() +
-  geom_hline(yintercept = 0,color="red",linetype="dotted") +
-  facet_wrap(~combo) +
-  # facet_grid(t1~t2,
-  #            labeller = label_wrap_gen(width=8)) +
-  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
-  # theme(axis.title = element_text(size=20),
-  #       axis.text = element_text(size=14),
-  #       strip.text = element_text(size=16),
-  #       title = element_text(size=20),
-  #       plot.margin = unit(0.1*c(1,1,1,1), "cm")) +
-  labs(x="",y="Cross-correlation")
-# theme(strip.text = element_text(size=6))
+  mutate(group = "CLR")
 
-p1
-
-p2 <- xl2_e %>%
+dd2 <- xl2_e %>%
   mutate(combo = paste0(t1," <--> ",t2)) %>%
-  # mutate(ub = mu+sigma,
-  #        lb = mu-sigma) %>%
   right_join(filter_out) %>%
   mutate(hs = hs * max_range) %>%
-  # mutate(across(c(t1,t2),~ifelse(.x == "granulocytes","gran.",.x))) %>%
-  # mutate(across(c(t1,t2),~ifelse(.x == "vasculature","vasc.",.x))) %>%
+  mutate(group = "DII")
+
+
+bind_rows(dd1,dd2) %>%
+  rename(Group = group) %>%
   ggplot(aes(hs,mu)) +
-  geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
-  geom_line() +
+  geom_ribbon(aes(hs,ymin = lb,ymax=ub,fill = Group),alpha=0.2) +
+  geom_line(aes(color=Group)) +
   geom_hline(yintercept = 0,color="red",linetype="dotted") +
   facet_wrap(~combo) +
   # facet_grid(t1~t2,
@@ -300,10 +281,37 @@ p2 <- xl2_e %>%
   labs(x="Distance (\u03bcm)",y="Cross-correlation")
 
 # paper
-p1 / p2 + plot_annotation(tag_levels = 'a')
 fsave("xcor_CRC.png")
 
 # supplement - full version
+dd1 <- xl1_e %>%
+  mutate(combo = paste0(t1," <--> ",t2)) %>%
+  mutate(hs = hs * max_range) %>%
+  mutate(group = "CLR")
+
+dd2 <- xl2_e %>%
+  mutate(combo = paste0(t1," <--> ",t2)) %>%
+  mutate(hs = hs * max_range) %>%
+  mutate(group = "DII")
+
+
+bind_rows(dd1,dd2) %>%
+  rename(Group = group) %>%
+  ggplot(aes(hs,mu)) +
+  geom_ribbon(aes(hs,ymin = lb,ymax=ub,fill = Group),alpha=0.2) +
+  geom_line(aes(color=Group)) +
+  geom_hline(yintercept = 0,color="red",linetype="dotted") +
+  # facet_wrap(~combo) +
+  facet_grid(t1~t2,
+             labeller = label_wrap_gen(width=8)) +
+  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+  # theme(axis.title = element_text(size=20),
+  #       axis.text = element_text(size=14),
+  #       strip.text = element_text(size=16),
+  #       title = element_text(size=20),
+  #       plot.margin = unit(0.5*c(1,1,1,1), "cm")) +
+  labs(x="Distance (\u03bcm)",y="Cross-correlation")
+fsave("xcor_CRC_full.png")
 
 # spatial cross-correlation difference over distance plots
 xl_diff <- lapply(1:length(hs),\(i) {
@@ -343,7 +351,7 @@ unique_combinations_with_self(types_intersect) %>%
   }) %>%
   ungroup() -> xldiff_e
 
-# paper
+# supplement
 xldiff_e %>%
   # filter(auc %in% sort(unique(auc),decreasing = TRUE)[1:10]) %>%
   # mutate(ub = mu+sigma,

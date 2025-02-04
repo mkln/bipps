@@ -105,8 +105,8 @@ ny <- ceiling(max_dim[2]/pix_dim)
 max_range <- max(max_dim)
 
 
-out1 <- readRDS("examples/data/IPMN_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds")
-out2 <- readRDS("examples/data/PDAC_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds")
+out1 <- readRDS("examples/data/PDAC_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds")
+out2 <- readRDS("examples/data/IPMN_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds")
 
 hs <- seq(0,1,0.1)
 
@@ -201,8 +201,8 @@ waic_df <- tibble(k=ks,
 
 # paper
 waic_df %>%
-  rename(`WAIC in CLR group`=WAIC1,
-         `WAIC in DII group`=WAIC2) %>%
+  rename(`WAIC in PDAC group`=WAIC1,
+         `WAIC in IPMN group`=WAIC2) %>%
 
   kable(format="latex")
 
@@ -214,6 +214,35 @@ df1 %>%
   facet_grid(t1~t2) +
   labs(x="Scaled distance")
 fsave("rhat_1.png")
+
+# trace plots
+h_ix <- 1
+trace_df <- lapply(1:length(ks),\(k_ix) {
+  as_draws_df(xl1[[k_ix]][[h_ix]]) %>%
+    pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
+    separate(variable,into = c("type1","type2"),sep=",") %>%
+    mutate(type1 = sub("^x\\[","",type1),
+           type2 = sub("\\]","",type2)) %>%
+    mutate(k=ks[k_ix])
+}) %>%
+  bind_rows()
+
+trace_df %>%
+  filter(k == 6) %>%
+  mutate(k = factor(k)) %>%
+  # mutate(across(c(type1,type2),~ifelse(.x == "granulocytes","gran.",.x))) %>%
+  # mutate(across(c(type1,type2),~ifelse(.x == "vasculature","vasc.",.x))) %>%
+  mutate(.chain = factor(.chain)) %>%
+  ggplot(aes(.iteration,value,color=k,group=k)) +
+  geom_line() +
+  geom_hline(yintercept=0,color="black",linetype="dashed",linewidth=0.5) +
+  facet_grid(type1~type2,
+             labeller = label_wrap_gen(width=8)) +
+  # theme_bw() +
+  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1))
+  # theme(axis.title = element_text(size=20),
+  #       axis.text = element_text(size=12),
+  #       strip.text = element_text(size=10))
 
 df1 %>%
   # filter(t1 %in% types_intersect[1:3]) %>%
@@ -238,6 +267,31 @@ df2 %>%
   facet_grid(t1~t2) +
   labs(x="Scaled distance")
 fsave("rhat_2.png")
+
+h_ix <- 1
+trace_df <- lapply(1:length(ks),\(k_ix) {
+  as_draws_df(xl2[[k_ix]][[h_ix]]) %>%
+    pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
+    separate(variable,into = c("type1","type2"),sep=",") %>%
+    mutate(type1 = sub("^x\\[","",type1),
+           type2 = sub("\\]","",type2)) %>%
+    mutate(k=ks[k_ix])
+}) %>%
+  bind_rows()
+
+trace_df %>%
+  filter(k == 6) %>%
+  mutate(k = factor(k)) %>%
+  # mutate(across(c(type1,type2),~ifelse(.x == "granulocytes","gran.",.x))) %>%
+  # mutate(across(c(type1,type2),~ifelse(.x == "vasculature","vasc.",.x))) %>%
+  mutate(.chain = factor(.chain)) %>%
+  ggplot(aes(.iteration,value,color=k,group=k)) +
+  geom_line() +
+  geom_hline(yintercept=0,color="black",linetype="dashed",linewidth=0.5) +
+  facet_grid(type1~type2,
+             labeller = label_wrap_gen(width=8)) +
+  # theme_bw() +
+  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1))
 
 # supplement
 df2 %>%
