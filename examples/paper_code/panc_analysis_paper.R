@@ -14,8 +14,8 @@ theme_set(theme_bw(base_size=11, base_family='Times New Roman')+
                   panel.grid.minor = element_blank()))
 n_thin <- 10
 k_idx <- c(2,3) # corresponds to k=3,4 for PDAC,IPMN
-fsave <- \(fname) {
-  ggsave(paste0(figures_folder,fname),dpi=300, height=5, width=8, units="in")
+fsave <- \(fname,width=8,height=5) {
+  ggsave(paste0(figures_folder,fname),dpi=300, height=height, width=width, units="in")
 }
 figures_folder <- "examples/data/figures/panc_analysis_paper/"
 
@@ -258,7 +258,12 @@ p1 <- bind_rows(xl1_e,xl2_e) %>%
   geom_hline(yintercept = 0,color="red",linetype="dotted") +
   facet_wrap(~t2,nrow=1) +
   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
-  labs(x="Distance (\u03bcm)",y="Marginal correlation")
+  labs(x="Distance (\u03bcm)",y="Marginal correlation") +
+  theme(legend.position = "top",
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank())
+p1
 
 p2 <- bind_rows(xl1_e,xl2_e) %>%
   mutate(combo = paste0(t1," <--> ",t2)) %>%
@@ -272,7 +277,12 @@ p2 <- bind_rows(xl1_e,xl2_e) %>%
   geom_hline(yintercept = 0,color="red",linetype="dotted") +
   facet_wrap(~combo,nrow=1) +
   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
-  labs(x="Distance (\u03bcm)",y="Cross-correlation")
+  labs(x="Distance (\u03bcm)",y="Cross-correlation") +
+  guides(color="none") +
+  theme(
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank())
 
 p3 <- bind_rows(xl1_e,xl2_e) %>%
   mutate(combo = paste0(t1," <--> ",t2)) %>%
@@ -285,12 +295,13 @@ p3 <- bind_rows(xl1_e,xl2_e) %>%
   geom_hline(yintercept = 0,color="red",linetype="dotted") +
   facet_wrap(~combo,nrow=1) +
   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
-  labs(x="Distance (\u03bcm)",y="Cross-correlation")
+  labs(x="Distance (\u03bcm)",y="Cross-correlation") +
+  guides(color="none")
 
-p1/p2/p3
+p1/p2/p3 + plot_annotation(tag_levels = "a")
 
 
-fsave("xcor_comparison.png")
+fsave("xcor_comparison.png",width=9,height=6)
 
 # spatial cross-correlation difference over distance plots
 xl_diff <- lapply(1:length(hs),\(i) {
