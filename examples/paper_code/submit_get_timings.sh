@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --time=5:00
 #SBATCH --array=1-30
-#SBATCH --mem=8G
+#SBATCH --mem=32G
 #SBATCH --mail-user=joelne@umich.edu
 #SBATCH --mail-type=END,FAIL
 
