@@ -1,4 +1,3 @@
-library(tidyverse)
 
 args <- commandArgs(trailingOnly = TRUE)
 sim_idx <- as.integer(args[1])
