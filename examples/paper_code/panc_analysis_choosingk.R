@@ -4,6 +4,8 @@ library(tidyverse)
 library(posterior)
 library(patchwork)
 library(kableExtra)
+library(ggdist)
+library(latex2exp)
 
 set.seed(2020)
 
@@ -22,7 +24,7 @@ n_burnin <- 20000
 n_thin <- 10
 n_threads <- 8
 block_size <- 50
-ks <- c(2,4,6)
+ks <- c(2,3,4,5)
 starting <- list(phi = 5)
 prior <- list(phi = c(0.1,10))
 
@@ -32,13 +34,17 @@ dat1 <- readRDS("examples/data/PDAC_POS_DATA.rds") %>%
   rename(X=Cell.X.Position,
          Y=Cell.Y.Position,
          type=Cellname,
-         Spot=SlideID)
+         Spot=SlideID) %>%
+  filter(type != "CD4")
+
 
 dat2 <- readRDS("examples/data/IPMN_POS_DATA.rds") %>%
   rename(X=Cell.X.Position,
          Y=Cell.Y.Position,
          type=Cellname,
-         Spot=SlideID)
+         Spot=SlideID) %>%
+  filter(type != "CD4")
+
 
 # dat1 %>%
 #   filter(Spot == "PATID_538_SLIDE_1") %>%
@@ -188,7 +194,7 @@ get_df <- \(xl,out) {
     bind_rows() -> df
 
 }
-ks <- c(2,4,6)
+
 df1 <- get_df(xl1,out1)
 df2 <- get_df(xl2,out2)
 
@@ -203,16 +209,20 @@ waic_df <- tibble(k=ks,
 waic_df %>%
   rename(`WAIC in PDAC group`=WAIC1,
          `WAIC in IPMN group`=WAIC2) %>%
-
-  kable(format="latex")
+  kable(format = "latex", booktabs = TRUE, digits = 0, align = "c", caption = "", label = "waic_panc") %>%
+  kable_styling(latex_options = c("striped", "hold_position", "scale_down")) %>%
+  add_header_above(c(" " = 1, "WAIC Scores" = 2)) %>%
+  column_spec(1, bold = TRUE) %>%
+  row_spec(0, bold = TRUE)
 
 df1 %>%
+  mutate(hs = hs * max_range) %>%
   mutate(k=factor(k)) %>%
   ggplot(aes(hs,rhat,color=k)) +
   geom_jitter() +
   # facet_wrap(~t1+t2) +
   facet_grid(t1~t2) +
-  labs(x="Scaled distance")
+  labs(x="Distance (\u03bcm)",y=TeX("$\\hat{R}$"))
 fsave("rhat_1.png")
 
 # trace plots
@@ -228,7 +238,7 @@ trace_df <- lapply(1:length(ks),\(k_ix) {
   bind_rows()
 
 trace_df %>%
-  filter(k == 6) %>%
+  # filter(k == 6) %>%
   mutate(k = factor(k)) %>%
   # mutate(across(c(type1,type2),~ifelse(.x == "granulocytes","gran.",.x))) %>%
   # mutate(across(c(type1,type2),~ifelse(.x == "vasculature","vasc.",.x))) %>%
@@ -260,15 +270,30 @@ df1 %>%
 fsave("xcor_varyingk_group1.png")
 
 df2 %>%
+  mutate(hs = hs * max_range) %>%
   mutate(k=factor(k)) %>%
   ggplot(aes(hs,rhat,color=k)) +
   geom_jitter() +
   # facet_wrap(~t1+t2) +
   facet_grid(t1~t2) +
-  labs(x="Scaled distance")
+  labs(x="Distance (\u03bcm)",y=TeX("$\\hat{R}$"))
 fsave("rhat_2.png")
 
-h_ix <- 1
+df2 %>%
+  group_by(t1,t2,k) %>%
+  summarise(mn_rhat = mean(rhat)) %>%
+  ggplot(aes(k,y=mn_rhat)) +
+  geom_point() +
+  facet_grid(t1~t2)
+
+df2 %>%
+  group_by(k) %>%
+  summarise(mn_rhat = mean(rhat)) %>%
+  ggplot(aes(k,y=mn_rhat)) +
+  geom_point()
+
+
+h_ix <- 5
 trace_df <- lapply(1:length(ks),\(k_ix) {
   as_draws_df(xl2[[k_ix]][[h_ix]]) %>%
     pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
@@ -280,7 +305,7 @@ trace_df <- lapply(1:length(ks),\(k_ix) {
   bind_rows()
 
 trace_df %>%
-  filter(k == 6) %>%
+  filter(k == 5) %>%
   mutate(k = factor(k)) %>%
   # mutate(across(c(type1,type2),~ifelse(.x == "granulocytes","gran.",.x))) %>%
   # mutate(across(c(type1,type2),~ifelse(.x == "vasculature","vasc.",.x))) %>%

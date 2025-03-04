@@ -24,8 +24,10 @@ ks <- c(2,4,6,8,10)
 
 n_thin <- 10
 df_raw <- readr::read_csv("examples/data/CRC_cleaned.csv") %>%
-  # dplyr::mutate(type = as.factor(type)) %>%
-  dplyr::rename(Spot = spots)
+  dplyr::mutate(type = as.factor(type)) %>%
+  dplyr::rename(Spot = spots) %>%
+  mutate(type = fct_recode(type,"CAFs"="smooth muscle","hybrid E/M"="stroma","TAMs"="CD163+ macros","CTLs"="CD8+ T cells"))
+
 # mutate(Spot = factor(Spot))
 
 

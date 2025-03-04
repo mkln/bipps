@@ -6,6 +6,7 @@ library(tidybayes)
 library(bayesplot)
 library(patchwork)
 library(kableExtra)
+library(latex2exp)
 
 set.seed(2020)
 
@@ -14,15 +15,16 @@ theme_set(theme_bw(base_size=11, base_family='Times New Roman')+
                   panel.grid.minor = element_blank(),
                   axis.text.x = element_text(angle=45,hjust=1,vjust=1)))
 
-fsave <- \(fname) {
-  ggsave(paste0(figures_folder,fname),dpi=300, height=5, width=8, units="in")
+fsave <- \(fname,height=7,width=10) {
+  ggsave(paste0(figures_folder,fname),dpi=300, height=height, width=width, units="in")
 }
 figures_folder <- "examples/data/figures/CRC_choosingk/"
 
 n_thin <- 10
 df_raw <- readr::read_csv("examples/data/CRC_cleaned.csv") %>%
-  # dplyr::mutate(type = as.factor(type)) %>%
-  dplyr::rename(Spot = spots)
+  dplyr::mutate(type = as.factor(type)) %>%
+  dplyr::rename(Spot = spots) %>%
+  mutate(type = fct_recode(type,"CAFs"="smooth muscle","hybrid E/M"="stroma","TAMs"="CD163+ macros","CTLs"="CD8+ T cells"))
 # mutate(Spot = factor(Spot))
 
 
@@ -207,8 +209,11 @@ waic_df <- tibble(k=ks,
 waic_df %>%
   rename(`WAIC in CLR group`=WAIC1,
          `WAIC in DII group`=WAIC2) %>%
-
-  kable(format="latex")
+  kable(format = "latex", booktabs = TRUE, digits = 0, align = "c", caption = "The WAIC of the fitted model for various $k$, for both patient groups in the CRC dataset.", label = "waic_crc") %>%
+  kable_styling(latex_options = c("striped", "hold_position", "scale_down")) %>%
+  add_header_above(c(" " = 1, "WAIC Scores" = 2)) %>%
+  column_spec(1, bold = TRUE) %>%
+  row_spec(0, bold = TRUE)
 
 # Group 1
 
@@ -222,11 +227,19 @@ waic_df %>%
 # supplement
 df1 %>%
   mutate(k=factor(k)) %>%
+  mutate(hs = hs * max_range) %>%
   ggplot(aes(hs,rhat,color=k)) +
   geom_jitter() +
   # facet_wrap(~t1+t2) +
-  facet_grid(t1~t2) +
-  labs(x="Scaled distance")
+  facet_grid(t1~t2,
+             labeller = labeller(
+               t1 = as_labeller(~ recode(., "granulocytes" = "gran.", "vasculature" = "vasc."),
+                                label_wrap_gen(width = 8)),
+               t2 = as_labeller(~ recode(., "granulocytes" = "gran.", "vasculature" = "vasc."),
+                                label_wrap_gen(width = 8))
+             )) +
+  scale_x_continuous(breaks = c(0,1000,2000)) +
+  labs(x="Distance (\u03bcm)",y=TeX("$\\hat{R}$"))
 fsave("rhat_1.png")
 
 # trace plots
@@ -274,8 +287,15 @@ df1 %>%
   # geom_ribbon(aes(ymin = lb,ymax=ub)) +
   geom_hline(yintercept = 0,linetype="dotted") +
   # facet_wrap(~t1+t2) +
-  facet_grid(t1~t2) +
-  # theme_minimal() +
+  facet_grid(t1~t2,
+             labeller = labeller(
+               t1 = as_labeller(~ recode(., "granulocytes" = "gran.", "vasculature" = "vasc."),
+                                label_wrap_gen(width = 8)),
+               t2 = as_labeller(~ recode(., "granulocytes" = "gran.", "vasculature" = "vasc."),
+                                label_wrap_gen(width = 8))
+             )) +
+  scale_x_continuous(breaks = c(0,1000,2000)) +
+  scale_y_continuous(breaks = c(-1,0,1)) +
   scale_color_manual(values=as.vector(pals::glasbey())) +
   labs(x="Distance (\u03bcm)",y="Cross-correlation")
 fsave("xcor_varyingk_group1.png")
@@ -304,11 +324,19 @@ fsave("xcor_varyingk_group1.png")
 # supplement
 df2 %>%
   mutate(k=factor(k)) %>%
+  mutate(hs = hs * max_range) %>%
   ggplot(aes(hs,rhat,color=k)) +
   geom_jitter() +
   # facet_wrap(~t1+t2) +
-  facet_grid(t1~t2) +
-  labs(x="Scaled distance")
+  facet_grid(t1~t2,
+             labeller = labeller(
+               t1 = as_labeller(~ recode(., "granulocytes" = "gran.", "vasculature" = "vasc."),
+                                label_wrap_gen(width = 8)),
+               t2 = as_labeller(~ recode(., "granulocytes" = "gran.", "vasculature" = "vasc."),
+                                label_wrap_gen(width = 8))
+             )) +
+  scale_x_continuous(breaks = c(0,1000,2000)) +
+  labs(x="Distance (\u03bcm)",y=TeX("$\\hat{R}$"))
 fsave("rhat_2.png")
 
 # trace plots
@@ -353,8 +381,15 @@ df2 %>%
   # geom_ribbon(aes(ymin = lb,ymax=ub)) +
   geom_hline(yintercept = 0,linetype="dotted") +
   # facet_wrap(~t1+t2) +
-  facet_grid(t1~t2) +
-  # theme_minimal() +
+  facet_grid(t1~t2,
+             labeller = labeller(
+               t1 = as_labeller(~ recode(., "granulocytes" = "gran.", "vasculature" = "vasc."),
+                                label_wrap_gen(width = 8)),
+               t2 = as_labeller(~ recode(., "granulocytes" = "gran.", "vasculature" = "vasc."),
+                                label_wrap_gen(width = 8))
+             )) +
+  scale_x_continuous(breaks = c(0,1000,2000)) +
+  scale_y_continuous(breaks = c(-1,0,1)) +
   scale_color_manual(values=as.vector(pals::glasbey())) +
   labs(x="Distance (\u03bcm)",y="Cross-correlation")
 fsave("xcor_varyingk_group2.png")
@@ -390,7 +425,15 @@ df_diff %>%
   # geom_ribbon(aes(ymin = lb,ymax=ub,fill=k),alpha=0.5) +
   geom_hline(yintercept = 0,linetype="dotted") +
   # facet_wrap(~t1+t2) +
-  facet_grid(t1~t2) +
+  facet_grid(t1~t2,
+             labeller = labeller(
+               t1 = as_labeller(~ recode(., "granulocytes" = "gran.", "vasculature" = "vasc."),
+                                label_wrap_gen(width = 8)),
+               t2 = as_labeller(~ recode(., "granulocytes" = "gran.", "vasculature" = "vasc."),
+                                label_wrap_gen(width = 8))
+             )) +
+  scale_x_continuous(breaks = c(0,1000,2000)) +
+  # scale_y_continuous(breaks = c(-1,0,1)) +
   scale_color_manual(values=as.vector(pals::glasbey())) +
   # scale_fill_manual(values=as.vector(pals::glasbey())) +
   labs(x="Distance (\u03bcm)",y="Difference in cross-correlation")

@@ -7,6 +7,7 @@ library(posterior)
 library(bayesplot)
 library(ggdist)
 library(patchwork)
+library(latex2exp)
 
 theme_set(theme_bw(base_size=11, base_family='Times New Roman')+
             theme(panel.grid.major = element_blank(),
@@ -15,18 +16,17 @@ theme_set(theme_bw(base_size=11, base_family='Times New Roman')+
 fsave <- \(fname) {
   ggsave(fname,dpi=300, height=5, width=8, units="in")
 }
+figures_folder <- "examples/data/figures/varyingpixels/"
 
-figures_folder <- "examples/data/figures/varyingk/"
-
-actual_ks <- 3
-trial_ks <- c(2,3,6)
-grid <- expand.grid(actual_k=actual_ks,trial_k=trial_ks,sim=1:10)
-start_idx <- 1
-seed_start <- 24
-file_prefix <- "examples/data/out_simset_varyingk"
-
+# simset1
+szs <- c(12,24,48)
 
 # mcmc and model settings
+grid <- expand.grid(sz=szs,sim=1:10)
+start_idx <- 1
+file_prefix <- "examples/data/out_simset_varyingpx"
+seed_start <- 26
+
 n_samples <- 1000
 n_burnin <- 5000
 n_thin <- 5
@@ -39,24 +39,13 @@ chains <- 1
 do_plots <- FALSE
 sample_theta <- TRUE
 num_images <- 40
-mu <- -1
+mu <- -3
+k <- 4
 q <- 10
-
-# simulation settings
-nx <- 30
-ny <- 30
-n <- nx*ny
 x_max <- 1919
 y_max <- 1439
-sigmasq <- 1
-
 p <- 1
 
-coords <- expand.grid(x=seq(0,x_max,length.out=nx),y=seq(0,y_max,length.out=ny))
-
-coords <- coords / max(x_max,y_max)
-c_mat <- as.matrix(coords)
-d_coords <- as.matrix(dist(c_mat))
 
 unique_combinations_with_self <- function(data) {
   # Generate all pairs including self-pairings
@@ -74,57 +63,82 @@ unique_combinations_with_self <- function(data) {
 #   print(sim_idx)
 #   sim <- grid$sim[sim_idx]
 #   seed <- seed_start + sim
+#   nx <- ny <- grid$sz[sim_idx]
+#   min_nx <- min_ny <- min(grid$sz)
+#   max_nx <- max_ny <- max(grid$sz)
 #
-#   actual_k <- grid$actual_k[sim_idx]
-#   trial_k <- grid$trial_k[sim_idx]
+#   max_n <- max_nx*max_ny
+#   n <- nx*ny
+#   x_max <- 1919
+#   y_max <- 1439
+#   px_x <- x_max / nx
+#   px_y <- y_max / ny
+#   px_area <- px_x * px_y
+#   px_minx <- x_max / min_nx
+#   px_miny <- y_max / min_ny
+#   max_px_area <- px_minx * px_miny
+#   size_factor <- px_area / max_px_area
+#   p <- 1
 #
-#   # save_file <- paste0("out_simset1_",sim_idx,".rds")
+#   coords <- expand.grid(x=seq(0,x_max,length.out=max_nx),y=seq(0,y_max,length.out=max_ny))
+#
+#   coords <- coords / max(x_max,y_max)
+#   c_mat <- as.matrix(coords)
+#   d_coords <- as.matrix(dist(c_mat))
+#
+#   save_file <- paste0(file_prefix,"_",sim_idx,".rds")
 #   save_file_ltb <- paste0(file_prefix,"_",sim_idx,"_ltb.rds")
 #
 #   set.seed(seed)
-#   philist <- runif(actual_k,phi_range[1],phi_range[2])
-#   LClist <- 1:actual_k %>% lapply(\(i) t(chol(
+#   philist <- runif(k,phi_range[1],phi_range[2])
+#
+#   LClist <- 1:k %>% lapply(\(i) t(chol(
 #     exp(- philist[i] * d_coords)
 #   )))
 #
 #   set.seed(seed)
 #   VV <- lapply(1:num_images,\(j) {
-#     wlist <- lapply(1:actual_k,\(i) LClist[[i]] %*% rnorm(n))
+#     vlist <- lapply(1:k,\(i) LClist[[i]] %*% rnorm(max_n))
 #
 #     # factor matrix
-#     do.call(cbind, wlist)
+#     do.call(cbind, vlist)
 #   })
-#   #
-#   # fields::image.plot(seq(0,x_max,length.out=nx),seq(0,y_max,length.out=ny),matrix(VV[[10]][,2],nrow = ny,ncol = nx))
-#
 #
 #   # factor loadings
-#   Lambda <- matrix(0, q, actual_k)
+#   Lambda <- matrix(0, q, k)
 #   set.seed(seed)
-#   diag(Lambda) <- runif(actual_k, 0.5, 1)
+#   diag(Lambda) <- runif(k, 0.5, 1)
 #   Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -0.7, 0.7)
 #
 #   Beta <- matrix(rep(mu,p*q),ncol=q)
 #
 #   x_list <- lapply(1:num_images,\(i) {
-#     matrix(1,nrow = n,ncol = p)
+#     matrix(1,nrow = max_n,ncol = p)
 #   })
 #
 #   WW <- lapply(1:num_images,\(i) {
 #     mat <- VV[[i]] %*% t(Lambda) + x_list[[i]] %*% Beta
-#     # print(range(exp(mat)))
+#     print(range(exp(mat)))
 #     mat
 #   })
 #
 #   set.seed(seed)
-#   y_list <- lapply(WW,\(ww) {
-#     matrix(rpois(nrow(ww)*ncol(ww),exp(ww)),nrow=nrow(ww),ncol=ncol(ww))
+#   y_list <- lapply(1:num_images,\(i) {
+#     yy_list <- lapply(1:q,\(j) {
+#       mat <- matrix(WW[[i]][,j],nrow = max_ny,ncol = max_nx)
+#       mat <- matrix(rpois(nrow(mat)*ncol(mat),exp(mat)),nrow=nrow(mat),ncol=ncol(mat))
+#       r <- raster::raster(mat)
+#       r_sub <- raster::aggregate(r,fact = max_nx / nx, fun = sum, expand = FALSE)
+#       vec_sub <- c(raster::as.matrix(r_sub))
+#     })
+#     yy <- do.call(cbind,yy_list)
 #   })
-#   #
-#   # if(do_plots) {
-#   #   p1 <- plot_y_list(y_list,coords)
-#   #   p1
-#   # }
+#   agg_coords <- expand.grid(x=seq(0,x_max,length.out=nx),y=seq(0,y_max,length.out=ny))
+#   coords <- agg_coords / max(x_max,y_max)
+#
+#   x_list <- lapply(1:num_images,\(i) {
+#     matrix(1,nrow = n,ncol = p)
+#   })
 #
 #   out <- readRDS(save_file_ltb)
 #
@@ -137,7 +151,7 @@ unique_combinations_with_self <- function(data) {
 #   #
 #   hs <- seq(0,1,0.1)
 #   xl <- cross_list(out,hs,thin=n_thin)
-#   out_actual <- list(theta_mcmc=matrix(c(philist,rep(0,actual_k)),nrow = 2,ncol=actual_k,byrow=TRUE),
+#   out_actual <- list(theta_mcmc=matrix(c(philist,rep(0,k)),nrow = 2,ncol=k,byrow=TRUE),
 #                      lambda_mcmc=Lambda)
 #   out_actual <- list(lapply(out_actual,\(o) {
 #     dim(o) <- c(dim(o),1)
@@ -284,9 +298,9 @@ unique_combinations_with_self <- function(data) {
 # }) %>%
 #   bind_rows() -> df_diff
 #
-# saveRDS(df_diff,"examples/df_diff_varyingk.rds")
+# saveRDS(df_diff,"examples/df_diff_varyingpixels.rds")
 
-df_diff <- readRDS("examples/df_diff_varyingk.rds")
+df_diff <- readRDS("examples/df_diff_varyingpixels.rds")
 
 grid <- grid %>%
   mutate(sim_idx=1:nrow(grid))
@@ -295,164 +309,160 @@ df_diff %>%
   rename(sim_idx=sim) %>%
   left_join(grid,by="sim_idx") -> df_diff
 
-
 # paper
 df_diff %>%
   mutate(abs_diff=abs(diff)) %>%
-  mutate(trial_k=factor(trial_k)) %>%
+  mutate(sz=factor(sz)) %>%
   mutate(hs = hs*max(x_max,y_max)) %>%
   # mutate(mad=median(abs(diff))) %>%
-  group_by(hs,actual_k,trial_k) %>%
+  group_by(hs,sz) %>%
   # summarise(mean_diff=mean(mad))
   summarise(mean_diff=rvar_median(abs_diff)) %>%
   # print(n=nrow(.))
   # ggplot(aes(xdist=mean_diff,y=trial_k)) +
   # stat_halfeye() +
   # facet_wrap(~hs) +
-  ggplot(aes(x=hs,ydist=mean_diff,color=trial_k,fill=trial_k)) +
+  ggplot(aes(x=hs,ydist=mean_diff,color=sz,fill=sz)) +
   stat_halfeye() +
   # theme_bipps() +
   # theme(text=element_text(size=28)) +
-  labs(y="MAD between observed and fitted",x="Distance (\u03bcm)",color="k",fill="k")
+  labs(y="MAD between true and fitted",x="Distance (\u03bcm)",color="# of pixels",fill="# of pixels")
 
-fsave(paste0(figures_folder,"mad_distance_k.png"))
+fsave(paste0(figures_folder,"mad_distance_sz.png"))
 
+# supplement
+# WAICs are not comparable across pixel sizes, since it is a different dataset.
 
 # supplement
 df_diff %>%
-  mutate(trial_k=factor(trial_k)) %>%
-  distinct(sim,trial_k,waic) %>%
-  ggplot(aes(x=trial_k,y = waic)) +
-  geom_boxplot() +
-  # theme_bipps() +
-  # theme(text=element_text(size=28)) +
-  labs(y="WAIC",x="k")
-
-fsave(paste0(figures_folder,"waic_k.png"))
-
-
-# summary(lm(abs_diff~phi*hs*trial_k,data=df_diff %>%
-#              mutate(abs_diff=E(abs(diff)),
-#                     trial_k=factor(trial_k))))
-
-
-# extract log-likelihood
-# need to run with low_mem=FALSE, so that we can recover the lp_mcmc
-
-# maybe just do with a few of them.
-
-# let's look at convergence metrics as well
-
-# supplement
-df_diff %>%
-  mutate(trial_k=factor(trial_k)) %>%
+  mutate(sz=factor(sz)) %>%
   mutate(hs = hs*max(x_max,y_max)) %>%
   # mutate(mad=median(abs(diff))) %>%
-  group_by(hs,actual_k,trial_k) %>%
+  group_by(hs,sz) %>%
   summarise(mean_rhat=mean(rhat,na.rm = T)) %>%
-  ggplot(aes(x=hs,y=mean_rhat,color=trial_k,fill=trial_k)) +
-  stat_halfeye() +
-  # theme_bipps() +
-  labs(y="Average rhat",x="Distance (\u03bcm)",color="k",fill="k")
-fsave(paste0(figures_folder,"rhat_k.png"))
-
-
-# supplement
-df_diff %>%
-  mutate(trial_k=factor(trial_k)) %>%
-  mutate(hs = hs*max(x_max,y_max)) %>%
-  # mutate(mad=median(abs(diff))) %>%
-  group_by(hs,actual_k,trial_k) %>%
-  summarise(mean_ess=mean(ess_bulk,na.rm = T)) %>%
-  ggplot(aes(x=hs,y=mean_ess,color=trial_k,fill=trial_k)) +
+  ggplot(aes(x=hs,y=mean_rhat,color=sz,fill=sz)) +
   stat_halfeye() +
   # theme_bipps() +
   # theme(text=element_text(size=28)) +
-  labs(y="Average Bulk ESS",x="Distance (\u03bcm)",color="k",fill="k")
-fsave(paste0(figures_folder,"bulk_ess_k.png"))
+  labs(y=TeX("Average $\\hat{R}$"),x="Distance (\u03bcm)",color="# of pixels",fill="# of pixels")
+fsave(paste0(figures_folder,"rhat_sz.png"))
+
 
 # supplement
 df_diff %>%
-  mutate(trial_k=factor(trial_k)) %>%
+  mutate(sz=factor(sz)) %>%
   mutate(hs = hs*max(x_max,y_max)) %>%
   # mutate(mad=median(abs(diff))) %>%
-  group_by(hs,actual_k,trial_k) %>%
-  summarise(mean_ess=mean(ess_tail,na.rm = T)) %>%
-  ggplot(aes(x=hs,y=mean_ess,color=trial_k,fill=trial_k)) +
+  group_by(hs,sz) %>%
+  summarise(mean_ess=mean(ess_bulk,na.rm = T)) %>%
+  ggplot(aes(x=hs,y=mean_ess,color=sz,fill=sz)) +
   stat_halfeye() +
   # theme_bipps() +
-  labs(y="Average Tail ESS",x="Distance (\u03bcm)",color="k",fill="k")
-fsave(paste0(figures_folder,"tail_ess_k.png"))
+  # theme(text=element_text(size=28)) +
+  labs(y="Average Bulk ESS",x="Distance (\u03bcm)",color="# of pixels",fill="# of pixels")
+fsave(paste0(figures_folder,"bulk_ess_sz.png"))
 
-# df_diff %>%
-#   mutate(trial_k=factor(trial_k)) %>%
-#   mutate(hs = hs*max(x_max,y_max)) %>%
-#   # mutate(mad=median(abs(diff))) %>%
-#   group_by(phi,actual_k,trial_k) %>%
-#   summarise(mean_rhat=mean(rhat,na.rm = T)) %>%
-#   ggplot(aes(x=phi,y=mean_rhat,color=trial_k,fill=trial_k)) +
-#   geom_point(size=3) +
-#   theme_classic() +
-#   theme(text=element_text(size=28)) +
-#   labs(y="Average rhat",x="Phi",title = "Simulations with actual k = 3")
+# supplement
+df_diff %>%
+  mutate(sz=factor(sz)) %>%
+  mutate(hs = hs*max(x_max,y_max)) %>%
+  # mutate(mad=median(abs(diff))) %>%
+  group_by(hs,sz) %>%
+  summarise(mean_ess=mean(ess_tail,na.rm = T)) %>%
+  ggplot(aes(x=hs,y=mean_ess,color=sz,fill=sz)) +
+  stat_halfeye() +
+  # theme_bipps() +
+  # theme(text=element_text(size=28)) +
+  labs(y="Average Tail ESS",x="Distance (\u03bcm)",color="# of pixels",fill="# of pixels")
+fsave(paste0(figures_folder,"tail_ess_sz.png"))
 
 # example convergence plots
 get_sim_and_actual <- \(sim_idx) {
   print(sim_idx)
   sim <- grid$sim[sim_idx]
   seed <- seed_start + sim
+  nx <- ny <- grid$sz[sim_idx]
+  min_nx <- min_ny <- min(grid$sz)
+  max_nx <- max_ny <- max(grid$sz)
 
-  actual_k <- grid$actual_k[sim_idx]
-  trial_k <- grid$trial_k[sim_idx]
+  max_n <- max_nx*max_ny
+  n <- nx*ny
+  x_max <- 1919
+  y_max <- 1439
+  px_x <- x_max / nx
+  px_y <- y_max / ny
+  px_area <- px_x * px_y
+  px_minx <- x_max / min_nx
+  px_miny <- y_max / min_ny
+  max_px_area <- px_minx * px_miny
+  size_factor <- px_area / max_px_area
+  p <- 1
 
-  # save_file <- paste0("out_simset1_",sim_idx,".rds")
+  coords <- expand.grid(x=seq(0,x_max,length.out=max_nx),y=seq(0,y_max,length.out=max_ny))
+
+  coords <- coords / max(x_max,y_max)
+  c_mat <- as.matrix(coords)
+  d_coords <- as.matrix(dist(c_mat))
+
+  save_file <- paste0(file_prefix,"_",sim_idx,".rds")
   save_file_ltb <- paste0(file_prefix,"_",sim_idx,"_ltb.rds")
 
   set.seed(seed)
-  philist <- runif(actual_k,phi_range[1],phi_range[2])
-  LClist <- 1:actual_k %>% lapply(\(i) t(chol(
+  philist <- runif(k,phi_range[1],phi_range[2])
+
+  LClist <- 1:k %>% lapply(\(i) t(chol(
     exp(- philist[i] * d_coords)
   )))
 
   set.seed(seed)
   VV <- lapply(1:num_images,\(j) {
-    wlist <- lapply(1:actual_k,\(i) LClist[[i]] %*% rnorm(n))
+    vlist <- lapply(1:k,\(i) LClist[[i]] %*% rnorm(max_n))
 
     # factor matrix
-    do.call(cbind, wlist)
+    do.call(cbind, vlist)
   })
-  #
-  # fields::image.plot(seq(0,x_max,length.out=nx),seq(0,y_max,length.out=ny),matrix(VV[[10]][,2],nrow = ny,ncol = nx))
-
 
   # factor loadings
-  Lambda <- matrix(0, q, actual_k)
+  Lambda <- matrix(0, q, k)
   set.seed(seed)
-  diag(Lambda) <- runif(actual_k, 0.5, 1)
+  diag(Lambda) <- runif(k, 0.5, 1)
   Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -0.7, 0.7)
 
   Beta <- matrix(rep(mu,p*q),ncol=q)
 
   x_list <- lapply(1:num_images,\(i) {
-    matrix(1,nrow = n,ncol = p)
+    matrix(1,nrow = max_n,ncol = p)
   })
 
   WW <- lapply(1:num_images,\(i) {
     mat <- VV[[i]] %*% t(Lambda) + x_list[[i]] %*% Beta
-    # print(range(exp(mat)))
+    print(range(exp(mat)))
     mat
   })
 
   set.seed(seed)
-  y_list <- lapply(WW,\(ww) {
-    matrix(rpois(nrow(ww)*ncol(ww),exp(ww)),nrow=nrow(ww),ncol=ncol(ww))
+  y_list <- lapply(1:num_images,\(i) {
+    yy_list <- lapply(1:q,\(j) {
+      mat <- matrix(WW[[i]][,j],nrow = max_ny,ncol = max_nx)
+      mat <- matrix(rpois(nrow(mat)*ncol(mat),exp(mat)),nrow=nrow(mat),ncol=ncol(mat))
+      r <- raster::raster(mat)
+      r_sub <- raster::aggregate(r,fact = max_nx / nx, fun = sum, expand = FALSE)
+      vec_sub <- c(raster::as.matrix(r_sub))
+    })
+    yy <- do.call(cbind,yy_list)
+  })
+  agg_coords <- expand.grid(x=seq(0,x_max,length.out=nx),y=seq(0,y_max,length.out=ny))
+  coords <- agg_coords / max(x_max,y_max)
+
+  x_list <- lapply(1:num_images,\(i) {
+    matrix(1,nrow = n,ncol = p)
   })
 
   out <- readRDS(save_file_ltb)
 
   hs <- seq(0,1,0.1)
   xl <- cross_list(out,hs,thin=n_thin)
-  out_actual <- list(theta_mcmc=matrix(c(philist,rep(0,actual_k)),nrow = 2,ncol=actual_k,byrow=TRUE),
+  out_actual <- list(theta_mcmc=matrix(c(philist,rep(0,k)),nrow = 2,ncol=k,byrow=TRUE),
                      lambda_mcmc=Lambda)
   out_actual <- list(lapply(out_actual,\(o) {
     dim(o) <- c(dim(o),1)
@@ -499,9 +509,8 @@ get_sim_and_actual <- \(sim_idx) {
     }) %>%
     ungroup() -> xl_e
 
-  list(out=out,out_actual=out_actual,xl=xl,xl_actual=xl_actual,xl_e=xl_e,y_list=y_list, WW=WW)
+  list(out=out,out_actual=out_actual,xl=xl,xl_actual=xl_actual,xl_e=xl_e,y_list=y_list, WW=WW,coords=coords)
 }
-
 
 sim_idx <- 1
 res <- get_sim_and_actual(sim_idx)
@@ -542,98 +551,15 @@ trace_df %>%
   facet_grid(type1~type2,
              labeller = label_wrap_gen(width=8)) +
   # theme_bipps() +
-  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+  # theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
   # theme(axis.title = element_text(size=20),
-  #       axis.text = element_text(size=12),
-  #       strip.text = element_text(size=10)) +
-  labs(x="Draw",y=paste0("Mean-centered cross-correlation at h=",hs[h_ix]*max(x_max,y_max),"\u03bcm"))
-fsave(paste0(figures_folder,"trace_df_sim1_k2.png"))
+        # axis.text = element_text(size=12),
+        # strip.text = element_text(size=10)) +
+  labs(x="Draw",y=paste0("Cross-correlation at h=",hs[h_ix]*max(x_max,y_max),"\u03bcm"))
+fsave(paste0(figures_folder,"trace_df_sim1_sz15.png"))
 
-sim_idx <- 1
-res <- get_sim_and_actual(sim_idx)
-xl_e <- res$xl_e
 
-# set.seed(2025)
-# filter_out <- tibble(combo=paste0(sample(1:10,6,replace=TRUE)," <--> ",paste0(sample(1:10,6,replace=TRUE))))
-# supplement
-xl_e %>%
-  # mutate(combo = paste0(t1," <--> ",t2)) %>%
-  # right_join(filter_out) %>%
-  mutate(hs = hs*x_max) %>%
-  rename(Predicted=mu,Observed=mu_actual) %>%
-  pivot_longer(c(Predicted,Observed)) %>%
-  ggplot() +
-  geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
-  geom_line(aes(hs,value,color=name)) +
-  geom_hline(yintercept = 0,color="red",alpha=0.5,linetype="dotted") +
-  # theme_bipps() +
-  facet_grid(t1~t2) +
-  # facet_wrap(~combo)
-  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
-  # theme(axis.title = element_text(size=20),
-  #       axis.text = element_text(size=12),
-  #       strip.text = element_text(size=10)) +
-  labs(x="Distance (\u03bcm)",y="Cross-correlation",color="Cross-correlation")
-fsave(paste0(figures_folder,"cross_cor_sim1_k2.png"))
-
-sim_idx <- 2
-res <- get_sim_and_actual(sim_idx)
-xl_e <- res$xl_e
-
-# set.seed(2025)
-# filter_out <- tibble(combo=paste0(sample(1:10,6,replace=TRUE)," <--> ",paste0(sample(1:10,6,replace=TRUE))))
-# supplement
-xl_e %>%
-  # mutate(combo = paste0(t1," <--> ",t2)) %>%
-  # right_join(filter_out) %>%
-  mutate(hs = hs*x_max) %>%
-  rename(Predicted=mu,Observed=mu_actual) %>%
-  pivot_longer(c(Predicted,Observed)) %>%
-  ggplot() +
-  geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
-  geom_line(aes(hs,value,color=name)) +
-  geom_hline(yintercept = 0,color="red",alpha=0.5,linetype="dotted") +
-  # theme_bipps() +
-  facet_grid(t1~t2) +
-  # facet_wrap(~combo)
-  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
-  # theme(axis.title = element_text(size=20),
-  #       axis.text = element_text(size=12),
-  #       strip.text = element_text(size=10)) +
-  labs(x="Distance (\u03bcm)",y="Cross-correlation",color="Cross-correlation")
-fsave(paste0(figures_folder,"cross_cor_sim2_k3.png"))
-
-sim_idx <- 9
-res <- get_sim_and_actual(sim_idx)
-xl_e <- res$xl_e
-
-# set.seed(2025)
-# filter_out <- tibble(combo=paste0(sample(1:10,6,replace=TRUE)," <--> ",paste0(sample(1:10,6,replace=TRUE))))
-# supplement
-xl_e %>%
-  # mutate(combo = paste0(t1," <--> ",t2)) %>%
-  # right_join(filter_out) %>%
-  mutate(hs = hs*x_max) %>%
-  rename(Predicted=mu,Observed=mu_actual) %>%
-  pivot_longer(c(Predicted,Observed)) %>%
-  ggplot() +
-  geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
-  geom_line(aes(hs,value,color=name)) +
-  geom_hline(yintercept = 0,color="red",alpha=0.5,linetype="dotted") +
-  # theme_bipps() +
-  facet_grid(t1~t2) +
-  # facet_wrap(~combo)
-  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
-  # theme(axis.title = element_text(size=20),
-  #       axis.text = element_text(size=12),
-  #       strip.text = element_text(size=10)) +
-  labs(x="Distance (\u03bcm)",y="Cross-correlation",color="Cross-correlation")
-fsave(paste0(figures_folder,"cross_cor_sim9_k6.png"))
-
-# predicted vs actual patterns
-# intensity surface (W) and counts
-
-sim_idx <- 6
+sim_idx <- 3 # do this with sim 1 and 3, to contrast convergence differences
 res <- get_sim_and_actual(sim_idx)
 out <- res$out
 out_actual <- res$out_actual
@@ -642,69 +568,166 @@ xl_actual <- res$xl_actual
 xl_e <- res$xl_e
 y_list <- res$y_list
 WW <- res$WW
+
 lambda <- get_rvars(out,"lambda",thin=n_thin)
+lambda
+mcmc_trace(as_draws_df(lambda[,1]))
+theta <- get_rvars(out,"theta",thin=n_thin)
+theta
+mcmc_trace(as_draws_df(theta[1,]))
 
-# actual patterns
-types_idx <- 1:2
-y_list_trimmed <- lapply(y_list,\(yy) {
-  yy <- yy[,types_idx]
-  colnames(yy) <- paste0("Cell type: ",1:ncol(yy))
-  yy
-})
+h_ix <- 5
+trace_df <- as_draws_df(xl[[h_ix]]) %>%
+  pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%
+  separate(variable,into = c("type1","type2"),sep=",") %>%
+  mutate(type1 = sub("^x\\[","",type1),
+         type2 = sub("\\]","",type2))
 
-WW_trimmed <- lapply(WW,\(ww) {
-  ww <- ww[,types_idx]
-  colnames(ww) <- paste0("Cell type: ",1:ncol(ww))
-  ww
-})
+hs <- seq(0,1,0.1)
 
-py <- plot_y_list(y_list_trimmed[1:2],coords * max(x_max,y_max))
-pW <- plot_y_list(WW_trimmed[1:2],coords * max(x_max,y_max))
-
-# paper
-p1 <- py[[1]] +
-  facet_wrap(~type,nrow = 2) +
+# supplement?
+trace_df %>%
+  mutate(.chain = factor(.chain)) %>%
+  mutate(type1=factor(type1,levels=1:q)) %>%
+  mutate(type2=factor(type2,levels=1:q)) %>%
+  group_by(type1,type2) %>%
+  mutate(value = value - mean(value)) %>%
+  ungroup() %>%
+  ggplot(aes(.iteration,value)) +
+  geom_line() +
+  facet_grid(type1~type2,
+             labeller = label_wrap_gen(width=8)) +
   # theme_bipps() +
+  # theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+  # theme(axis.title = element_text(size=20),
+        # axis.text = element_text(size=12),
+        # strip.text = element_text(size=10)) +
+  labs(x="Draw",y=paste0("Cross-correlation at h=",hs[h_ix]*max(x_max,y_max),"\u03bcm"))
+fsave(paste0(figures_folder,"trace_df_sim3_sz45.png"))
+
+sim_idx <- 1
+res <- get_sim_and_actual(sim_idx)
+xl_e <- res$xl_e
+
+# set.seed(2025)
+# filter_out <- tibble(combo=paste0(sample(1:10,6,replace=TRUE)," <--> ",paste0(sample(1:10,6,replace=TRUE))))
+# supplement
+dd1 <- xl_e %>%
+  # mutate(combo = paste0(t1," <--> ",t2)) %>%
+  # right_join(filter_out) %>%
+  mutate(hs = hs*x_max) %>%
+  rename(Predicted=mu,True=mu_actual) %>%
+  pivot_longer(c(Predicted,True)) %>%
+  mutate(pixel_size=grid$sz[sim_idx])
+
+
+sim_idx <- 2
+res <- get_sim_and_actual(sim_idx)
+xl_e <- res$xl_e
+
+# set.seed(2025)
+# filter_out <- tibble(combo=paste0(sample(1:10,6,replace=TRUE)," <--> ",paste0(sample(1:10,6,replace=TRUE))))
+# supplement
+dd2 <- xl_e %>%
+  # mutate(combo = paste0(t1," <--> ",t2)) %>%
+  # right_join(filter_out) %>%
+  mutate(hs = hs*x_max) %>%
+  rename(Predicted=mu,True=mu_actual) %>%
+  pivot_longer(c(Predicted,True)) %>%
+  mutate(pixel_size=grid$sz[sim_idx])
+
+
+sim_idx <- 3
+res <- get_sim_and_actual(sim_idx)
+xl_e <- res$xl_e
+
+# set.seed(2025)
+# filter_out <- tibble(combo=paste0(sample(1:10,6,replace=TRUE)," <--> ",paste0(sample(1:10,6,replace=TRUE))))
+# supplement
+xl_e %>%
+  mutate(hs = hs*x_max) %>%
+  rename(Predicted=mu,True=mu_actual) %>%
+  pivot_longer(c(Predicted,True)) %>%
+  mutate(pixel_size=grid$sz[sim_idx]) -> dd3
+
+bind_rows(dd1,dd2,dd3) %>%
+  mutate(pixel_size=factor(pixel_size)) %>%
+  rename(Curve=name) %>%
+  ggplot() +
+  # geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill="grey70") +
+  geom_line(aes(hs,value,color=pixel_size,linetype = Curve,group=paste(pixel_size,Curve))) +
+  geom_hline(yintercept = 0,color="red",alpha=0.5,linetype="dotted") +
+  # theme_bipps() +
+  facet_grid(t1~t2) +
+  # facet_wrap(~combo)
+  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+  # theme(axis.title = element_text(size=20),
+        # axis.text = element_text(size=12),
+        # strip.text = element_text(size=10)) +
+  labs(x="Distance (\u03bcm)",y="Cross-correlation",color="# of pixels")
+fsave(paste0(figures_folder,"cross_cor_sim_comparison.png"))
+
+# actual on different grid sizes
+sim_idx <- 1
+res <- get_sim_and_actual(sim_idx)
+
+y1 <- res$y_list[[1]][,1]
+c1 <- res$coords
+d1 <- cbind(c1,val=y1,im=1)
+
+sim_idx <- 2
+res <- get_sim_and_actual(sim_idx)
+
+y2 <- res$y_list[[1]][,1]
+c2 <- res$coords
+d2 <- cbind(c2,val=y2,im=2)
+
+
+
+sim_idx <- 3
+res <- get_sim_and_actual(sim_idx)
+
+y3 <- res$y_list[[1]][,1]
+c3 <- res$coords
+d3 <- cbind(c3,val=y3,im=3)
+
+p1 <- d1 %>%
+  ggplot(aes(x,y,fill=val)) +
+  geom_tile() +
+  labs(x="X",y="Y",fill="Count") +
   theme(axis.text = element_blank()) +
-  labs(fill = "Count") +
-  guides(fill="none")
+  theme(legend.position="top") +
+  ggplot2::scale_fill_viridis_c(option="magma",    breaks = seq(floor(min(d1$val)), ceiling(max(d1$val)), by = 2),
+                                labels = function(x) ifelse(x %% 2 == 0, x, "")
+  )
+p1
 
-# paper
-p2 <- pW[[1]] +
-  facet_wrap(~type,nrow = 2) +
-  # theme_bipps() +
-  theme(axis.text = element_blank(),
-        axis.title.y=element_blank()) +
-  guides(fill="none")
-  # labs(fill="Intensity")
-
-# fitted patterns
-out_exp <- readRDS(paste0("examples/data/out_simset_varyingk_",sim_idx,"_exp.rds"))
-vhat <- out_exp[[1]]$v_mcmc
-
-
-beta <- out_exp[[1]]$beta_mcmc
-
-lp_e <- E(vhat %*% t(lambda) + matrix(1,nrow=nx*ny,ncol=p) %*% beta)
-colnames(lp_e) <- paste0("Cell type: ", 1:q)
-
-# paper
-p3 <- dplyr::bind_cols(lp_e[,types_idx],coords * max(x_max,y_max)) %>%
-  tidyr::pivot_longer(-c(x,y),names_to = "type",values_to = "count") %>%
-  ggplot2::ggplot(ggplot2::aes(x,y,fill=count)) +
-  ggplot2::geom_tile() +
-  ggplot2::facet_wrap(~type,nrow=2) +
+p2 <- d2 %>%
+  ggplot(aes(x,y,fill=val)) +
+  geom_tile() +
+  labs(x="X",y="Y",fill="Count") +
   ggplot2::scale_fill_viridis_c(option="magma") +
   theme(axis.text = element_blank(),
-        axis.title.y=element_blank()) +
-  guides(fill="none")
+        axis.title.y = element_blank()) +
+  theme(legend.position="top")
+
+
+p3 <- d3 %>%
+  ggplot(aes(x,y,fill=val)) +
+  geom_tile() +
+  labs(x="X",y="Y",fill="Count") +
+  theme(axis.text = element_blank(),
+        axis.title.y = element_blank()) +
+  theme(legend.position="top") +
+  ggplot2::scale_fill_viridis_c(option="magma")
+
 
 p1 + p2 + p3 + plot_annotation(tag_levels = 'a')
-fsave(paste0(figures_folder,"pred_W_obs_W_k.png"))
+fsave(paste0(figures_folder,"Y_list_diff_res.png"))
 
 
 
-# difference between groups (within same combination)
+# difference between groups (within same combination), low-res
 idx1 <- 1
 idx2 <- 4
 
@@ -730,12 +753,12 @@ xl1_e %>%
   geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
   geom_line(aes(hs,value,color=name)) +
   geom_hline(yintercept = 0,color="red",alpha=0.5,linetype="dotted") +
-  theme_minimal() +
+  # theme_minimal() +
   facet_grid(t1~t2) +
   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
   # theme(axis.title = element_text(size=20),
-  #       axis.text = element_text(size=12),
-  #       strip.text = element_text(size=10)) +
+        # axis.text = element_text(size=12),
+        # strip.text = element_text(size=10)) +
   labs(x="Distance (\u03bcm)",y="Cross-correlation") +
   ggtitle("Group 1")
 
@@ -746,12 +769,12 @@ xl2_e %>%
   geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
   geom_line(aes(hs,value,color=name)) +
   geom_hline(yintercept = 0,color="red",alpha=0.5,linetype="dotted") +
-  theme_minimal() +
+  # theme_minimal() +
   facet_grid(t1~t2) +
   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
-  theme(axis.title = element_text(size=20),
-        axis.text = element_text(size=12),
-        strip.text = element_text(size=10)) +
+  # theme(axis.title = element_text(size=20),
+        # axis.text = element_text(size=12),
+        # strip.text = element_text(size=10)) +
   labs(x="Distance (\u03bcm)",y="Cross-correlation") +
   ggtitle("Group 2")
 
@@ -797,6 +820,7 @@ unique_combinations_with_self(types) %>%
 
 # paper
 group_diff_e %>%
+  filter(t1 %in% c(1),t2%in% 1:3) %>%
   mutate(hs = hs*x_max) %>%
   rename(Predicted=diff,Observed=diff_actual) %>%
   pivot_longer(c(Predicted,Observed)) %>%
@@ -805,12 +829,128 @@ group_diff_e %>%
   geom_line(aes(hs,value,color=name)) +
   geom_hline(yintercept = 0,color="red",alpha=0.5,linetype="dotted") +
   # theme_bipps() +
-  facet_grid(t1~t2) +
+  # facet_grid(t1~t2) +
+  facet_wrap(~t1 + t2,ncol=5) +
   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
   # theme(axis.title = element_text(size=20),
-  #       axis.text = element_text(size=12),
-  #       strip.text = element_text(size=10)) +
+        # axis.text = element_text(size=12),
+        # strip.text = element_text(size=10)) +
   labs(x="Distance (\u03bcm)",y="Difference in cross-correlation",color="Difference")
-  # ggtitle("Difference between group 1 and group 2")
-fsave(paste0(figures_folder,"group_diff_k.png"))
+  # theme(strip.background = element_blank(),
+        # strip.text.x = element_blank())
+# ggtitle("Difference between group 1 and group 2")
+fsave(paste0(figures_folder,"group_diff_sz_lo-res.png"))
 
+# difference between groups (within same combination), hi-res
+idx1 <- 3
+idx2 <- 6
+
+res1 <- get_sim_and_actual(idx1)
+out1 <- res1$out
+out1_actual <- res1$out_actual
+xl1 <- res1$xl
+xl1_actual <- res1$xl_actual
+xl1_e <- res1$xl_e
+
+res2 <- get_sim_and_actual(idx2)
+out2 <- res2$out
+out2_actual <- res2$out_actual
+xl2 <- res2$xl
+xl2_actual <- res2$xl_actual
+xl2_e <- res2$xl_e
+
+# supplement
+xl1_e %>%
+  mutate(hs = hs*x_max) %>%
+  pivot_longer(c(mu,mu_actual)) %>%
+  ggplot() +
+  geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
+  geom_line(aes(hs,value,color=name)) +
+  geom_hline(yintercept = 0,color="red",alpha=0.5,linetype="dotted") +
+  # theme_minimal() +
+  facet_grid(t1~t2) +
+  # theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+  # theme(axis.title = element_text(size=20),
+        # axis.text = element_text(size=12),
+        # strip.text = element_text(size=10)) +
+  labs(x="Distance (\u03bcm)",y="Cross-correlation") +
+  ggtitle("Group 1")
+
+xl2_e %>%
+  mutate(hs = hs*x_max) %>%
+  pivot_longer(c(mu,mu_actual)) %>%
+  ggplot() +
+  geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
+  geom_line(aes(hs,value,color=name)) +
+  geom_hline(yintercept = 0,color="red",alpha=0.5,linetype="dotted") +
+  # theme_minimal() +
+  facet_grid(t1~t2) +
+  # theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+  # theme(axis.title = element_text(size=20),
+        # axis.text = element_text(size=12),
+        # strip.text = element_text(size=10)) +
+  labs(x="Distance (\u03bcm)",y="Cross-correlation") +
+  ggtitle("Group 2")
+
+group_diff_actual <- lapply(1:length(xl1_actual) ,\(i){
+  xl1_actual[[i]] - xl2_actual[[i]]
+})
+
+group_diff_est <- lapply(1:length(xl1) ,\(i){
+  xl1[[i]] - xl2[[i]]
+})
+
+types <- 1:q
+
+unique_combinations_with_self(types) %>%
+  # expand_grid(type1 = types_intersect,type2 = types_intersect) %>%
+  as.data.frame() %>%
+  as_tibble() %>%
+  magrittr::set_colnames(c("t1","t2")) %>%
+  group_by(t1,t2) %>%
+  group_modify(~{
+    ix1 <- which(types == .y$t1)
+    ix2 <- which(types == .y$t2)
+
+    mu <- unlist(lapply(group_diff_est,\(x) {
+      E(x[ix1,ix2])
+    }))
+
+    mu_actual <- unlist(lapply(group_diff_actual,\(x) {
+      x[ix1,ix2]
+    }))
+
+
+    lb <- unlist(lapply(group_diff_est,\(x) {
+      quantile(x[ix1,ix2],probs = 0.025)
+    }))
+
+    ub <- unlist(lapply(group_diff_est,\(x) {
+      quantile(x[ix1,ix2],probs = 0.975)
+    }))
+    tibble(diff=mu,diff_actual=mu_actual,lb=lb,ub=ub,hs=hs)
+  }) %>%
+  ungroup() -> group_diff_e
+
+# paper
+group_diff_e %>%
+  filter(t1 %in% c(1),t2%in% 1:3) %>%
+  mutate(hs = hs*x_max) %>%
+  rename(Predicted=diff,Observed=diff_actual) %>%
+  pivot_longer(c(Predicted,Observed)) %>%
+  ggplot() +
+  geom_ribbon(aes(hs,ymin = lb,ymax=ub),fill = "grey70") +
+  geom_line(aes(hs,value,color=name)) +
+  geom_hline(yintercept = 0,color="red",alpha=0.5,linetype="dotted") +
+  # theme_bipps() +
+  # facet_grid(t1~t2) +
+  facet_wrap(~t1+t2) +
+  # theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+  # theme(axis.title = element_text(size=20),
+        # axis.text = element_text(size=12),
+        # strip.text = element_text(size=10),
+        # strip.background = element_blank(),
+        # strip.text.x = element_blank()) +
+  labs(x="Distance (\u03bcm)",y="Difference in cross-correlation",color="Difference")
+# ggtitle("Difference between group 1 and group 2")
+fsave(paste0(figures_folder,"group_diff_sz_hi-res.png"))
