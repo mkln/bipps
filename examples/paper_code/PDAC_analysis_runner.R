@@ -12,25 +12,28 @@ block_size <- 50
 ks <- c(2,3,4,5)
 starting <- list(phi = 5)
 prior <- list(phi = c(0.1,10))
-save_file <- "PDAC_varyingk_nburn20k_nthin10_nsamp1e3_chain1.rds"
-save_file_lt <- "PDAC_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds"
+save_file <- "PDAC_2024Pheno_varyingk_nburn20k_nthin10_nsamp1e3_chain1.rds"
+save_file_lt <- "PDAC_2024Pheno_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds"
 
 chains <- 1
 
-dat1 <- readRDS("examples/data/PDAC_POS_DATA.rds") %>%
+filename_manage <- \(x){
+  strsplit(x, "/") %>% `[[`(1) %>% tail(1) %>% gsub("_cell_seg_data.txt", "", .)
+}
+
+dat1 <- Sys.glob("examples/data/2024Phenotypes/PDAC_ModPhenotypes/*.txt") %>%
+  lapply(\(f) read.delim(f,sep=",") %>% mutate(Spot=filename_manage(f))) %>%
+  bind_rows() %>%
   rename(X=Cell.X.Position,
          Y=Cell.Y.Position,
-         type=Cellname,
-         Spot=SlideID) %>%
-  filter(type != "CD4")
+         type=CellOfInterest)
 
-
-dat2 <- readRDS("examples/data/IPMN_POS_DATA.rds") %>%
+dat2<- Sys.glob("examples/data/2024Phenotypes/IPMN_ModPhenotypes/*.txt") %>%
+  lapply(\(f) read.delim(f,sep=",") %>% mutate(Spot=filename_manage(f))) %>%
+  bind_rows() %>%
   rename(X=Cell.X.Position,
          Y=Cell.Y.Position,
-         type=Cellname,
-         Spot=SlideID) %>%
-  filter(type != "CD4")
+         type=CellOfInterest)
 
 # dat1 %>%
 #   filter(Spot == "PATID_538_SLIDE_1") %>%
@@ -41,7 +44,7 @@ dat2 <- readRDS("examples/data/IPMN_POS_DATA.rds") %>%
 
 dat1 %>%
   distinct(Spot) %>%
-  filter(!(Spot %in% c("PATID_12_SLIDE_1","PATID_538_SLIDE_1"))) %>% # these are bad images
+  # filter(!(Spot %in% c("PATID_12_SLIDE_1","PATID_538_SLIDE_1"))) %>% # these are bad images
   pull(Spot) -> spots1
 
 dat2 %>%
@@ -53,29 +56,6 @@ dat1 <- dat1 %>%
 
 dat2 <- dat2 %>%
   filter(Spot %in% spots2)
-
-dat1 %>%
-  count(Spot,type) %>%
-  group_by(type) %>%
-  summarise(mn = median(n)) %>%
-  filter(mn > 10) %>%
-  pull(type) -> types1
-
-dat2 %>%
-  count(Spot,type) %>%
-  group_by(type) %>%
-  summarise(mn = median(n)) %>%
-  filter(mn > 10) %>%
-  pull(type) -> types2
-
-
-types_intersect <- intersect(types1,types2)
-
-dat1 <- dat1 %>%
-  filter(type %in% types_intersect)
-
-dat2 <- dat2 %>%
-  filter(type %in% types_intersect)
 
 bind_rows(dat1,dat2) %>%
   dplyr::group_by(Spot) %>%
@@ -130,5 +110,5 @@ out1 <- lapply(ks,\(k) multi_bipps(y_list1,
                                    ),
                                    just_preprocess = F))
 saveRDS(out1,save_file)
-out1_lt <- lapply(out1,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc,waic=o$waic,beta_mcmc=o$beta_mcmc))
+out1_lt <- lapply(out1,\(o) list(theta_mcmc=o$theta_mcmc,lambda_mcmc=o$lambda_mcmc,waic=o$waic,beta_mcmc=o$beta_mcmc,mcmc_time=o$mcmc_time))
 saveRDS(out1_lt,save_file_lt)

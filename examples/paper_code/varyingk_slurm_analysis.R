@@ -287,6 +287,57 @@ unique_combinations_with_self <- function(data) {
 #
 # saveRDS(df_diff,"examples/df_diff_varyingk.rds")
 
+sim_timings <- readRDS("examples/data/timings.rds")
+
+sim_timings %>%
+  filter(type == "k") %>%
+  left_join(grid %>% mutate(sim_idx = 1:nrow(.))) %>%
+  mutate(trial_k=as.factor(trial_k)) %>%
+  ggplot(aes(trial_k,timing)) +
+  geom_boxplot() +
+  scale_y_continuous(trans = "log10") +
+  labs(x="k",y="Model fitting time (s)")
+fsave(paste0(figures_folder,"timings.png"))
+
+# sim_timings %>%
+#   filter(type == "k") %>%
+#   left_join(grid %>% mutate(sim_idx = 1:nrow(.))) %>%
+#   # mutate(trial_k=as.factor(trial_k)) %>%
+#   ggplot(aes(trial_k,timing)) +
+#   geom_point() +
+#   scale_y_continuous(trans = "log10") +
+#   scale_x_continuous(trans = "log10") +
+#   labs(x="k",y="Model fitting time (s)")
+#
+# # Fit different models
+# dd <- sim_timings %>%
+#   filter(type == "k") %>%
+#   left_join(grid %>% mutate(sim_idx = 1:nrow(.)))
+# n <- dd$trial_k
+# Tn <- dd$timing
+# lm_linear <- lm(Tn ~ n)  # Linear model
+# lm_quadratic <- lm(Tn ~ I(n^2))  # Quadratic model
+# lm_exponential <- lm(log(Tn) ~ n)  # Log-transformed exponential model
+#
+# # Compare fits
+# summary(lm_linear)
+# summary(lm_quadratic)
+# summary(lm_exponential)
+#
+# AIC(lm_linear, lm_quadratic, lm_exponential)
+#
+# # Plot the data and fitted curves
+# par(mfrow=c(1,3))  # 3 plots in one row
+#
+# plot(n, Tn, main="Linear Fit", xlab="n", ylab="Time")
+# abline(lm_linear, col="red")
+#
+# plot(n, Tn, main="Quadratic Fit", xlab="n", ylab="Time")
+# lines(n, predict(lm_quadratic), col="red", lwd=2)
+#
+# plot(n, log(Tn), main="Exponential Fit (Log Scale)", xlab="n", ylab="log(Time)")
+# abline(lm_exponential, col="red")
+
 df_diff <- readRDS("examples/df_diff_varyingk.rds")
 
 grid <- grid %>%

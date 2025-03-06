@@ -250,12 +250,21 @@ unique_combinations_with_self(types_intersect) %>%
   ungroup() -> xl2_e
 
 
-filter_out <- tibble(combo=c("hybrid E/M <--> TAMs",
-                             "CTLs <--> tumor cells",
-                             "B cells <--> granulocytes",
-                             "B cells <--> tumor cells",
-                             "memory CD4+ T <--> plasma cells",
-                             "CAFs <--> CTLs"))
+filter_out <- tibble(combo = c("B cells <--> tumor cells",
+                 "B cells <--> granulocytes",
+                 "CAFs <--> CTLs",
+                 "CAFs <--> vasculature",
+                 "CAFs <--> memory CD4+ T",
+                 "CAFs <--> tumor cells",
+                 "CTLs <--> tumor cells",
+                 "CTLs <--> plasma cells",
+                 "granulocytes <--> plasma cells",
+                 "hybrid E/M <--> vasculature",
+                 "hybrid E/M <--> TAMs",
+                 "memory CD4+ T <--> plasma cells",
+                 "memory CD4+ T <--> TAMs",
+                 "memory CD4+ T <--> vasculature",
+                 "plasma cells <--> TAMs"))
 
 dd1 <- xl1_e %>%
   mutate(combo = paste0(t1," <--> ",t2)) %>%
@@ -276,7 +285,7 @@ bind_rows(dd1,dd2) %>%
   geom_ribbon(aes(hs,ymin = lb,ymax=ub,fill = Group),alpha=0.2) +
   geom_line(aes(color=Group)) +
   geom_hline(yintercept = 0,color="red",linetype="dotted") +
-  facet_wrap(~combo) +
+  facet_wrap(~combo,ncol=5) +
   # facet_grid(t1~t2,
   #            labeller = label_wrap_gen(width=8)) +
   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
@@ -288,7 +297,7 @@ bind_rows(dd1,dd2) %>%
   labs(x="Distance (\u03bcm)",y="Cross-correlation")
 
 # paper
-fsave("xcor_CRC.png")
+fsave("xcor_CRC.png",width = 11,height=7)
 
 # supplement - full version
 dd1 <- xl1_e %>%
@@ -347,7 +356,7 @@ unique_combinations_with_self(types_intersect) %>%
       E(x[ix1,ix2])
     }))
 
-    int_val <- integrate(approxfun(hs,abs(mu)),hs[1],hs[length(hs)])$value
+    int_val <- integrate(approxfun(hs,mu),hs[1],hs[length(hs)])$value
 
     sigma <- unlist(lapply(xl_diff,\(x) {
       sd(x[ix1,ix2])
@@ -363,6 +372,8 @@ unique_combinations_with_self(types_intersect) %>%
     tibble(mu=mu,lb=lb,ub=ub,hs=hs,auc=int_val)
   }) %>%
   ungroup() -> xldiff_e
+
+xldiff_e
 
 # supplement
 xldiff_e %>%
@@ -390,3 +401,39 @@ xldiff_e %>%
 fsave("diff_cor_CRC.png")
 
 # supplement - full version
+
+dd1 <- xl1_e %>%
+  select(t1,t2,hs,mu) %>%
+  rename(mu1=mu)
+
+dd2 <- xl2_e %>%
+  select(t1,t2,hs,mu) %>%
+  rename(mu2=mu)
+
+d_diff <- xldiff_e %>%
+  select(t1,t2,hs,mu,auc) %>%
+  rename(mu_diff=mu)
+
+dd <- dd1 %>%
+  inner_join(dd2) %>%
+  inner_join(d_diff) %>%
+  filter(hs %in% c(0,0.2,0.4,0.8)) %>%
+  # mutate(hs=max_range*hs) %>%
+  mutate(hs=factor(hs)) %>%
+  mutate(hs=fct_recode(hs,
+                       "close"="0",
+                       "moderate"="0.2",
+                       "far"="0.4",
+                       "very far"="0.8")) %>%
+  rename(distance=hs) %>%
+  rename(type1=t1,
+         type2=t2,
+         cor_CLR=mu1,
+         cor_DII=mu2,
+         cor_CLR_minus_cor_DII=mu_diff) %>%
+  arrange(desc(abs(auc))) %>%
+  mutate(greater_in_CLR=cor_CLR_minus_cor_DII > 0)
+
+dd %>%
+  filter(type1 != type2) %>%
+  print(n=nrow(.))

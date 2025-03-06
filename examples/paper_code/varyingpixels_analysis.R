@@ -300,6 +300,18 @@ unique_combinations_with_self <- function(data) {
 #
 # saveRDS(df_diff,"examples/df_diff_varyingpixels.rds")
 
+sim_timings <- readRDS("examples/data/timings.rds")
+
+sim_timings %>%
+  filter(type == "px") %>%
+  left_join(grid %>% mutate(sim_idx = 1:nrow(.))) %>%
+  mutate(sz=as.factor(sz)) %>%
+  ggplot(aes(sz,timing)) +
+  geom_boxplot() +
+  scale_y_continuous(trans = "log10") +
+  labs(x="Number of pixels",y="Model fitting time (s)")
+fsave(paste0(figures_folder,"timings.png"))
+
 df_diff <- readRDS("examples/df_diff_varyingpixels.rds")
 
 grid <- grid %>%

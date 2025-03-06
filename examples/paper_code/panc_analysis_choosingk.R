@@ -6,6 +6,7 @@ library(patchwork)
 library(kableExtra)
 library(ggdist)
 library(latex2exp)
+library(clipr)
 
 set.seed(2020)
 
@@ -18,6 +19,20 @@ fsave <- \(fname) {
   ggsave(paste0(figures_folder,fname),dpi=300, height=5, width=8, units="in")
 }
 figures_folder <- "examples/data/figures/panc_choosingk/"
+
+# timings table
+real_timings <- readRDS("examples/data/timings_apps.rds") %>%
+  filter(type %in% c("ipmn","pdac")) %>%
+  pivot_wider(names_from = type,values_from = timing) %>%
+  rename(IPMN=ipmn,PDAC=pdac)
+
+real_timings %>%
+  kable(format = "latex", booktabs = TRUE, digits = 0, align = "c", caption = "Model fitting times on images from pancreatic cancer patient groups for various $k$.", label = "timings_panc") %>%
+  kable_styling(latex_options = c("striped", "hold_position", "scale_down")) %>%
+  add_header_above(c(" " = 1, "Model fitting time (s)" = 2)) %>%
+  column_spec(1, bold = TRUE) %>%
+  row_spec(0, bold = TRUE) %>%
+  write_clip()
 
 n_samples <- 1000
 n_burnin <- 20000

@@ -150,6 +150,7 @@ xl2 <- lapply(xl2,\(xl) {
 xl1 <- xl1[[k_idx[1]]]
 xl2 <- xl2[[k_idx[2]]]
 
+
 # zero distance expected spatial cross-cor plots
 ex1 <- xl1[[1]] %>%
   as_tibble(rownames="type1") %>%

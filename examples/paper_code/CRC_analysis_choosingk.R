@@ -7,6 +7,7 @@ library(bayesplot)
 library(patchwork)
 library(kableExtra)
 library(latex2exp)
+library(clipr)
 
 set.seed(2020)
 
@@ -26,6 +27,20 @@ df_raw <- readr::read_csv("examples/data/CRC_cleaned.csv") %>%
   dplyr::rename(Spot = spots) %>%
   mutate(type = fct_recode(type,"CAFs"="smooth muscle","hybrid E/M"="stroma","TAMs"="CD163+ macros","CTLs"="CD8+ T cells"))
 # mutate(Spot = factor(Spot))
+
+# timings table
+real_timings <- readRDS("examples/data/timings_apps.rds") %>%
+  filter(type %in% c("g1_crc","g2_crc")) %>%
+  pivot_wider(names_from = type,values_from = timing) %>%
+  rename(CLR=g1_crc,DII=g2_crc)
+
+real_timings %>%
+  kable(format = "latex", booktabs = TRUE, digits = 0, align = "c", caption = "Model fitting times on images from colorectal cancer patient groups for various $k$.", label = "timings_crc") %>%
+  kable_styling(latex_options = c("striped", "hold_position", "scale_down")) %>%
+  add_header_above(c(" " = 1, "Model fitting time (s)" = 2)) %>%
+  column_spec(1, bold = TRUE) %>%
+  row_spec(0, bold = TRUE) %>%
+  write_clip()
 
 
 # pp plot
