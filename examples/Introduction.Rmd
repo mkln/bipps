@@ -1,0 +1,664 @@
+---
+title: "BIPPS Simulation Example: Varying number of latent fators"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+    embed_resources: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 10,
+  fig.height = 7,
+  comment = "#>"
+)
+```
+
+# Overview
+
+This Rmarkdown demonstrates how to run Bayesian Inference for Point Patterns in Space (BIPPS) simulations with varying numbers of latent factors (k). We'll generate synthetic spatial point process data with a known number of latent factors, then fit models with different numbers of factors to evaluate model performance under different specifications.
+
+## What is BIPPS?
+
+BIPPS (Bayesian Inference for Point Patterns in Space) is a spatial statistical modeling approach for analyzing point patterns or count data across a spatial domain. It uses latent Gaussian processes to model the underlying intensity of a point process, making it useful for applications like ecological data, disease mapping, or astronomical observations.
+
+## Purpose of This Analysis
+
+In this example, we'll:
+
+1. Generate synthetic spatial point process data with a known number of latent factors (k)
+2. Fit BIPPS models using different numbers of latent factors
+3. Compare model performance to determine how well we can recover the true structure
+
+# Setup
+
+First, let's load the necessary libraries and set up our environment:
+
+```{r load_libraries}
+# Load the BIPPS package
+# If you're using a development version, uncomment:
+devtools::load_all()
+
+# Load other required packages
+library(magrittr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(posterior)
+library(bayesplot)
+library(ggdist)
+library(latex2exp)
+library(patchwork)
+
+# Set random seed for reproducibility
+set.seed(24)
+```
+
+# Simulation Parameters
+
+We'll define all parameters needed for our simulation:
+
+```{r simulation_parameters}
+# MCMC settings
+n_samples <- 500   # Number of samples to collect
+n_burnin <- 500    # Number of burn-in iterations
+n_thin <- 1        # Thinning rate
+n_threads <- 2     # Number of threads for parallel processing
+chains <- 1        # Number of MCMC chains
+
+# Simulation parameters
+actual_k <- 3      # True number of latent factors
+trial_ks <- c(2,3,4)  # Different k values to try in our models
+
+# Spatial grid specifications
+nx <- 30           # Number of grid points in x direction
+ny <- 30           # Number of grid points in y direction
+n <- nx * ny       # Total number of grid points
+x_max <- 1919      # Maximum x coordinate
+y_max <- 1439      # Maximum y coordinate
+
+# Model parameters
+block_size <- 50   # Block size for MCMC sampling
+starting <- list(phi = 1)  # Starting values for parameters
+prior <- list(phi = c(0.1, 10))  # Prior specifications
+phi_range <- c(1, 3)  # Range for spatial decay parameter phi
+sample_theta <- TRUE  # Whether to sample theta parameter
+mu <- -1              # Mean parameter for the baseline intensity
+sigmasq <- 1          # Variance parameter
+p <- 1                # Number of covariates (intercept only in this case)
+q <- 4                # Dimension of the response
+num_images <- 3       # Number of simulated images/replicates
+
+# Create output directories if needed
+if (!dir.exists("output")) {
+  dir.create("output")
+}
+if (!dir.exists("figures")) {
+  dir.create("figures")
+}
+```
+
+# Generate Synthetic Data
+
+## Create Spatial Grid
+
+First, we'll create a grid of spatial coordinates:
+
+```{r create_grid}
+# Create a regular grid of coordinates
+coords <- expand.grid(
+  x = seq(0, x_max, length.out = nx),
+  y = seq(0, y_max, length.out = ny)
+)
+
+# Normalize coordinates to [0,1] range
+coords <- coords / max(x_max, y_max)
+c_mat <- as.matrix(coords)
+
+# Calculate distance matrix between all coordinates
+d_coords <- as.matrix(dist(c_mat))
+
+# Visualize the spatial grid
+ggplot(coords, aes(x = x, y = y)) +
+  geom_point(size = 0.5, alpha = 0.5) +
+  theme_minimal() +
+  labs(
+    title = "Spatial Grid for Simulation",
+    subtitle = paste0(nx, "×", ny, " grid (", n, " total points)")
+  )
+```
+
+## Generate Latent Spatial Fields
+
+Now we'll generate the latent spatial fields using Gaussian processes with different spatial decay parameters:
+
+```{r generate_latent_fields}
+# Sample decay parameters for each latent factor
+philist <- runif(actual_k, phi_range[1], phi_range[2])
+print(paste("Spatial decay parameters (phi):", paste(round(philist, 2), collapse = ", ")))
+
+# Create Cholesky factors of the covariance matrices
+# Each latent factor has its own spatial correlation structure
+LClist <- 1:actual_k %>% lapply(\(i) t(chol(
+  exp(- philist[i] * d_coords)
+)))
+
+# Generate latent spatial fields for multiple images
+VV <- lapply(1:num_images, \(j) {
+  # For each image, generate 'actual_k' latent spatial fields
+  wlist <- lapply(1:actual_k, \(i) LClist[[i]] %*% rnorm(n))
+  
+  # Combine all latent fields into a matrix
+  do.call(cbind, wlist)
+})
+
+# Visualize first latent field from the first image
+if (requireNamespace("fields", quietly = TRUE)) {
+  fields::image.plot(
+    seq(0, x_max, length.out = nx),
+    seq(0, y_max, length.out = ny),
+    matrix(VV[[1]][,1], nrow = ny, ncol = nx),
+    main = "First Latent Spatial Field",
+    xlab = "X coordinate", 
+    ylab = "Y coordinate"
+  )
+}
+```
+
+## Generate Factor Loadings
+
+Now we'll create factor loadings to link the latent fields to the observed data:
+
+```{r factor_loadings}
+# Generate factor loadings matrix
+Lambda <- matrix(0, q, actual_k)
+diag(Lambda) <- runif(actual_k, 0.5, 1)  # Strong diagonal loadings
+Lambda[lower.tri(Lambda)] <- runif(sum(lower.tri(Lambda)), -0.7, 0.7)  # Off-diagonal loadings
+
+# Display the factor loadings matrix
+print("Factor loadings matrix (Lambda):")
+print(round(Lambda, 2))
+
+# Create covariate matrix (intercept only in this example)
+Beta <- matrix(rep(mu, p*q), ncol = q)
+print("Beta coefficient matrix:")
+print(round(Beta, 2))
+
+# Create design matrices (just intercept)
+x_list <- lapply(1:num_images, \(i) {
+  matrix(1, nrow = n, ncol = p)
+})
+```
+
+## Generate Response Data
+
+Finally, we'll generate the observed count data (Poisson responses) based on the latent fields:
+
+```{r generate_response}
+# Combine latent spatial fields with factor loadings to create intensity surfaces
+WW <- lapply(1:num_images, \(i) {
+  mat <- VV[[i]] %*% t(Lambda) + x_list[[i]] %*% Beta
+  mat
+})
+
+# Generate Poisson counts based on the intensity
+y_list <- lapply(WW, \(ww) {
+  matrix(rpois(nrow(ww) * ncol(ww), exp(ww)), nrow = nrow(ww), ncol = ncol(ww))
+})
+
+# Visualize the first response dimension from the first image
+# Create a simple function to plot the response
+plot_y <- function(y, coords, dimension = 1, image_num = 1) {
+  data <- data.frame(
+    x = coords$x * max(x_max, y_max),
+    y = coords$y * max(x_max, y_max),
+    count = y[[image_num]][, dimension]
+  )
+  
+  ggplot(data, aes(x = x, y = y, fill = count)) +
+    geom_tile() +
+    scale_fill_viridis_c() +
+    theme_minimal() +
+    labs(
+      title = paste("Observed Counts - Image", image_num, "Dimension", dimension),
+      x = "X coordinate",
+      y = "Y coordinate",
+      fill = "Count"
+    )
+}
+
+# Plot the first dimension of the first image
+plot_y(y_list, coords)
+```
+
+# Run BIPPS Models
+
+Now we'll run the BIPPS model for each of our trial k values. We'll use the same dataset for all models but vary the number of latent factors:
+
+```{r run_bipps, cache=TRUE}
+# Function to run BIPPS for a specific k value
+run_bipps_with_k <- function(trial_k) {
+  cat("Running BIPPS with k =", trial_k, "\n")
+  
+  # Run BIPPS
+  out <- multi_bipps(
+    y_list = y_list,
+    x_list = x_list,
+    coords = coords,
+    k = trial_k,
+    family = "poisson",
+    block_size = block_size,
+    n_samples = n_samples, 
+    n_burn = n_burnin, 
+    n_thin = n_thin,
+    n_threads = n_threads,
+    starting = starting,
+    prior = prior,
+    settings = list(adapting = TRUE, saving = TRUE, ps = TRUE, low_mem = TRUE),
+    verbose = 10,
+    debug = list(
+      sample_beta = TRUE, 
+      sample_tausq = FALSE,
+      sample_theta = sample_theta, 
+      sample_w = TRUE, 
+      sample_lambda = TRUE,
+      verbose = FALSE, 
+      debug = FALSE
+    )
+  )
+  
+  return(out)
+}
+
+# Run BIPPS for each trial k
+results <- list()
+for (k in trial_ks) {
+  results[[as.character(k)]] <- run_bipps_with_k(k)
+}
+
+# Save results
+saveRDS(results, "output/bipps_varying_k_results.rds")
+```
+
+# Analysis of Results
+
+After running the models, we analyze the results to understand how well different models with varying k values perform. This helps us determine if we can correctly identify the true number of latent factors. We will focus mostly on analysis of the spatial cross-correlations, since these are the most interpretable quantities we get obtain from this model. The spatial cross-correlations are defined:
+
+$$
+\rho_{rs}(\mathbf{h}; \mathbf{\theta}) = \frac{C_{rs}(\mathbf{h}; \mathbf{\theta})}{\sqrt{C_{rr}(\mathbf{0}; \mathbf{\theta})} \sqrt{C_{ss}(\mathbf{0}; \mathbf{\theta})}}
+$$
+$$C_{rs}(\mathbf{h}) = \sum_{j=1}^k \lambda_{rj}\lambda_{sj} \rho(\mathbf{h}; \varphi_j)$$
+
+where $\lambda_{rj}$ is the $(r,j)$ element of the $q \times k$ matrix $\mathbf{\Lambda}$ of factor loadings, $\rho(\mathbf{h}; \varphi_j) = \exp\{ -\varphi_j \mathbf{h} \}$.
+
+## Model Comparison via WAIC
+
+First, let's compare the WAIC (Widely Applicable Information Criterion) scores and compute times across different k values. Lower WAIC scores indicate better model fit.
+
+```{r waic_display}
+waic_scores <- unlist(lapply(results,\(o) o$waic))
+timings <- unlist(lapply(results,\(o) o$mcmc_time))
+
+# Create data frame for the table
+waic_df <- tibble(
+  `Number of Latent Factors (k)` = trial_ks,
+  `WAIC Score` = waic_scores,
+  `Difference from Best` = waic_scores - min(waic_scores),
+  `Timing (s)` = timings
+)
+
+# Format the table with kable
+kableExtra::kable(waic_df, 
+      caption = "Model Comparison by WAIC and Computational Time (True k = 2)",
+      digits = c(0, 0, 0, 0),
+      # format.args = list(big.mark = ","),
+      align = c('c', 'r', 'r', 'r')) %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE,
+                position = "center")
+
+```
+
+
+## Model Diagnostics
+
+We should also examine MCMC diagnostics to ensure our models have converged properly. Important diagnostics include:
+
+1. Effective Sample Size (ESS)
+2. R-hat (Potential Scale Reduction Factor)
+
+First we will extract relevant quantities related to the cross-correlations:
+
+```{r}
+# Helper function to get unique combinations including self-pairings
+unique_combinations_with_self <- function(data) {
+  # Generate all pairs including self-pairings
+  all_pairs <- expand.grid(data, data)
+  
+  # Sort the pairs and remove duplicates
+  all_pairs <- t(apply(all_pairs, 1, sort))
+  unique_pairs <- unique(all_pairs)
+  
+  return(unique_pairs)
+}
+
+# Distance bins
+hs <- seq(0, 1, 0.1)
+
+xl_e <- lapply(trial_ks,\(k) {
+
+  # Extract cross-correlation functions
+  xl <- cross_list(results[as.character(k)], hs, thin = n_thin)
+  
+  # Prepare true cross-correlation values
+  # First, reconstruct the "true" model
+  out_actual <- list(
+    theta_mcmc = matrix(c(philist, rep(0, actual_k)), nrow = 2, ncol = actual_k, byrow = TRUE),
+    lambda_mcmc = Lambda
+  )
+  # Convert to list format expected by cross_list
+  out_actual <- list(lapply(out_actual, \(o) {
+    dim(o) <- c(dim(o), 1)
+    o
+  }))
+  # Get true cross-correlation values
+  xl_actual <- cross_list(out_actual, hs, thin = n_thin)
+  xl_actual <- lapply(xl_actual, \(x) E(x))
+  
+  # Types (response dimensions)
+  types <- 1:q
+  
+  # Calculate cross-correlation metrics for all pairs of types
+  xl_e <- unique_combinations_with_self(types) %>%
+    as.data.frame() %>%
+    as_tibble() %>%
+    magrittr::set_colnames(c("t1", "t2")) %>%
+    group_by(t1, t2) %>%
+    group_modify(~{
+      ix1 <- which(types == .y$t1)
+      ix2 <- which(types == .y$t2)
+      
+      # Predicted mean cross-correlation
+      mu <- unlist(lapply(xl, \(x) {
+        E(x[ix1, ix2])
+      }))
+      
+      # True cross-correlation
+      mu_actual <- unlist(lapply(xl_actual, \(x) {
+        x[ix1, ix2]
+      }))
+      
+      # Bulk ESS for cross-correlations
+      ess_bulk <- as.vector(do.call(rbind,lapply(xl,\(x) {
+        posterior::ess_bulk(x[ix1,ix2])
+      })))
+      
+      # Tail ESS for cross-correlations
+      ess_tail <- as.vector(do.call(rbind,lapply(xl,\(x) {
+        posterior::ess_tail(x[ix1,ix2])
+      })))
+  
+      # Rhat for cross-correlations
+      rhats <- as.vector(do.call(rbind,lapply(xl,\(x) {
+        posterior::rhat(x[ix1,ix2])
+      })))
+        
+      # Credible intervals
+      lb <- unlist(lapply(xl, \(x) {
+        quantile(x[ix1, ix2], probs = 0.025)
+      }))
+      
+      ub <- unlist(lapply(xl, \(x) {
+        quantile(x[ix1, ix2], probs = 0.975)
+      }))
+      
+      tibble(trial_k = k, actual_k = actual_k, mu = mu, mu_actual = mu_actual,
+             lb = lb, ub = ub, hs = hs, rhat = rhats, ess_bulk = ess_bulk,
+             ess_tail = ess_tail)
+    }) %>%
+    ungroup()
+}) %>%
+  bind_rows()
+```
+
+The plots above display three key Markov Chain Monte Carlo (MCMC) diagnostics across different distances and values of k:
+
+### Gelman's Rhat
+Rhat (potential scale reduction factor) measures convergence across multiple chains. Values close to 1.0 indicate good convergence, while values substantially above 1.0 (typically >1.01 or >1.05) suggest that chains have not converged to the same posterior distribution.
+
+### Bulk ESS (Effective Sample Size)
+Bulk ESS measures the effective number of independent samples for estimating the central part of the posterior distribution. It accounts for autocorrelation in the MCMC chains - higher values indicate more efficient sampling. The bulk ESS is particularly important for accurately estimating posterior means and medians. Low bulk ESS values suggest that despite having many nominal iterations, the effective information content is much lower.
+
+### Tail ESS
+Tail ESS focuses specifically on the sampling efficiency in the distribution tails, which is crucial for accurate estimation of quantiles and intervals. Tail ESS is often lower than bulk ESS because extreme values are encountered less frequently during sampling. This diagnostic is particularly important when inference about extreme probabilities or rare events is needed.
+
+```{r}
+xl_e %>%
+  mutate(trial_k=factor(trial_k)) %>%
+  mutate(hs = hs*max(x_max,y_max)) %>%
+  group_by(hs,actual_k,trial_k) %>%
+  summarise(mean_rhat=mean(rhat,na.rm = T)) %>%
+  ggplot(aes(x=hs,y=mean_rhat,color=trial_k,fill=trial_k)) +
+  stat_halfeye() +
+  labs(y=TeX("Average $\\hat{R}$"),x="Distance (\u03bcm)",color="k",fill="k")
+
+xl_e %>%
+  mutate(trial_k=factor(trial_k)) %>%
+  mutate(hs = hs*max(x_max,y_max)) %>%
+  group_by(hs,actual_k,trial_k) %>%
+  summarise(mean_ess=mean(ess_bulk,na.rm = T)) %>%
+  ggplot(aes(x=hs,y=mean_ess,color=trial_k,fill=trial_k)) +
+  stat_halfeye() +
+  labs(y="Average Bulk ESS",x="Distance (\u03bcm)",color="k",fill="k")
+
+xl_e %>%
+  mutate(trial_k=factor(trial_k)) %>%
+  mutate(hs = hs*max(x_max,y_max)) %>%
+  group_by(hs,actual_k,trial_k) %>%
+  summarise(mean_ess=mean(ess_tail,na.rm = T)) %>%
+  ggplot(aes(x=hs,y=mean_ess,color=trial_k,fill=trial_k)) +
+  stat_halfeye() +
+  labs(y="Average Tail ESS",x="Distance (\u03bcm)",color="k",fill="k")
+```
+
+## MCMC Trace Plots
+
+Trace plots are essential for assessing MCMC convergence. We want to see that the chains have mixed well and are exploring the parameter space efficiently:
+
+```{r trace_plots}
+# Get trace plots for spatial decay parameters
+if (actual_k %in% trial_ks) {
+  # Extract theta (containing phi parameters)
+  theta <- get_rvars(results[as.character(actual_k)], "theta", thin = n_thin)
+  
+  # Plot trace for the first row (phi parameters)
+  mcmc_trace(as_draws_df(theta[1, ])) + ggtitle("Trace plot for phi")
+}
+
+# Trace plots for factor loadings (Lambda)
+lambda <- get_rvars(results[as.character(actual_k)], "lambda", thin = n_thin)
+mcmc_trace(as_draws_df(lambda[, 1])) + ggtitle("Trace plot for first column of lambda")  # First column of lambda
+
+# Trace plots for cross-correlations at a specific distance
+h_ix <- 5  # Index for distance bin
+hs <- seq(0, 1, 0.1)  # Distance bins
+xl <- cross_list(results[as.character(actual_k)], hs, thin = n_thin)
+
+# Create and plot trace data
+trace_df <- as_draws_df(xl[[h_ix]]) %>%
+  pivot_longer(-c(".chain", ".iteration", ".draw"), names_to = "variable") %>%
+  separate(variable, into = c("type1", "type2"), sep = ",") %>%
+  mutate(
+    type1 = sub("^x\\[", "", type1),
+    type2 = sub("\\]", "", type2)
+  )
+
+# Center each trace around its mean to better visualize mixing
+ggplot(
+  trace_df %>%
+    mutate(.chain = factor(.chain)) %>%
+    mutate(type1 = factor(type1, levels = 1:q)) %>%
+    mutate(type2 = factor(type2, levels = 1:q)) %>%
+    group_by(type1, type2) %>%
+    mutate(value = value - mean(value)) %>%
+    ungroup(),
+  aes(.iteration, value)
+) +
+  geom_line() +
+  facet_grid(
+    type1 ~ type2,
+    labeller = label_wrap_gen(width = 8)
+  ) +
+  theme_bw() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)
+  ) +
+  labs(
+    x = "Draw",
+    y = paste0("Mean-centered cross-correlation at h=", hs[h_ix] * max(x_max, y_max), "μm")
+  )
+```
+
+Here we can see that our MCMC chains definitely don't seem to have converged, which makes sense, since we only had 500 burn-in samples! Running for longer should make convergence look much better.
+
+# Analyzing Spatial Cross-Correlation
+
+One of the key features of BIPPS is its ability to model the spatial cross-correlation between different types (or components) of the response. Here, we'll analyze how well our models capture these spatial relationships.
+
+## Spatial Cross-Correlation Analysis
+
+We'll compute and visualize the spatial cross-correlation functions for different pairs of response types:
+
+```{r cross_correlation}
+# Plot cross-correlations
+xl_e %>%
+  filter(trial_k == actual_k) %>%
+  mutate(hs = hs * max(x_max, y_max)) %>%
+  rename(Predicted = mu, True = mu_actual) %>%
+  pivot_longer(c(Predicted, True)) %>%
+  ggplot() +
+  geom_ribbon(aes(hs, ymin = lb, ymax = ub), fill = "grey70") +
+  geom_line(aes(hs, value, color = name)) +
+  geom_hline(yintercept = 0, color = "red", alpha = 0.5, linetype = "dotted") +
+  theme_bw() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)
+  ) +
+  facet_grid(t1 ~ t2) +
+  labs(
+    x = "Distance (μm)",
+    y = "Cross-correlation",
+    color = "Cross-correlation"
+  )
+```
+
+The plot above shows the spatial cross-correlation functions for each pair of response types. For each pair:
+
+- The blue line represents the true cross-correlation from our model
+- The red line represents the estimated cross-correlation function
+- The grey ribbon shows the 95% credible interval for our estimate
+- The x-axis represents the spatial distance in micrometers
+
+When our model is performing well, the estimated cross-correlation should closely follow the true cross-correlation, and the credible intervals should include the true values.
+
+## Comparing Intensity Surfaces
+
+We can also compare the estimated intensity surfaces with the true ones and the observed counts:
+
+```{r intensity_comparison}
+# Plot observed counts, true intensity, and predicted intensity
+# Select a subset of images and types for visualization
+image_idx <- 1
+types_idx <- 1:2
+
+# Extract observed counts
+y_list_subset <- lapply(y_list[image_idx], \(yy) {
+  yy <- yy[, types_idx]
+  colnames(yy) <- paste0("Cell type: ", types_idx)
+  yy
+})
+
+# Extract true intensity surfaces
+WW_subset <- lapply(WW[image_idx], \(ww) {
+  ww <- ww[, types_idx]
+  colnames(ww) <- paste0("Cell type: ", types_idx)
+  ww
+})
+
+# Create plots
+py <- plot_y_list(y_list_subset, coords * max(x_max, y_max))
+pW <- plot_y_list(WW_subset, coords * max(x_max, y_max))
+
+# Get predicted intensity
+# Extract posterior means for V (latent factors) and Lambda (loadings)
+vhat <- results[[as.character(actual_k)]]$v_mcmc
+vhat <- lapply(vhat,\(v) v[1:(nx*ny),])
+arr <- simplify2array(vhat)
+arr <- aperm(arr,perm=c(3,1,2))
+vhat <- posterior::rvar(arr)
+
+beta <- results[[as.character(actual_k)]]$beta_mcmc
+arr <- beta
+arr <- arr[,,seq(1,dim(arr)[3],by=n_thin),drop=FALSE]
+arr <- aperm(arr,perm=c(3,1,2))
+beta <- posterior::rvar(arr)
+
+# Calculate predicted intensity surface
+lp_e <- E(vhat %*% t(lambda) + matrix(1,nrow=nx*ny,ncol=p) %*% beta)
+colnames(lp_e) <- paste0("Cell type: ", 1:q)
+
+# Plot predicted intensity
+p3 <- dplyr::bind_cols(lp_e[,types_idx],coords * max(x_max,y_max)) %>%
+  tidyr::pivot_longer(-c(x,y),names_to = "type",values_to = "count") %>%
+  ggplot2::ggplot(ggplot2::aes(x,y,fill=count)) +
+  ggplot2::geom_tile() +
+  ggplot2::facet_wrap(~type,ncol=2) +
+  ggplot2::scale_fill_viridis_c(option="magma") +
+  theme(axis.text = element_blank(),
+        axis.title.y=element_blank()) +
+  guides(fill="none")
+
+
+py[[1]]
+pW[[1]] + labs(fill="log-intensity")
+p3
+```
+
+The figures shown are:
+
+- Plot 1: Observed count data for selected cell types
+- Plot 2: True underlying intensity that generated the counts
+- Plot 3: Model-predicted intensity surfaces
+
+When the model fits well, the predicted intensity surfaces should closely match the true intensity surfaces, despite the randomness in the observed counts.
+
+# Conclusion
+
+In this example, we demonstrated:
+
+1. How to set up and run BIPPS simulations with varying numbers of latent factors
+2. The process of generating synthetic spatial point process data
+3. How to fit BIPPS models with different specifications
+4. Methods for comparing model performance and evaluating results
+
+The simulation framework allows us to test how well BIPPS can recover the true underlying structure of spatial point process data. By comparing models with different numbers of latent factors, we can develop insights into model selection and specification.
+
+## Next Steps
+
+Potential extensions of this analysis could include:
+
+1. Varying other parameters like the spatial decay range
+2. Testing with different point process families (e.g., Negative Binomial)
+3. Adding covariates to the model
+4. Exploring different spatial correlation structures
