@@ -380,6 +380,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// waic_test_runner
+double waic_test_runner(const arma::mat& log_likelihood);
+RcppExport SEXP _bipps_waic_test_runner(SEXP log_likelihoodSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type log_likelihood(log_likelihoodSEXP);
+    rcpp_result_gen = Rcpp::wrap(waic_test_runner(log_likelihood));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_bipps_bipps_predict", (DL_FUNC) &_bipps_bipps_predict, 16},
@@ -406,6 +417,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_bipps_cube_correl_from_lambda", (DL_FUNC) &_bipps_cube_correl_from_lambda, 1},
     {"_bipps_summary_list_mean", (DL_FUNC) &_bipps_summary_list_mean, 2},
     {"_bipps_summary_list_q", (DL_FUNC) &_bipps_summary_list_q, 3},
+    {"_bipps_waic_test_runner", (DL_FUNC) &_bipps_waic_test_runner, 1},
     {NULL, NULL, 0}
 };
 

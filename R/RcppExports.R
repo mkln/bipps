@@ -97,3 +97,7 @@ summary_list_q <- function(x, q, n_threads = 1L) {
     .Call(`_bipps_summary_list_q`, x, q, n_threads)
 }
 
+waic_test_runner <- function(log_likelihood) {
+    .Call(`_bipps_waic_test_runner`, log_likelihood)
+}
+

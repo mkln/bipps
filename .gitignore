@@ -17,3 +17,4 @@ example/data/
 .vscode
 _rslurm*
 bipps.Rproj
+*.DS_Store
