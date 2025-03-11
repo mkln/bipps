@@ -20,20 +20,6 @@ fsave <- \(fname) {
 }
 figures_folder <- "examples/data/figures/panc_choosingk/"
 
-# timings table
-real_timings <- readRDS("examples/data/timings_apps.rds") %>%
-  filter(type %in% c("ipmn","pdac")) %>%
-  pivot_wider(names_from = type,values_from = timing) %>%
-  rename(IPMN=ipmn,PDAC=pdac)
-
-real_timings %>%
-  kable(format = "latex", booktabs = TRUE, digits = 0, align = "c", caption = "Model fitting times on images from pancreatic cancer patient groups for various $k$.", label = "timings_panc") %>%
-  kable_styling(latex_options = c("striped", "hold_position", "scale_down")) %>%
-  add_header_above(c(" " = 1, "Model fitting time (s)" = 2)) %>%
-  column_spec(1, bold = TRUE) %>%
-  row_spec(0, bold = TRUE) %>%
-  write_clip()
-
 n_samples <- 1000
 n_burnin <- 20000
 n_thin <- 10
@@ -45,32 +31,26 @@ prior <- list(phi = c(0.1,10))
 
 chains <- 1
 
-dat1 <- readRDS("examples/data/PDAC_POS_DATA.rds") %>%
+filename_manage <- \(x){
+  strsplit(x, "/") %>% `[[`(1) %>% tail(1) %>% gsub("_cell_seg_data.txt", "", .)
+}
+
+dat1 <- Sys.glob("examples/data/2024Phenotypes/PDAC_ModPhenotypes/*.txt") %>%
+  lapply(\(f) read.delim(f,sep=",") %>% mutate(Spot=filename_manage(f))) %>%
+  bind_rows() %>%
   rename(X=Cell.X.Position,
          Y=Cell.Y.Position,
-         type=Cellname,
-         Spot=SlideID) %>%
-  filter(type != "CD4")
+         type=CellOfInterest)
 
-
-dat2 <- readRDS("examples/data/IPMN_POS_DATA.rds") %>%
+dat2<- Sys.glob("examples/data/2024Phenotypes/IPMN_ModPhenotypes/*.txt") %>%
+  lapply(\(f) read.delim(f,sep=",") %>% mutate(Spot=filename_manage(f))) %>%
+  bind_rows() %>%
   rename(X=Cell.X.Position,
          Y=Cell.Y.Position,
-         type=Cellname,
-         Spot=SlideID) %>%
-  filter(type != "CD4")
-
-
-# dat1 %>%
-#   filter(Spot == "PATID_538_SLIDE_1") %>%
-#   ggplot(aes(X,Y,color=type)) +
-#   geom_point() +
-#   scale_color_manual(values=as.vector(pals::glasbey())) +
-#   theme_bw()
+         type=CellOfInterest)
 
 dat1 %>%
   distinct(Spot) %>%
-  filter(!(Spot %in% c("PATID_12_SLIDE_1","PATID_538_SLIDE_1"))) %>% # these are bad images
   pull(Spot) -> spots1
 
 dat2 %>%
@@ -83,29 +63,6 @@ dat1 <- dat1 %>%
 dat2 <- dat2 %>%
   filter(Spot %in% spots2)
 
-dat1 %>%
-  count(Spot,type) %>%
-  group_by(type) %>%
-  summarise(mn = median(n)) %>%
-  filter(mn > 10) %>%
-  pull(type) -> types1
-
-dat2 %>%
-  count(Spot,type) %>%
-  group_by(type) %>%
-  summarise(mn = median(n)) %>%
-  filter(mn > 10) %>%
-  pull(type) -> types2
-
-
-types_intersect <- intersect(types1,types2)
-
-dat1 <- dat1 %>%
-  filter(type %in% types_intersect)
-
-dat2 <- dat2 %>%
-  filter(type %in% types_intersect)
-
 bind_rows(dat1,dat2) %>%
   dplyr::group_by(Spot) %>%
   dplyr::mutate(X = X - min(X),
@@ -114,39 +71,81 @@ bind_rows(dat1,dat2) %>%
   select(X,Y) %>%
   apply(.,2,max) -> max_dim
 
-# x <- dat1$X
-# y <- dat1$Y
-# types <- dat1$type
-# image_ids <- dat1$Spot
-
 pix_dim <- 70
 nx <- ceiling(max_dim[1]/pix_dim)
 ny <- ceiling(max_dim[2]/pix_dim)
 
 max_range <- max(max_dim)
 
+types_intersect <- unique(dat1$type)
 
-out1 <- readRDS("examples/data/PDAC_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds")
-out2 <- readRDS("examples/data/IPMN_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds")
+out1 <- pixellate_grid(dat1$X,dat1$Y,dat1$type,dat1$Spot,nx,ny)
+y_list1 <- out1$y_list
+coords1 <- out1$coords
+x_list1 <- lapply(y_list1,\(yy) {
+  matrix(1,nrow = nrow(yy),ncol = 1)
+})
+
+out2 <- pixellate_grid(dat2$X,dat2$Y,dat2$type,dat2$Spot,nx,ny)
+y_list2 <- out2$y_list
+coords2 <- out2$coords
+x_list2 <- lapply(y_list2,\(yy) {
+  matrix(1,nrow = nrow(yy),ncol = 1)
+})
+
+
+out1 <- readRDS("examples/data/PDAC_2024Pheno_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds")
+out2 <- readRDS("examples/data/IPMN_2024Pheno_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds")
+
+tim_pdac <- unlist(lapply(out1,\(o) o$mcmc_time))
+tim_ipmn <- unlist(lapply(out2,\(o) o$mcmc_time))
+
+
+# timings table
+real_timings <- tibble(timing=c(tim_pdac,tim_ipmn),type=rep(c("pdac","ipmn"),each=4),k=rep(2:5,2)) %>%
+  pivot_wider(names_from = type,values_from = timing) %>%
+  rename(IPMN=ipmn,PDAC=pdac)
+
+real_timings %>%
+  kable(format = "latex", booktabs = TRUE, digits = 0, align = "c", caption = "Model fitting times on images from pancreatic cancer patient groups for various $k$.", label = "timings_panc") %>%
+  kable_styling(latex_options = c("striped", "hold_position", "scale_down")) %>%
+  add_header_above(c(" " = 1, "Model fitting time (s)" = 2)) %>%
+  column_spec(1, bold = TRUE) %>%
+  row_spec(0, bold = TRUE) %>%
+  write_clip()
 
 hs <- seq(0,1,0.1)
 
 xl1 <- lapply(out1,\(o) cross_list(list(o),hs,thin=n_thin))
 xl2 <- lapply(out2,\(o) cross_list(list(o),hs,thin=n_thin))
 
+all(sapply(y_list1[-1], function(v) all.equal(colnames(v), colnames(y_list1[[1]]))))
+
+all(sapply(y_list2[-1], function(v) all.equal(colnames(v), colnames(y_list2[[1]]))))
+
+
+types1 <- colnames(y_list1[[1]])
+
+types2 <- colnames(y_list2[[1]])
+
+
 xl1 <- lapply(xl1,\(xl) {
   lapply(xl,\(x) {
-    rownames(x) <- colnames(x) <- types_intersect
-    x
+    rownames(x) <- colnames(x) <- types1
+    sorted <- order(rownames(x))
+    x[sorted,sorted]
   })
 })
 
 xl2 <- lapply(xl2,\(xl) {
   lapply(xl,\(x) {
-    rownames(x) <- colnames(x) <- types_intersect
-    x
+    rownames(x) <- colnames(x) <- types2
+    sorted <- order(rownames(x))
+    x[sorted,sorted]
   })
 })
+
+types_intersect <- sort(types1)
 
 unique_combinations_with_self <- function(data) {
   # Generate all pairs including self-pairings
@@ -224,11 +223,12 @@ waic_df <- tibble(k=ks,
 waic_df %>%
   rename(`WAIC in PDAC group`=WAIC1,
          `WAIC in IPMN group`=WAIC2) %>%
-  kable(format = "latex", booktabs = TRUE, digits = 0, align = "c", caption = "", label = "waic_panc") %>%
+  kable(format = "latex", booktabs = TRUE, digits = 0, align = "c", caption = "The WAIC of the fitted model for various $k$, for both patient groups in the pancreatic cancer dataset.", label = "waic_panc") %>%
   kable_styling(latex_options = c("striped", "hold_position", "scale_down")) %>%
   add_header_above(c(" " = 1, "WAIC Scores" = 2)) %>%
   column_spec(1, bold = TRUE) %>%
-  row_spec(0, bold = TRUE)
+  row_spec(0, bold = TRUE) %>%
+  write_clip()
 
 df1 %>%
   mutate(hs = hs * max_range) %>%
@@ -308,7 +308,7 @@ df2 %>%
   geom_point()
 
 
-h_ix <- 5
+h_ix <- 1
 trace_df <- lapply(1:length(ks),\(k_ix) {
   as_draws_df(xl2[[k_ix]][[h_ix]]) %>%
     pivot_longer(-c(".chain",".iteration",".draw"),names_to = "variable") %>%

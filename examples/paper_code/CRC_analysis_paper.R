@@ -124,6 +124,80 @@ dplyr::bind_cols(y_list[[1]],coords) %>%
   labs(x="X (\u03BCm)",y="Y (\u03BCm)")
 fsave("binned_count_CRC.png")
 
+df_raw %>%
+  distinct(Spot,groups) %>%
+  filter(groups == 1) %>%
+  filter(!(Spot %in% c("67_B","57_A"))) %>% # these are really weird images
+  pull(Spot) -> spots1
+
+df_raw %>%
+  distinct(Spot,groups) %>%
+  filter(groups == 2) %>%
+  filter(!(Spot %in% c("53_B","54_B"))) %>% # these are also really weird images
+  pull(Spot) -> spots2
+
+dat1 <- df_raw %>%
+  filter(Spot %in% spots1)
+
+dat2 <- df_raw %>%
+  filter(Spot %in% spots2)
+
+dat1 %>%
+  count(Spot,type) %>%
+  group_by(type) %>%
+  summarise(mn = median(n)) %>%
+  filter(mn > 10) %>%
+  pull(type) -> types1
+
+dat2 %>%
+  count(Spot,type) %>%
+  group_by(type) %>%
+  summarise(mn = median(n)) %>%
+  filter(mn > 10) %>%
+  pull(type) -> types2
+
+
+types_intersect <- intersect(types1,types2)
+
+dat1 <- dat1 %>%
+  filter(type %in% types_intersect)
+
+dat2 <- dat2 %>%
+  filter(type %in% types_intersect)
+
+bind_rows(dat1,dat2) %>%
+  dplyr::group_by(Spot) %>%
+  dplyr::mutate(X = X - min(X),
+                Y = Y - min(Y)) %>%
+  dplyr::ungroup() %>%
+  select(X,Y) %>%
+  apply(.,2,max) -> max_dim
+
+max_range <- max(max_dim)
+
+# x <- dat1$X
+# y <- dat1$Y
+# types <- dat1$type
+# image_ids <- dat1$Spot
+
+pix_dim <- 70
+nx <- ceiling(max_dim[1]/pix_dim)
+ny <- ceiling(max_dim[2]/pix_dim)
+
+out1 <- pixellate_grid(dat1$X,dat1$Y,dat1$type,dat1$Spot,nx,ny)
+y_list1 <- out1$y_list
+coords1 <- out1$coords
+x_list1 <- lapply(y_list1,\(yy) {
+  matrix(1,nrow = nrow(yy),ncol = 1)
+})
+
+out2 <- pixellate_grid(dat2$X,dat2$Y,dat2$type,dat2$Spot,nx,ny)
+y_list2 <- out2$y_list
+coords2 <- out2$coords
+x_list2 <- lapply(y_list2,\(yy) {
+  matrix(1,nrow = nrow(yy),ncol = 1)
+})
+
 out1 <- readRDS("examples/data/group1_CRC_intercept_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds")
 out2 <- readRDS("examples/data/group2_CRC_intercept_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds")
 
@@ -134,19 +208,33 @@ hs <- seq(0,1,0.1)
 xl1 <- lapply(out1,\(o) cross_list(list(o),hs,thin=n_thin))
 xl2 <- lapply(out2,\(o) cross_list(list(o),hs,thin=n_thin))
 
+all(sapply(y_list1[-1], function(v) all.equal(colnames(v), colnames(y_list1[[1]]))))
+
+all(sapply(y_list2[-1], function(v) all.equal(colnames(v), colnames(y_list2[[1]]))))
+
+
+types1 <- colnames(y_list1[[1]])
+
+types2 <- colnames(y_list2[[1]])
+
+
 xl1 <- lapply(xl1,\(xl) {
   lapply(xl,\(x) {
-    rownames(x) <- colnames(x) <- types_intersect
-    x
+    rownames(x) <- colnames(x) <- types1
+    sorted <- order(rownames(x))
+    x[sorted,sorted]
   })
 })
 
 xl2 <- lapply(xl2,\(xl) {
   lapply(xl,\(x) {
-    rownames(x) <- colnames(x) <- types_intersect
-    x
+    rownames(x) <- colnames(x) <- types2
+    sorted <- order(rownames(x))
+    x[sorted,sorted]
   })
 })
+
+types_intersect <- sort(types1)
 
 xl1 <- xl1[[k_idx]]
 xl2 <- xl2[[k_idx]]
@@ -249,22 +337,49 @@ unique_combinations_with_self(types_intersect) %>%
   }) %>%
   ungroup() -> xl2_e
 
+dd1 <- xl1_e %>%
+  select(t1,t2,hs,mu) %>%
+  rename(mu1=mu)
 
-filter_out <- tibble(combo = c("B cells <--> tumor cells",
-                 "B cells <--> granulocytes",
-                 "CAFs <--> CTLs",
-                 "CAFs <--> vasculature",
-                 "CAFs <--> memory CD4+ T",
-                 "CAFs <--> tumor cells",
-                 "CTLs <--> tumor cells",
-                 "CTLs <--> plasma cells",
-                 "granulocytes <--> plasma cells",
-                 "hybrid E/M <--> vasculature",
-                 "hybrid E/M <--> TAMs",
-                 "memory CD4+ T <--> plasma cells",
-                 "memory CD4+ T <--> TAMs",
-                 "memory CD4+ T <--> vasculature",
-                 "plasma cells <--> TAMs"))
+dd2 <- xl2_e %>%
+  select(t1,t2,hs,mu) %>%
+  rename(mu2=mu)
+
+d_diff <- xldiff_e %>%
+  select(t1,t2,hs,mu,auc) %>%
+  rename(mu_diff=mu)
+
+dd <- dd1 %>%
+  inner_join(dd2) %>%
+  inner_join(d_diff) %>%
+  filter(hs %in% c(0,0.2,0.4,0.8)) %>%
+  # mutate(hs=max_range*hs) %>%
+  mutate(hs=factor(hs)) %>%
+  mutate(hs=fct_recode(hs,
+                       "close"="0",
+                       "moderate"="0.2",
+                       "far"="0.4",
+                       "very far"="0.8")) %>%
+  rename(distance=hs) %>%
+  rename(type1=t1,
+         type2=t2,
+         cor_CLR=mu1,
+         cor_DII=mu2,
+         cor_CLR_minus_cor_DII=mu_diff) %>%
+  arrange(desc(abs(auc))) %>%
+  mutate(greater_in_CLR=cor_CLR_minus_cor_DII > 0)
+
+dd %>%
+  filter(abs(auc) > sort(abs(unique(auc)),decreasing=TRUE)[11]) %>%
+  print(n=nrow(.))
+
+dd %>%
+  filter(abs(auc) > sort(abs(unique(auc)),decreasing=TRUE)[11]) %>%
+  distinct(type1,type2) %>%
+  mutate(combo = paste0(type1," <--> ",type2)) %>%
+  select(combo) -> filter_out
+
+
 
 dd1 <- xl1_e %>%
   mutate(combo = paste0(t1," <--> ",t2)) %>%
@@ -391,49 +506,15 @@ xldiff_e %>%
   geom_hline(yintercept = 0,color="red",linetype="dotted") +
   # facet_grid(t1~t2,
   #            labeller = label_wrap_gen(width=8)) +
-  facet_wrap(~combo) +
+  facet_wrap(~combo,ncol=5) +
   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
   # theme(axis.title = element_text(size=20),
   #       axis.text = element_text(size=14),
   #       strip.text = element_text(size=16),
   #       title = element_text(size=20)) +
   labs(x="Distance (\u03bcm)",y="Difference in cross-correlation")
-fsave("diff_cor_CRC.png")
+fsave("diff_cor_CRC.png",height = 7,width = 10)
 
 # supplement - full version
 
-dd1 <- xl1_e %>%
-  select(t1,t2,hs,mu) %>%
-  rename(mu1=mu)
 
-dd2 <- xl2_e %>%
-  select(t1,t2,hs,mu) %>%
-  rename(mu2=mu)
-
-d_diff <- xldiff_e %>%
-  select(t1,t2,hs,mu,auc) %>%
-  rename(mu_diff=mu)
-
-dd <- dd1 %>%
-  inner_join(dd2) %>%
-  inner_join(d_diff) %>%
-  filter(hs %in% c(0,0.2,0.4,0.8)) %>%
-  # mutate(hs=max_range*hs) %>%
-  mutate(hs=factor(hs)) %>%
-  mutate(hs=fct_recode(hs,
-                       "close"="0",
-                       "moderate"="0.2",
-                       "far"="0.4",
-                       "very far"="0.8")) %>%
-  rename(distance=hs) %>%
-  rename(type1=t1,
-         type2=t2,
-         cor_CLR=mu1,
-         cor_DII=mu2,
-         cor_CLR_minus_cor_DII=mu_diff) %>%
-  arrange(desc(abs(auc))) %>%
-  mutate(greater_in_CLR=cor_CLR_minus_cor_DII > 0)
-
-dd %>%
-  filter(type1 != type2) %>%
-  print(n=nrow(.))

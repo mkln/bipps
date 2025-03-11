@@ -42,43 +42,12 @@ real_timings %>%
   row_spec(0, bold = TRUE) %>%
   write_clip()
 
-
-# pp plot
-df <- df_raw %>%
-  filter(Spot == "59_A") %>%
-  mutate(type = fct_lump_min(type,min=20)) %>%
-  filter(type != "Other") %>%
-  droplevels() %>%
-  rename(Type=type)
-
-df_raw %>%
-  dplyr::group_by(Spot) %>%
-  dplyr::mutate(X = X - min(X),
-                Y = Y - min(Y)) %>%
-  dplyr::ungroup() %>%
-  select(X,Y) %>%
-  apply(.,2,max) -> max_dim
-
-
-pix_dim <- 70
-nx <- ceiling(max_dim[1]/pix_dim)
-ny <- ceiling(max_dim[2]/pix_dim)
-
-out <- pixellate_grid(df$X,df$Y,df$Type,df$Spot,nx,ny)
-
-y_list <- out$y_list
-coords <- out$coords
-
 # p1 <- plot_y_list(y_list,coords)
 # p1
 # 54_B
 # 53_B
 
-max_range <- max(max_dim)
 
-# model fitting
-# group 1 is CLR
-# group 2 is DII
 df_raw %>%
   distinct(Spot,groups) %>%
   filter(groups == 1) %>%
@@ -120,6 +89,39 @@ dat1 <- dat1 %>%
 dat2 <- dat2 %>%
   filter(type %in% types_intersect)
 
+bind_rows(dat1,dat2) %>%
+  dplyr::group_by(Spot) %>%
+  dplyr::mutate(X = X - min(X),
+                Y = Y - min(Y)) %>%
+  dplyr::ungroup() %>%
+  select(X,Y) %>%
+  apply(.,2,max) -> max_dim
+
+max_range <- max(max_dim)
+
+# x <- dat1$X
+# y <- dat1$Y
+# types <- dat1$type
+# image_ids <- dat1$Spot
+
+pix_dim <- 70
+nx <- ceiling(max_dim[1]/pix_dim)
+ny <- ceiling(max_dim[2]/pix_dim)
+
+out1 <- pixellate_grid(dat1$X,dat1$Y,dat1$type,dat1$Spot,nx,ny)
+y_list1 <- out1$y_list
+coords1 <- out1$coords
+x_list1 <- lapply(y_list1,\(yy) {
+  matrix(1,nrow = nrow(yy),ncol = 1)
+})
+
+out2 <- pixellate_grid(dat2$X,dat2$Y,dat2$type,dat2$Spot,nx,ny)
+y_list2 <- out2$y_list
+coords2 <- out2$coords
+x_list2 <- lapply(y_list2,\(yy) {
+  matrix(1,nrow = nrow(yy),ncol = 1)
+})
+
 out1 <- readRDS("examples/data/group1_CRC_intercept_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds")
 out2 <- readRDS("examples/data/group2_CRC_intercept_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds")
 
@@ -130,19 +132,33 @@ hs <- seq(0,1,0.1)
 xl1 <- lapply(out1,\(o) cross_list(list(o),hs,thin=n_thin))
 xl2 <- lapply(out2,\(o) cross_list(list(o),hs,thin=n_thin))
 
+all(sapply(y_list1[-1], function(v) all.equal(colnames(v), colnames(y_list1[[1]]))))
+
+all(sapply(y_list2[-1], function(v) all.equal(colnames(v), colnames(y_list2[[1]]))))
+
+
+types1 <- colnames(y_list1[[1]])
+
+types2 <- colnames(y_list2[[1]])
+
+
 xl1 <- lapply(xl1,\(xl) {
   lapply(xl,\(x) {
-    rownames(x) <- colnames(x) <- types_intersect
-    x
+    rownames(x) <- colnames(x) <- types1
+    sorted <- order(rownames(x))
+    x[sorted,sorted]
   })
 })
 
 xl2 <- lapply(xl2,\(xl) {
   lapply(xl,\(x) {
-    rownames(x) <- colnames(x) <- types_intersect
-    x
+    rownames(x) <- colnames(x) <- types2
+    sorted <- order(rownames(x))
+    x[sorted,sorted]
   })
 })
+
+types_intersect <- sort(types1)
 
 unique_combinations_with_self <- function(data) {
   # Generate all pairs including self-pairings

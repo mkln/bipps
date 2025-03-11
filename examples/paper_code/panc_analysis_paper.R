@@ -13,7 +13,7 @@ theme_set(theme_bw(base_size=11, base_family='Times New Roman')+
             theme(panel.grid.major = element_blank(),
                   panel.grid.minor = element_blank()))
 n_thin <- 10
-k_idx <- c(2,3) # corresponds to k=3,4 for PDAC,IPMN
+k_idx <- c(4,4) # corresponds to k=5,5 for PDAC,IPMN
 fsave <- \(fname,width=8,height=5) {
   ggsave(paste0(figures_folder,fname),dpi=300, height=height, width=width, units="in")
 }
@@ -21,24 +21,26 @@ figures_folder <- "examples/data/figures/panc_analysis_paper/"
 
 chains <- 1
 
-dat1 <- readRDS("examples/data/PDAC_POS_DATA.rds") %>%
+filename_manage <- \(x){
+  strsplit(x, "/") %>% `[[`(1) %>% tail(1) %>% gsub("_cell_seg_data.txt", "", .)
+}
+
+dat1 <- Sys.glob("examples/data/2024Phenotypes/PDAC_ModPhenotypes/*.txt") %>%
+  lapply(\(f) read.delim(f,sep=",") %>% mutate(Spot=filename_manage(f))) %>%
+  bind_rows() %>%
   rename(X=Cell.X.Position,
          Y=Cell.Y.Position,
-         type=Cellname,
-         Spot=SlideID) %>%
-  filter(type != "CD4")
+         type=CellOfInterest)
 
-
-dat2 <- readRDS("examples/data/IPMN_POS_DATA.rds") %>%
+dat2<- Sys.glob("examples/data/2024Phenotypes/IPMN_ModPhenotypes/*.txt") %>%
+  lapply(\(f) read.delim(f,sep=",") %>% mutate(Spot=filename_manage(f))) %>%
+  bind_rows() %>%
   rename(X=Cell.X.Position,
          Y=Cell.Y.Position,
-         type=Cellname,
-         Spot=SlideID) %>%
-  filter(type != "CD4")
+         type=CellOfInterest)
 
 dat1 %>%
   distinct(Spot) %>%
-  filter(!(Spot %in% c("PATID_12_SLIDE_1","PATID_538_SLIDE_1"))) %>% # these are bad images
   pull(Spot) -> spots1
 
 dat2 %>%
@@ -51,43 +53,19 @@ dat1 <- dat1 %>%
 dat2 <- dat2 %>%
   filter(Spot %in% spots2)
 
-dat1 %>%
-  count(Spot,type) %>%
-  group_by(type) %>%
-  summarise(mn = median(n)) %>%
-  filter(mn > 10) %>%
-  pull(type) -> types1
-
-dat2 %>%
-  count(Spot,type) %>%
-  group_by(type) %>%
-  summarise(mn = median(n)) %>%
-  filter(mn > 10) %>%
-  pull(type) -> types2
-
-
-types_intersect <- intersect(types1,types2)
-
-dat1 <- dat1 %>%
-  filter(type %in% types_intersect)
-
-dat2 <- dat2 %>%
-  filter(type %in% types_intersect)
 
 dat1 %>%
   count(Spot)
 
 df <- dat1 %>%
-  filter(Spot == "PATID_64_SLIDE_1")
-  # filter(Spot == "PATID_12_SLIDE_1")
-  # filter(Spot == "PATID_538_SLIDE_1")
+  filter(Spot == "539_2_1")
 
 # pp plot
 df %>%
   ggplot(aes(X,Y,color=type,fill=type,shape=type)) +
   geom_point(size=1) +
-  scale_color_manual(values=as.vector(pals::glasbey())) +
-  scale_fill_manual(values=as.vector(pals::glasbey())) +
+  scale_color_manual(values=as.vector(pals::trubetskoy())) +
+  scale_fill_manual(values=as.vector(pals::trubetskoy())) +
   scale_shape_manual(values=rep(21:25,times=2,length.out=10)) +
   labs(x="X (\u03BCm)",y="Y (\u03BCm)",color="Type",shape="Type",fill="Type")
 fsave("pdac_pat.png")
@@ -120,32 +98,61 @@ dplyr::bind_cols(y_list[[1]],coords) %>%
   ggplot2::ggplot(ggplot2::aes(x,y,fill=Count)) +
   ggplot2::geom_tile() +
   ggplot2::facet_wrap(~type) +
-  scale_fill_viridis_c(option = "inferno",direction=-1,na.value = "transparent",breaks = c(0,5,10)) +
+  scale_fill_viridis_c(option = "inferno",direction=-1,na.value = "transparent") + #,breaks = c(0,5,10)) +
   theme(axis.text.x=element_text(angle=45,hjust=1,vjust=1)) +
   labs(x="X (\u03BCm)",y="Y (\u03BCm)")
 fsave("binned_count_PDAC.png")
 
-out2 <- readRDS("examples/data/IPMN_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds")
-out1 <- readRDS("examples/data/PDAC_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds")
+out1 <- pixellate_grid(dat1$X,dat1$Y,dat1$type,dat1$Spot,nx,ny)
+y_list1 <- out1$y_list
+coords1 <- out1$coords
+x_list1 <- lapply(y_list1,\(yy) {
+  matrix(1,nrow = nrow(yy),ncol = 1)
+})
+
+out2 <- pixellate_grid(dat2$X,dat2$Y,dat2$type,dat2$Spot,nx,ny)
+y_list2 <- out2$y_list
+coords2 <- out2$coords
+x_list2 <- lapply(y_list2,\(yy) {
+  matrix(1,nrow = nrow(yy),ncol = 1)
+})
+
+out1 <- readRDS("examples/data/PDAC_2024Pheno_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds")
+out2 <- readRDS("examples/data/IPMN_2024Pheno_varyingk_nburn20k_nthin10_nsamp1e3_chain1_lt.rds")
+
 
 hs <- seq(0,1,0.1)
 
 xl1 <- lapply(out1,\(o) cross_list(list(o),hs,thin=n_thin))
 xl2 <- lapply(out2,\(o) cross_list(list(o),hs,thin=n_thin))
 
+all(sapply(y_list1[-1], function(v) all.equal(colnames(v), colnames(y_list1[[1]]))))
+
+all(sapply(y_list2[-1], function(v) all.equal(colnames(v), colnames(y_list2[[1]]))))
+
+
+types1 <- colnames(y_list1[[1]])
+
+types2 <- colnames(y_list2[[1]])
+
+
 xl1 <- lapply(xl1,\(xl) {
   lapply(xl,\(x) {
-    rownames(x) <- colnames(x) <- types_intersect
-    x
+    rownames(x) <- colnames(x) <- types1
+    sorted <- order(rownames(x))
+    x[sorted,sorted]
   })
 })
 
 xl2 <- lapply(xl2,\(xl) {
   lapply(xl,\(x) {
-    rownames(x) <- colnames(x) <- types_intersect
-    x
+    rownames(x) <- colnames(x) <- types2
+    sorted <- order(rownames(x))
+    x[sorted,sorted]
   })
 })
+
+types_intersect <- sort(types1)
 
 xl1 <- xl1[[k_idx[1]]]
 xl2 <- xl2[[k_idx[2]]]
@@ -249,62 +256,6 @@ unique_combinations_with_self(types_intersect) %>%
   ungroup() %>%
   mutate(group = "IPMN") -> xl2_e
 
-p1 <- bind_rows(xl1_e,xl2_e) %>%
-  mutate(combo = paste0(t1," <--> ",t2)) %>%
-  mutate(hs = hs * max_range) %>%
-  filter(t1 == t2) %>%
-  ggplot(aes(hs,mu)) +
-  geom_ribbon(aes(hs,ymin = lb,ymax=ub,group=group),fill = "grey70") +
-  geom_line(aes(color=group)) +
-  geom_hline(yintercept = 0,color="red",linetype="dotted") +
-  facet_wrap(~t2,nrow=1) +
-  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
-  labs(x="Distance (\u03bcm)",y="Marginal correlation") +
-  theme(legend.position = "top",
-        axis.text.x = element_blank(),
-        axis.title.x = element_blank(),
-        axis.ticks.x = element_blank())
-p1
-
-p2 <- bind_rows(xl1_e,xl2_e) %>%
-  mutate(combo = paste0(t1," <--> ",t2)) %>%
-  mutate(hs = hs * max_range) %>%
-  filter(t1 != t2) %>%
-  filter(t1 != "PDL1_CD8",
-         t2 != "PDL1_CD8") %>%
-  ggplot(aes(hs,mu)) +
-  geom_ribbon(aes(hs,ymin = lb,ymax=ub,group=group),fill = "grey70") +
-  geom_line(aes(color=group)) +
-  geom_hline(yintercept = 0,color="red",linetype="dotted") +
-  facet_wrap(~combo,nrow=1) +
-  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
-  labs(x="Distance (\u03bcm)",y="Cross-correlation") +
-  guides(color="none") +
-  theme(
-        axis.text.x = element_blank(),
-        axis.title.x = element_blank(),
-        axis.ticks.x = element_blank())
-
-p3 <- bind_rows(xl1_e,xl2_e) %>%
-  mutate(combo = paste0(t1," <--> ",t2)) %>%
-  mutate(hs = hs * max_range) %>%
-  filter(t1 == "PDL1_CD8" |
-         t2 == "PDL1_CD8") %>%
-  ggplot(aes(hs,mu)) +
-  geom_ribbon(aes(hs,ymin = lb,ymax=ub,group=group),fill = "grey70") +
-  geom_line(aes(color=group)) +
-  geom_hline(yintercept = 0,color="red",linetype="dotted") +
-  facet_wrap(~combo,nrow=1) +
-  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
-  labs(x="Distance (\u03bcm)",y="Cross-correlation") +
-  guides(color="none")
-
-p1/p2/p3 + plot_annotation(tag_levels = "a")
-
-
-fsave("xcor_comparison.png",width=9,height=6)
-
-# spatial cross-correlation difference over distance plots
 xl_diff <- lapply(1:length(hs),\(i) {
   x1 <- xl1[[i]]
   x2 <- xl2[[i]]
@@ -341,6 +292,155 @@ unique_combinations_with_self(types_intersect) %>%
     tibble(mu=mu,lb=lb,ub=ub,hs=hs,auc=int_val)
   }) %>%
   ungroup() -> xldiff_e
+
+dd1 <- xl1_e %>%
+  select(t1,t2,hs,mu) %>%
+  rename(mu1=mu)
+
+dd2 <- xl2_e %>%
+  select(t1,t2,hs,mu) %>%
+  rename(mu2=mu)
+
+d_diff <- xldiff_e %>%
+  select(t1,t2,hs,mu,auc) %>%
+  rename(mu_diff=mu)
+
+dd <- dd1 %>%
+  inner_join(dd2) %>%
+  inner_join(d_diff) %>%
+  filter(hs %in% c(0,0.2,0.4,0.8)) %>%
+  # mutate(hs=max_range*hs) %>%
+  mutate(hs=factor(hs)) %>%
+  mutate(hs=fct_recode(hs,
+                       "close"="0",
+                       "moderate"="0.2",
+                       "far"="0.4",
+                       "very far"="0.8")) %>%
+  rename(distance=hs) %>%
+  rename(type1=t1,
+         type2=t2,
+         cor_PDAC=mu1,
+         cor_IPMN=mu2,
+         cor_PDAC_minus_cor_IPMN=mu_diff) %>%
+  arrange(desc(abs(auc))) %>%
+  mutate(greater_in_PDAC=cor_PDAC_minus_cor_IPMN > 0)
+
+dd %>%
+  filter(abs(auc) > sort(abs(unique(auc)),decreasing=TRUE)[11]) %>%
+  print(n=nrow(.))
+
+dd %>%
+  filter(abs(auc) > sort(abs(unique(auc)),decreasing=TRUE)[11]) %>%
+  distinct(type1,type2) %>%
+  mutate(combo = paste0(type1," <--> ",type2)) %>%
+  select(combo) -> filter_out
+
+dd1 <- xl1_e %>%
+  mutate(combo = paste0(t1," <--> ",t2)) %>%
+  right_join(filter_out) %>%
+  mutate(hs = hs * max_range) %>%
+  mutate(group = "PDAC")
+
+dd2 <- xl2_e %>%
+  mutate(combo = paste0(t1," <--> ",t2)) %>%
+  right_join(filter_out) %>%
+  mutate(hs = hs * max_range) %>%
+  mutate(group = "IPMN")
+
+
+bind_rows(dd1,dd2) %>%
+  rename(Group = group) %>%
+  ggplot(aes(hs,mu)) +
+  geom_ribbon(aes(hs,ymin = lb,ymax=ub,fill = Group),alpha=0.2) +
+  geom_line(aes(color=Group)) +
+  geom_hline(yintercept = 0,color="red",linetype="dotted") +
+  facet_wrap(~combo,ncol=5) +
+  # facet_grid(t1~t2,
+  #            labeller = label_wrap_gen(width=8)) +
+  theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+  # theme(axis.title = element_text(size=20),
+  #       axis.text = element_text(size=14),
+  #       strip.text = element_text(size=16),
+  #       title = element_text(size=20),
+  #       plot.margin = unit(0.5*c(1,1,1,1), "cm")) +
+  labs(x="Distance (\u03bcm)",y="Cross-correlation")
+
+# paper
+fsave("xcor_comparison.png",width = 9,height=6)
+
+# bind_rows(xl1_e,xl2_e) %>%
+#   mutate(combo = paste0(t1," <--> ",t2)) %>%
+#   mutate(hs = hs * max_range) %>%
+#   ggplot(aes(hs,mu)) +
+#   geom_ribbon(aes(hs,ymin = lb,ymax=ub,group=group),fill = "grey70") +
+#   geom_line(aes(color=group)) +
+#   geom_hline(yintercept = 0,color="red",linetype="dotted") +
+#   facet_wrap(t1~t2,nrow=3) +
+#   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+#   labs(x="Distance (\u03bcm)",y="Marginal correlation") +
+#   theme(legend.position = "top",
+#         axis.text.x = element_blank(),
+#         axis.title.x = element_blank(),
+#         axis.ticks.x = element_blank())
+#
+# p1 <- bind_rows(xl1_e,xl2_e) %>%
+#   mutate(combo = paste0(t1," <--> ",t2)) %>%
+#   mutate(hs = hs * max_range) %>%
+#   filter(t1 == t2) %>%
+#   ggplot(aes(hs,mu)) +
+#   geom_ribbon(aes(hs,ymin = lb,ymax=ub,group=group),fill = "grey70") +
+#   geom_line(aes(color=group)) +
+#   geom_hline(yintercept = 0,color="red",linetype="dotted") +
+#   facet_wrap(~t2,nrow=1) +
+#   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+#   labs(x="Distance (\u03bcm)",y="Marginal correlation") +
+#   theme(legend.position = "top",
+#         axis.text.x = element_blank(),
+#         axis.title.x = element_blank(),
+#         axis.ticks.x = element_blank())
+# p1
+#
+# p2 <- bind_rows(xl1_e,xl2_e) %>%
+#   mutate(combo = paste0(t1," <--> ",t2)) %>%
+#   mutate(hs = hs * max_range) %>%
+#   filter(t1 != t2) %>%
+#   filter(t1 != "Epi",
+#          t2 != "Epi") %>%
+#   ggplot(aes(hs,mu)) +
+#   geom_ribbon(aes(hs,ymin = lb,ymax=ub,group=group),fill = "grey70") +
+#   geom_line(aes(color=group)) +
+#   geom_hline(yintercept = 0,color="red",linetype="dotted") +
+#   facet_wrap(~combo,nrow=1) +
+#   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+#   labs(x="Distance (\u03bcm)",y="Cross-correlation") +
+#   guides(color="none") +
+#   theme(
+#         axis.text.x = element_blank(),
+#         axis.title.x = element_blank(),
+#         axis.ticks.x = element_blank())
+# p2
+#
+# p3 <- bind_rows(xl1_e,xl2_e) %>%
+#   mutate(combo = paste0(t1," <--> ",t2)) %>%
+#   mutate(hs = hs * max_range) %>%
+#   filter(t1 == "Epi" |
+#          t2 == "Epi") %>%
+#   ggplot(aes(hs,mu)) +
+#   geom_ribbon(aes(hs,ymin = lb,ymax=ub,group=group),fill = "grey70") +
+#   geom_line(aes(color=group)) +
+#   geom_hline(yintercept = 0,color="red",linetype="dotted") +
+#   facet_wrap(~combo,nrow=1) +
+#   theme(axis.text.x = element_text(angle=45,hjust = 1,vjust = 1)) +
+#   labs(x="Distance (\u03bcm)",y="Cross-correlation") +
+#   guides(color="none")
+#
+# p1/p2/p3 + plot_annotation(tag_levels = "a")
+#
+#
+# fsave("xcor_comparison.png",width=9,height=6)
+
+# spatial cross-correlation difference over distance plots
+
 
 # paper
 xldiff_e %>%
