@@ -13,7 +13,8 @@ plot_y_list <- function(y_list,coords) {
       ggplot2::ggplot(ggplot2::aes(x,y,fill=count)) +
       ggplot2::geom_tile() +
       ggplot2::facet_wrap(~type) +
-      ggplot2::scale_fill_viridis_c(name="magma") +
-      ggtitle(names(y_list)[i])
+      ggplot2::scale_fill_viridis_c(option="magma") +
+      ggtitle(names(y_list)[i]) +
+      labs(x = "X",y = "Y")
   })
 }

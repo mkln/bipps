@@ -2,12 +2,12 @@
 
 S3method(predict,bipps)
 export("%>%")
-export(create_y_list)
 export(cross_cor)
 export(cross_covar)
 export(cross_list)
 export(get_rvars)
 export(multi_bipps)
+export(pixellate_grid)
 export(plot_y_list)
 importFrom(FNN,get.knnx)
 importFrom(Rcpp,sourceCpp)

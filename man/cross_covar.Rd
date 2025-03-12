@@ -4,16 +4,21 @@
 \alias{cross_covar}
 \title{Get cross-covariance matrix rvar at length-scale h}
 \usage{
-cross_covar(out, h)
+cross_covar(out, h, ...)
 }
 \arguments{
-\item{out}{output from multi_bipps}
+\item{out}{list of outputs from multi_bipps (one entry per chain)}
 
 \item{h}{length scale (in [0,1])}
+
+\item{...}{additional variables to be passed to get_rvars}
 }
 \value{
 cross-covariance rvar object
 }
 \description{
-Get cross-covariance matrix rvar at length-scale h
+Calculates the cross-covariance, e.g.,
+\deqn{C{ij}(h) = \Lambda W \Lambda'}
+with \eqn{\Lambda} estimated from MCMC and \eqn{W} the diagonal matrix with elements
+\eqn{\exp{(-\phi_jh})} for \eqn{j=1,\ldots,k} on the diagonal.
 }

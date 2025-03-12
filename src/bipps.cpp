@@ -942,6 +942,41 @@ void Bipps::update_lly(int u, BippsDataLMC& data, const arma::mat& LamHw, bool m
   end = std::chrono::steady_clock::now();
 }
 
+void Bipps::get_lly(arma::vec& ll_y){
+  start = std::chrono::steady_clock::now();
+
+  #ifdef _OPENMP
+  #pragma omp parallel for 
+  #endif
+    for(int i = 0; i<n_ref_blocks; i++){
+      int r = reference_blocks(i);
+      int u = block_names(r)-1;
+      ll_y.rows(indexing(u)).fill(0.0);
+
+      // some nongaussian
+      int nr = indexing(u).n_elem;
+      for(int ix=0; ix<nr; ix++){
+        int i = indexing(u)(ix);
+        double loglike = 0;
+        for(unsigned int j=0; j<q; j++){
+          if(na_mat(i, j) > 0){
+            //double xz = x(i) * z(i);
+            double xb = XB(i, j) + LambdaHw(i, j);
+            double ystar=0;
+            double tausq = 1.0/tausq_inv(j);
+            arma::vec nograd = 
+              get_likdens_likgrad(loglike, y(i,j), ystar, tausq, offsets(i, j), 
+                                  xb, familyid(j), false);
+
+          }
+        }
+        ll_y.row(i) += loglike;
+      }
+    }
+
+  end = std::chrono::steady_clock::now();
+}
+
 void Bipps::logpost_refresh_after_gibbs(BippsDataLMC& data, bool sample){
   
   if(verbose & debug){
@@ -957,7 +992,7 @@ void Bipps::logpost_refresh_after_gibbs(BippsDataLMC& data, bool sample){
     int u = block_names(r)-1;
     //update_block_covpars(u, data);
     update_block_wlogdens(u, data);
-    if(!sample){
+    if(!sample) {
       update_lly(u, data, LambdaHw, true);
     }
   }

@@ -4,16 +4,22 @@
 \alias{cross_cor}
 \title{Get cross-correlation matrix rvar at length-scale h}
 \usage{
-cross_cor(out, h)
+cross_cor(out, h, cov0, ...)
 }
 \arguments{
-\item{out}{output from multi_bipps}
+\item{out}{list of outputs from multi_bipps (one entry per chain)}
 
 \item{h}{length scale (in [0,1])}
+
+\item{cov0}{the cross covariance calculated at h=0}
+
+\item{...}{additional variables to be passed to cross_covar}
 }
 \value{
 cross-correlation rvar object
 }
 \description{
-Get cross-correlation matrix rvar at length-scale h
+Calculates the cross-correlation matrix, e.g.,
+\deqn{\rho_{ij}(h) = \frac{C_{ij}(h)}{\sqrt{C_{ii}(0)C_{jj}(0)}}}
+with \eqn{C_{ij}(h)} the cross-covariance as calculated in \link{cross_covar}.
 }

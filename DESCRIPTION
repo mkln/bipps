@@ -16,7 +16,8 @@ Imports:
     FNN,
     posterior,
     spatstat.geom,
-    vctrs
+    vctrs,
+    tibble
 Suggests: 
     ggplot2,
     abind,
@@ -27,5 +28,6 @@ Suggests:
 LinkingTo: Rcpp, RcppArmadillo
 VignetteBuilder: knitr
 RoxygenNote: 7.3.2
+Roxygen: list(markdown = TRUE)
 Encoding: UTF-8
 Config/testthat/edition: 3
